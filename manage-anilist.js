@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AnimeUnity to AniList Sync
 // @namespace    https://github.com/
-// @version      2.2.0
+// @version      1.0.0
 // @description  Sincronizzazione avanzata progresso, gestione lista e profilo AniList per AnimeUnity con QoL
 // @author       Open Community
 // @match        *://*.animeunity.so/*
@@ -811,47 +811,6 @@
         };
 
         epWrapper.after(wrap);
-      }
-
-      // 2. QoL: Tasti rapidi compatti nella barra sotto il player video (#video-bottom)
-      const videoBottom = document.getElementById("video-bottom");
-      if (videoBottom) {
-        const quickWrap = document.createElement("div");
-        quickWrap.id = "al-player-quick-btn";
-        quickWrap.style.cssText = "display:inline-flex;gap:6px;align-items:center;margin-left:10px;";
-
-        let quickHtml = "";
-        if (currentProg > 0) {
-          quickHtml += `
-            <button type="button" class="al-player-quick-btn" id="al-quick-prev" style="color:#f87171;" title="Torna a Ep. ${prevEp}">
-              <i class="fas fa-undo"></i> Ep. ${prevEp} (-1)
-            </button>
-          `;
-        }
-        quickHtml += `
-          <button type="button" class="al-player-quick-btn" id="al-quick-next">
-            <i class="fas fa-check" style="font-size:10px;"></i> Ep. ${nextEp} (+1)
-          </button>
-        `;
-        quickWrap.innerHTML = quickHtml;
-
-        if (currentProg > 0) {
-          quickWrap.querySelector("#al-quick-prev").onclick = async () => {
-            if (await API.updateMediaList(media.id, prevEp)) {
-              UI.toast(`Progresso: Ep. ${prevEp}`);
-              App.syncAnime();
-            }
-          };
-        }
-
-        quickWrap.querySelector("#al-quick-next").onclick = async () => {
-          if (await API.updateMediaList(media.id, nextEp)) {
-            UI.toast(`Episodio ${nextEp} completato!`);
-            App.syncAnime();
-          }
-        };
-
-        videoBottom.appendChild(quickWrap);
       }
     }
   };
