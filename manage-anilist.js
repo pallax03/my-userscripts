@@ -345,8 +345,8 @@
           box-shadow: 0 2px 5px rgba(0,0,0,0.7);
         }
 
-        /* Tasto Rapido Episodio Successivo sotto la griglia */
-        .al-next-ep-box { display: flex; justify-content: center; margin: 16px 0; }
+        /* Tasti Episodio Successivo & Precedente sotto la griglia */
+        .al-next-ep-box { display: flex; justify-content: center; margin: 16px 0; gap: 10px; flex-wrap: wrap; }
         .al-btn-next-ep {
           background: linear-gradient(135deg, #192b42 0%, #152232 100%);
           border: 1px solid rgba(61, 180, 242, 0.45); color: #fff; padding: 10px 22px;
@@ -355,6 +355,25 @@
           box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
         .al-btn-next-ep:hover { border-color: var(--al-blue); box-shadow: 0 0 12px rgba(61,180,242,0.4); transform: translateY(-1px); }
+
+        .al-btn-prev-ep {
+          background: #182230; border: 1px solid rgba(255, 255, 255, 0.15); color: #94a3b8;
+          padding: 10px 18px; border-radius: 20px; font-weight: 600; font-size: 13px; cursor: pointer;
+          display: flex; align-items: center; gap: 7px; transition: all 0.2s;
+        }
+        .al-btn-prev-ep:hover {
+          background: #233144; color: #f87171; border-color: rgba(248, 113, 113, 0.4); transform: translateY(-1px);
+        }
+
+        /* QoL: Mini bottoni step +/- nella card */
+        .al-step-btn {
+          background: #0e1622; border: 1px solid var(--al-border); color: #fff;
+          width: 20px; height: 20px; border-radius: 4px; display: inline-flex;
+          align-items: center; justify-content: center; font-size: 13px; font-weight: 700;
+          cursor: pointer; padding: 0; line-height: 1; transition: all 0.15s;
+        }
+        .al-step-btn:hover { border-color: var(--al-blue); color: var(--al-blue); }
+        .al-step-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
         /* QoL: Tasto Rapido accanto al player video */
         .al-player-quick-btn {
@@ -673,7 +692,11 @@
         </select>
         <div class="al-progress-container">
           <div class="al-progress-header">
-            <span>Progresso: <b>${entry.progress}</b>${totalEp ? ` / ${totalEp}` : ""} ep</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span>Progresso: <b>${entry.progress}</b>${totalEp ? ` / ${totalEp}` : ""} ep</span>
+              <button type="button" class="al-step-btn" id="al-step-minus" title="Riduci di 1 episodio" ${entry.progress <= 0 ? "disabled" : ""}>-</button>
+              <button type="button" class="al-step-btn" id="al-step-plus" title="Aumenta di 1 episodio">+</button>
+            </div>
             <span style="color:#3db4f2;">${totalEp ? `${progressPercent}%` : ""}</span>
           </div>
           ${totalEp ? `
@@ -701,6 +724,25 @@
         }
       };
 
+      panel.querySelector("#al-step-minus").onclick = async (e) => {
+        if (entry.progress <= 0) return;
+        e.target.disabled = true;
+        const newProg = entry.progress - 1;
+        if (await API.updateMediaList(media.id, newProg)) {
+          UI.toast(`Progresso riportato a Ep. ${newProg}`);
+          App.syncAnime();
+        } else e.target.disabled = false;
+      };
+
+      panel.querySelector("#al-step-plus").onclick = async (e) => {
+        e.target.disabled = true;
+        const newProg = entry.progress + 1;
+        if (await API.updateMediaList(media.id, newProg)) {
+          UI.toast(`Episodio ${newProg} completato!`);
+          App.syncAnime();
+        } else e.target.disabled = false;
+      };
+
       panel.querySelector("#al-status-select").onchange = async (e) => {
         const newStatus = e.target.value;
         e.target.disabled = true;
@@ -725,31 +767,91 @@
       if (!media?.mediaListEntry) return;
 
       const epWrapper = document.querySelector(".episode-wrapper");
-      const nextEp = media.mediaListEntry.progress + 1;
+      const currentProg = media.mediaListEntry.progress;
+      const nextEp = currentProg + 1;
+      const prevEp = Math.max(0, currentProg - 1);
 
-      // 1. Tasto rapido sotto la griglia degli episodi
+      // 1. Tasti sotto la griglia degli episodi
       if (epWrapper) {
-        const eps = Array.from(epWrapper.querySelectorAll(".episode-item"));
-        const hasNext = eps.some(el => parseInt(el.innerText.trim()) === nextEp);
+        const wrap = document.createElement("div");
+        wrap.id = "al-next-ep-wrap";
+        wrap.className = "al-next-ep-box";
 
-        if (hasNext) {
-          const wrap = document.createElement("div");
-          wrap.id = "al-next-ep-wrap";
-          wrap.className = "al-next-ep-box";
-          wrap.innerHTML = `
-            <button type="button" class="al-btn-next-ep" id="al-btn-mark-ep">
-              <i class="fas fa-check-circle" style="color:var(--al-blue);"></i> Segna Episodio ${nextEp} completato
+        let buttonsHtml = "";
+        if (currentProg > 0) {
+          buttonsHtml += `
+            <button type="button" class="al-btn-prev-ep" id="al-btn-prev-ep" title="Annulla o torna a Ep. ${prevEp}">
+              <i class="fas fa-undo"></i> Torna a Ep. ${prevEp} (-1)
             </button>
           `;
-          wrap.querySelector("#al-btn-mark-ep").onclick = async (e) => {
+        }
+        buttonsHtml += `
+          <button type="button" class="al-btn-next-ep" id="al-btn-mark-ep">
+            <i class="fas fa-check-circle" style="color:var(--al-blue);"></i> Segna Episodio ${nextEp} completato (+1)
+          </button>
+        `;
+        wrap.innerHTML = buttonsHtml;
+
+        if (currentProg > 0) {
+          wrap.querySelector("#al-btn-prev-ep").onclick = async (e) => {
             e.target.disabled = true;
-            if (await API.updateMediaList(media.id, nextEp)) {
-              UI.toast(`Episodio ${nextEp} completato!`);
+            if (await API.updateMediaList(media.id, prevEp)) {
+              UI.toast(`Progresso riportato a Episodio ${prevEp}!`);
               App.syncAnime();
             } else e.target.disabled = false;
           };
-          epWrapper.after(wrap);
         }
+
+        wrap.querySelector("#al-btn-mark-ep").onclick = async (e) => {
+          e.target.disabled = true;
+          if (await API.updateMediaList(media.id, nextEp)) {
+            UI.toast(`Episodio ${nextEp} completato!`);
+            App.syncAnime();
+          } else e.target.disabled = false;
+        };
+
+        epWrapper.after(wrap);
+      }
+
+      // 2. QoL: Tasti rapidi compatti nella barra sotto il player video (#video-bottom)
+      const videoBottom = document.getElementById("video-bottom");
+      if (videoBottom) {
+        const quickWrap = document.createElement("div");
+        quickWrap.id = "al-player-quick-btn";
+        quickWrap.style.cssText = "display:inline-flex;gap:6px;align-items:center;margin-left:10px;";
+
+        let quickHtml = "";
+        if (currentProg > 0) {
+          quickHtml += `
+            <button type="button" class="al-player-quick-btn" id="al-quick-prev" style="color:#f87171;" title="Torna a Ep. ${prevEp}">
+              <i class="fas fa-undo"></i> Ep. ${prevEp} (-1)
+            </button>
+          `;
+        }
+        quickHtml += `
+          <button type="button" class="al-player-quick-btn" id="al-quick-next">
+            <i class="fas fa-check" style="font-size:10px;"></i> Ep. ${nextEp} (+1)
+          </button>
+        `;
+        quickWrap.innerHTML = quickHtml;
+
+        if (currentProg > 0) {
+          quickWrap.querySelector("#al-quick-prev").onclick = async () => {
+            if (await API.updateMediaList(media.id, prevEp)) {
+              UI.toast(`Progresso: Ep. ${prevEp}`);
+              App.syncAnime();
+            }
+          };
+        }
+
+        quickWrap.querySelector("#al-quick-next").onclick = async () => {
+          if (await API.updateMediaList(media.id, nextEp)) {
+            UI.toast(`Episodio ${nextEp} completato!`);
+            App.syncAnime();
+          }
+        };
+
+        videoBottom.appendChild(quickWrap);
       }
     }
   };
@@ -869,13 +971,19 @@
         }
       }, true);
 
-      // QoL: Scorciatoia da tastiera globale (Shift + S per segnare il prossimo episodio come visto)
+      // QoL: Scorciatoie da tastiera globali (Shift + S: prossimo ep, Shift + Z: torna indietro di 1 ep)
       document.addEventListener("keydown", async (e) => {
-        if (e.shiftKey && (e.key === "S" || e.key === "s") && !["INPUT", "TEXTAREA"].includes(e.target.tagName)) {
-          if (currentMedia?.mediaListEntry) {
+        if (!["INPUT", "TEXTAREA"].includes(e.target.tagName) && e.shiftKey) {
+          if ((e.key === "S" || e.key === "s") && currentMedia?.mediaListEntry) {
             const next = currentMedia.mediaListEntry.progress + 1;
             if (await API.updateMediaList(currentMedia.id, next)) {
               UI.toast(`Episodio ${next} completato (Scorciatoia Shift+S)!`);
+              App.syncAnime();
+            }
+          } else if ((e.key === "Z" || e.key === "z") && currentMedia?.mediaListEntry && currentMedia.mediaListEntry.progress > 0) {
+            const prev = currentMedia.mediaListEntry.progress - 1;
+            if (await API.updateMediaList(currentMedia.id, prev)) {
+              UI.toast(`Progresso riportato a Ep. ${prev} (Scorciatoia Shift+Z)!`);
               App.syncAnime();
             }
           }
