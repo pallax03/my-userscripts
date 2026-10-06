@@ -25,15 +25,16 @@ Choose your browser to install the recommended extension with 1 click from the o
 
 ---
 
-### Step 2: Install the Script
+### Step 2: Install the Scripts
 
-Once the extension is installed, click the link below:
+Install either or both scripts with a single click:
 
-👉 **[📥 Click here to install the script (manage-anilist.js)](https://raw.githubusercontent.com/pallax03/my-userscripts/master/manage-anilist.js)**  
-*your browser extension will automatically prompt you to install it.*
+| Script | Purpose | Target Site | Quick Install Link |
+| :--- | :--- | :--- | :--- |
+| **`manage-anilist.js`** | Sync AnimeUnity watch progress & status to AniList | `animeunity.so` | [👉 **Install manage-anilist.js**](https://raw.githubusercontent.com/pallax03/my-userscripts/master/manage-anilist.js) |
+| **`list-anilist.js`** | 1-Click add & sync anime from a friend's AniList list | `anilist.co` | [👉 **Install list-anilist.js**](https://raw.githubusercontent.com/pallax03/my-userscripts/master/list-anilist.js) |
 
-> **Direct URL for remote installation (GitHub Raw):**  
-> `https://raw.githubusercontent.com/pallax03/my-userscripts/master/manage-anilist.js`
+> **Shared Token Benefit**: Both scripts share the exact same AniList token. Log in once, and both scripts work seamlessly!
 
 ---
 
@@ -82,6 +83,18 @@ Once the extension is installed, click the link below:
 | :---: | :--- |
 | `Shift + S` | Mark **next episode (+1)** as completed on AniList |
 | `Shift + Z` | Step back by **1 episode (-1)** on AniList |
+
+---
+
+## 👥 Features: `list-anilist.js` (AniList Friend List Quick Add)
+
+When browsing a friend's profile (`https://anilist.co/user/<username>/animelist`):
+- **Smart Last Action Memory**: The action button remembers your last chosen status (*Plan to Watch*, *Watching*, *Completed*, etc.). Clicking the main button instantly adds the anime using this preference with **1 single click**.
+- **Interactive Status Dropdown (`▾`)**: Click the arrow to choose any other status or delete from your list. Picking a new status updates your future default action automatically.
+- **Auto-Completion on Completed**: Choosing *Completed* automatically marks all episodes as seen, setting both completion and start dates.
+- **Live Status Badges**: Anime already in your collection are tagged with clean green badges (e.g. `✓ Watching` or `✓ Completed`), preventing accidental re-adds.
+- **"Hide Already in My List" Filter**: Floating bottom bar with a toggle checkbox to hide all anime you've already added, allowing you to discover unseen gems from your friend's list instantly!
+
 
 ---
 

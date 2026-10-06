@@ -25,15 +25,16 @@ Scegli il tuo browser per scaricare l'estensione con 1 click dallo store ufficia
 
 ---
 
-### Passo 2: Installa lo Script
+### Passo 2: Installa gli Script
 
-Una volta installata l'estensione, clicca sul link qui sotto:
+Installa uno o entrambi gli script con 1 solo click:
 
-👉 **[📥 Clicca qui per installare lo script (manage-anilist.js)](https://raw.githubusercontent.com/pallax03/my-userscripts/master/manage-anilist.js)**  
-*l'estensione aprirà automaticamente la schermata di installazione.*
+| Script | Scopo | Sito Target | Link Rapido Installazione |
+| :--- | :--- | :--- | :--- |
+| **`manage-anilist.js`** | Sincronizza progresso e stato da AnimeUnity ad AniList | `animeunity.so` | [👉 **Installa manage-anilist.js**](https://raw.githubusercontent.com/pallax03/my-userscripts/master/manage-anilist.js) |
+| **`list-anilist.js`** | Aggiungi e sincronizza anime in 1 click dalla lista di un amico | `anilist.co` | [👉 **Installa list-anilist.js**](https://raw.githubusercontent.com/pallax03/my-userscripts/master/list-anilist.js) |
 
-> **URL Diretto per l'installazione remota (GitHub Raw):**  
-> `https://raw.githubusercontent.com/pallax03/my-userscripts/master/manage-anilist.js`
+> **Vantaggio Token Condiviso**: Entrambi gli script condividono la stessa chiave del token AniList. Effettua l'accesso una sola volta ed entrambi funzioneranno all'istante!
 
 ---
 
@@ -82,6 +83,18 @@ Una volta installata l'estensione, clicca sul link qui sotto:
 | :---: | :--- |
 | `Shift + S` | Segna il **prossimo episodio (+1)** come visto su AniList |
 | `Shift + Z` | Torna indietro di **1 episodio (-1)** su AniList |
+
+---
+
+## 👥 Funzionalità: `list-anilist.js` (AniList Friend List Quick Add)
+
+Quando visiti il profilo di un amico (`https://anilist.co/user/<username>/animelist`):
+- **Memoria dell'Ultima Azione**: Il pulsante ricorda l'ultimo stato che hai selezionato (*Pianifica*, *In corso*, *Completato*, ecc.). Un semplice click sul pulsante principale aggiunge istantaneamente l'anime usando quella preferenza con **1 singolo click**.
+- **Dropdown Interattivo degli Stati (`▾`)**: Clicca la freccetta per scegliere qualsiasi altro stato o rimuovere la serie. Selezionando un nuovo stato, questo diventa automaticamente la tua nuova azione predefinita per i click successivi.
+- **Auto-Completamento su Completato**: Selezionando *Completato*, lo script imposta automaticamente tutti gli episodi come visti, compilando sia la data d'inizio che di fine.
+- **Badge di Stato in Tempo Reale**: Gli anime già presenti nella tua collezione vengono contrassegnati da badge verdi discreti (es. `✓ In corso` o `✓ Completato`), prevenendo duplicati accidentali.
+- **Filtro "Nascondi già in lista"**: Barra fluttuante in basso con checkbox per nascondere tutti i titoli che hai già aggiunto, permettendoti di esplorare rapidamente solo le nuove serie consigliate dal tuo amico!
+
 
 ---
 
