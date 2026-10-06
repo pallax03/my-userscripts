@@ -440,11 +440,11 @@
 
       let html = "";
       if (prog > 0) {
-        html += `<button type="button" class="al-btn-prev" id="al-btn-prev">↶ Ep. ${prevEp} (-1)</button>`;
+        html += `<button type="button" class="al-btn-prev" id="al-btn-prev"> ↻ Ep. ${prevEp} </button>`;
       }
 
       if (hasNext && !isCompleted) {
-        html += `<button type="button" class="al-btn-next" id="al-btn-next">✓ Segna Ep. ${nextEp} (+1)</button>`;
+        html += `<button type="button" class="al-btn-next" id="al-btn-next">✓ Segna Ep. ${nextEp}</button>`;
       } else if (isCompleted) {
         html += `<span class="al-badge-done">🎉 Serie completata</span>`;
       } else if (!hasNext && prog > 0) {
