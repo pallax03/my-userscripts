@@ -3,7 +3,7 @@
 **English** | [Italiano](README.it.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-2.2.0-brightgreen.svg)]()
+[![Version](https://img.shields.io/badge/Version-1.0.0-brightgreen.svg)]()
 [![Platform](https://img.shields.io/badge/Browser-Safari%20%7C%20Chrome-blueviolet.svg)]()
 
 A modern, lightweight, and responsive Userscript to automatically sync anime watch progress, list statuses (*Watching*, *Completed*, etc.), and personal scores directly with **[AniList](https://anilist.co)** from the AnimeUnity web interface on both **Desktop** and **Mobile**.
@@ -29,11 +29,11 @@ Choose your browser to install the recommended extension with 1 click from the o
 
 Once the extension is installed, click the link below:
 
-👉 **[📥 Click here to install the script (manage-anilist.js)](./manage-anilist.js)**  
-*(On GitHub, click **Raw** on `manage-anilist.js`: your browser extension will automatically prompt you to install it).*
+👉 **[📥 Click here to install the script (manage-anilist.js)](https://raw.githubusercontent.com/pallax03/my-userscripts/master/manage-anilist.js)**  
+*your browser extension will automatically prompt you to install it.*
 
 > **Direct URL for remote installation (GitHub Raw):**  
-> `https://raw.githubusercontent.com/<YOUR-USERNAME>/<YOUR-REPO>/master/manage-anilist.js`
+> `https://raw.githubusercontent.com/pallax03/my-userscripts/master/manage-anilist.js`
 
 ---
 
