@@ -21,9 +21,7 @@ Choose your browser to install the recommended extension with 1 click from the o
 | Browser | Recommended Extension | Official Download Link |
 | :--- | :--- | :--- |
 | 🍏 **Safari** (macOS / iOS) | **Userscripts** *(Open Source, Recommended)* | [👉 Download on Mac App Store](https://apps.apple.com/app/userscripts/id1463298887) <br> *GitHub alternative:* [quoid/userscripts](https://github.com/quoid/userscripts/releases) |
-| 🍏 **Safari** (macOS / iOS) | **Stay** | [👉 Download on Mac App Store](https://apps.apple.com/app/stay-for-safari/id1591620924) |
 | 🌐 **Google Chrome** / Brave / Edge | **Tampermonkey** *(Most popular)* | [👉 Download on Chrome Web Store](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) |
-| 🌐 **Google Chrome** / Brave / Edge | **Violentmonkey** *(Lightweight & Open Source)* | [👉 Download on Chrome Web Store](https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag) |
 
 ---
 

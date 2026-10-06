@@ -21,9 +21,7 @@ Scegli il tuo browser per scaricare l'estensione con 1 click dallo store ufficia
 | Browser | Estensione Consigliata | Link Download Ufficiale |
 | :--- | :--- | :--- |
 | 🍏 **Safari** (macOS / iOS) | **Userscripts** *(Open Source, Consigliata)* | [👉 Scarica da Mac App Store](https://apps.apple.com/it/app/userscripts/id1463298887) <br> *Alternativa GitHub:* [quoid/userscripts](https://github.com/quoid/userscripts/releases) |
-| 🍏 **Safari** (macOS / iOS) | **Stay** | [👉 Scarica da Mac App Store](https://apps.apple.com/it/app/stay-for-safari/id1591620924) |
 | 🌐 **Google Chrome** / Brave / Edge | **Tampermonkey** *(La più usata)* | [👉 Scarica da Chrome Web Store](https://chromewebstore.google.com/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo) |
-| 🌐 **Google Chrome** / Brave / Edge | **Violentmonkey** *(Leggera & Open Source)* | [👉 Scarica da Chrome Web Store](https://chromewebstore.google.com/detail/violentmonkey/jinjaccalgkegednnccohejagnlnfdag) |
 
 ---
 
