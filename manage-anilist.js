@@ -202,7 +202,7 @@
         .al-nav-btn:hover { background: rgba(61, 180, 242, 0.25); color: #fff!important; transform: translateY(-1px); }
         .al-nav-avatar { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--al-blue); object-fit: cover; }
         
-        /* Dropdown Profilo */
+        /* Dropdown Profilo Desktop */
         .al-dropdown {
           position: absolute; top: calc(100% + 8px); right: 0; background: var(--al-bg-card);
           border: 1px solid var(--al-border); border-radius: 10px; min-width: 190px;
@@ -210,6 +210,15 @@
           z-index: 10001; overflow: hidden; animation: alFadeIn 0.15s ease-out;
         }
         .al-dropdown.show { display: flex; }
+
+        /* Mobile Navbar AniList Widget & Dropdown */
+        .al-nav-widget-mobile { display: flex; align-items: center; position: relative; margin-left: 8px; }
+        .al-nav-btn-mobile { padding: 4px 10px !important; font-size: 12px !important; gap: 6px !important; border-radius: 16px !important; }
+        .al-dropdown-mobile {
+          position: fixed !important; top: 54px !important; right: 12px !important; left: auto !important;
+          min-width: 190px !important; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8) !important; z-index: 99999 !important;
+        }
+
         .al-dropdown-item {
           padding: 10px 14px; color: var(--al-text-main); font-size: 13px; display: flex;
           align-items: center; gap: 10px; text-decoration: none!important; cursor: pointer;
@@ -497,11 +506,11 @@
     },
 
     renderNavbar(viewer) {
+      // 1. WIDGET DESKTOP (#left-nav)
       const loginItem = document.querySelector('#left-nav a[href*="/login"]')?.closest("li") ||
                         document.querySelector('nav a[href*="/login"]')?.closest("li");
 
       let widget = document.getElementById("al-nav-widget");
-
       if (loginItem && loginItem !== widget) {
         if (!widget) {
           widget = document.createElement("li");
@@ -511,35 +520,73 @@
         loginItem.replaceWith(widget);
       }
 
-      if (!widget) return;
-
-      if (!viewer) {
-        widget.innerHTML = `
-          <button type="button" class="al-nav-btn" data-al-action="open-token-modal">
-            <i class="fas fa-key"></i> Connetti AniList
-          </button>
-        `;
-        return;
+      if (widget) {
+        if (!viewer) {
+          widget.innerHTML = `
+            <button type="button" class="al-nav-btn" data-al-action="open-token-modal">
+              <i class="fas fa-key"></i> Connetti AniList
+            </button>
+          `;
+        } else {
+          widget.innerHTML = `
+            <button type="button" class="al-nav-btn" id="al-user-toggle">
+              <img class="al-nav-avatar" src="${viewer.avatar?.medium || "https://anilist.co/img/icons/icon.svg"}" alt="${viewer.name}" />
+              <span>${viewer.name}</span>
+              <i class="fas fa-chevron-down" style="font-size:10px;margin-left:2px;"></i>
+            </button>
+            <div class="al-dropdown" id="al-nav-dropdown">
+              <a class="al-dropdown-item" href="https://anilist.co/user/${viewer.name}" target="_blank" rel="noopener noreferrer">
+                <i class="fas fa-user-circle"></i> Profilo AniList
+              </a>
+              <button type="button" class="al-dropdown-item" data-al-action="open-token-modal">
+                <i class="fas fa-cog"></i> Gestisci Token
+              </button>
+              <button type="button" class="al-dropdown-item danger" id="al-drop-logout">
+                <i class="fas fa-sign-out-alt"></i> Disconnetti
+              </button>
+            </div>
+          `;
+        }
       }
 
-      widget.innerHTML = `
-        <button type="button" class="al-nav-btn" id="al-user-toggle">
-          <img class="al-nav-avatar" src="${viewer.avatar?.medium || "https://anilist.co/img/icons/icon.svg"}" alt="${viewer.name}" />
-          <span>${viewer.name}</span>
-          <i class="fas fa-chevron-down" style="font-size:10px;margin-left:2px;"></i>
-        </button>
-        <div class="al-dropdown" id="al-nav-dropdown">
-          <a class="al-dropdown-item" href="https://anilist.co/user/${viewer.name}" target="_blank" rel="noopener noreferrer">
-            <i class="fas fa-user-circle"></i> Profilo AniList
-          </a>
-          <button type="button" class="al-dropdown-item" data-al-action="open-token-modal">
-            <i class="fas fa-cog"></i> Gestisci Token
-          </button>
-          <button type="button" class="al-dropdown-item danger" id="al-drop-logout">
-            <i class="fas fa-sign-out-alt"></i> Disconnetti
-          </button>
-        </div>
-      `;
+      // 2. WIDGET MOBILE (.nav-top-mobile)
+      const mobileNav = document.querySelector(".nav-top-mobile");
+      if (mobileNav) {
+        let mobileWidget = document.getElementById("al-nav-widget-mobile");
+        if (!mobileWidget) {
+          mobileWidget = document.createElement("div");
+          mobileWidget.id = "al-nav-widget-mobile";
+          mobileWidget.className = "al-nav-widget-mobile";
+          mobileNav.appendChild(mobileWidget);
+        }
+
+        if (!viewer) {
+          mobileWidget.innerHTML = `
+            <button type="button" class="al-nav-btn al-nav-btn-mobile" data-al-action="open-token-modal">
+              <i class="fas fa-key"></i> <span>AniList</span>
+            </button>
+          `;
+        } else {
+          mobileWidget.innerHTML = `
+            <button type="button" class="al-nav-btn al-nav-btn-mobile" id="al-user-toggle-mobile">
+              <img class="al-nav-avatar" src="${viewer.avatar?.medium || "https://anilist.co/img/icons/icon.svg"}" alt="${viewer.name}" />
+              <span style="max-width:75px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${viewer.name}</span>
+              <i class="fas fa-chevron-down" style="font-size:8px;"></i>
+            </button>
+            <div class="al-dropdown al-dropdown-mobile" id="al-nav-dropdown-mobile">
+              <a class="al-dropdown-item" href="https://anilist.co/user/${viewer.name}" target="_blank" rel="noopener noreferrer">
+                <i class="fas fa-user-circle"></i> Profilo AniList
+              </a>
+              <button type="button" class="al-dropdown-item" data-al-action="open-token-modal">
+                <i class="fas fa-cog"></i> Gestisci Token
+              </button>
+              <button type="button" class="al-dropdown-item danger" id="al-drop-logout-mobile">
+                <i class="fas fa-sign-out-alt"></i> Disconnetti
+              </button>
+            </div>
+          `;
+        }
+      }
     },
 
     renderAnimePanel(media) {
@@ -572,7 +619,7 @@
             <span style="font-size:12px;color:#f87171;font-weight:600;"><i class="fas fa-exclamation-triangle"></i> Non trovato</span>
             <button type="button" class="al-icon-btn" id="al-manual-trigger" title="Collega ID AniList"><i class="fas fa-link"></i></button>
           </div>
-          <button type="button" class="al-btn-action" style="background:#26384f;color:#fff;" id="al-manual-search-btn">
+          <button type="button" class="al-modal-btn primary" id="al-manual-search-btn">
             <i class="fas fa-link"></i> Collega URL o ID AniList
           </button>
         `;
@@ -793,28 +840,32 @@
           return;
         }
 
-        // Toggle dropdown utente
-        const userToggle = e.target.closest("#al-user-toggle");
+        // Toggle dropdown utente (desktop o mobile)
+        const userToggle = e.target.closest("#al-user-toggle, #al-user-toggle-mobile");
         if (userToggle) {
           e.preventDefault();
           e.stopPropagation();
-          document.getElementById("al-nav-dropdown")?.classList.toggle("show");
+          const isMobile = !!userToggle.matches("#al-user-toggle-mobile");
+          const target = document.getElementById(isMobile ? "al-nav-dropdown-mobile" : "al-nav-dropdown");
+          target?.classList.toggle("show");
           return;
         }
 
-        // Logout dal dropdown
-        const logoutBtn = e.target.closest("#al-drop-logout");
+        // Logout dal dropdown (desktop o mobile)
+        const logoutBtn = e.target.closest("#al-drop-logout, #al-drop-logout-mobile");
         if (logoutBtn) {
           e.preventDefault();
           e.stopPropagation();
           document.getElementById("al-nav-dropdown")?.classList.remove("show");
+          document.getElementById("al-nav-dropdown-mobile")?.classList.remove("show");
           App.logout();
           return;
         }
 
         // Chiusura dropdown al click esterno
-        if (!e.target.closest("#al-nav-widget")) {
+        if (!e.target.closest("#al-nav-widget, #al-nav-widget-mobile")) {
           document.getElementById("al-nav-dropdown")?.classList.remove("show");
+          document.getElementById("al-nav-dropdown-mobile")?.classList.remove("show");
         }
       }, true);
 
@@ -839,10 +890,11 @@
           App.syncAnime();
         }
 
-        // Se AnimeUnity rigenera il login originale, sostituiscilo
-        const originalLogin = document.querySelector('#left-nav a[href*="/login"]')?.closest("li") ||
-                              document.querySelector('nav a[href*="/login"]')?.closest("li");
-        if (originalLogin && originalLogin.id !== "al-nav-widget") {
+        // Se AnimeUnity rigenera il login originale o la navbar mobile, aggiorna i widget
+        const originalLogin = document.querySelector('#left-nav a[href*="/login"]')?.closest("li");
+        const hasMobileBar = !!document.querySelector(".nav-top-mobile");
+        const hasMobileWidget = !!document.getElementById("al-nav-widget-mobile");
+        if ((originalLogin && originalLogin.id !== "al-nav-widget") || (hasMobileBar && !hasMobileWidget)) {
           UI.renderNavbar(currentUser);
         }
 
