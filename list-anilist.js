@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         AniList Friend List - Quick Add & Sync
 // @namespace    https://github.com/pallax03/my-userscripts
-// @version      1.1.0
-// @description  Easily add and sync anime from a friend's AniList list directly into your own collection with native browser dropdowns and default action selection
+// @version      1.3.0
+// @description  Easily add and sync anime from a friend's AniList list directly into your own collection with graceful color-coded split buttons and customizable default action
 // @author       Alex Mazzoni
 // @match        *://anilist.co/user/*/animelist*
 // @grant        GM_getValue
@@ -37,14 +37,62 @@
     return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() };
   };
 
-  // Status mapping identical to manage-anilist.js
-  const STATUSES = {
-    PLANNING: "Plan to Watch",
-    CURRENT: "Watching",
-    COMPLETED: "Completed",
-    PAUSED: "Paused",
-    DROPPED: "Dropped",
-    REPEATING: "Rewatching"
+  // Exact color mapping requested:
+  // completed -> verde (green)
+  // watching -> blue
+  // re-watching -> cyan
+  // dropped -> red
+  // planning -> gray
+  // paused -> yellow
+  const STATUS_CONFIG = {
+    COMPLETED: {
+      name: "Completed",
+      icon: "✓",
+      border: "#22c55e",
+      bg: "#0d261a",
+      text: "#4ade80",
+      dot: "#22c55e"
+    },
+    CURRENT: {
+      name: "Watching",
+      icon: "▶",
+      border: "#3db4f2",
+      bg: "#102338",
+      text: "#60a5fa",
+      dot: "#3db4f2"
+    },
+    REPEATING: {
+      name: "Rewatching",
+      icon: "↻",
+      border: "#06b6d4",
+      bg: "#0c252e",
+      text: "#22d3ee",
+      dot: "#06b6d4"
+    },
+    DROPPED: {
+      name: "Dropped",
+      icon: "✕",
+      border: "#ef4444",
+      bg: "#2b1216",
+      text: "#f87171",
+      dot: "#ef4444"
+    },
+    PLANNING: {
+      name: "Plan to Watch",
+      icon: "📌",
+      border: "#64748b",
+      bg: "#18202c",
+      text: "#cbd5e1",
+      dot: "#94a3b8"
+    },
+    PAUSED: {
+      name: "Paused",
+      icon: "⏸",
+      border: "#eab308",
+      bg: "#29210c",
+      text: "#facc15",
+      dot: "#eab308"
+    }
   };
 
   // Quick token setup via URL (?al_token=...)
@@ -108,19 +156,16 @@
   };
 
   // ==========================================================================
-  // 3. UI & STYLES (Solid Opaque Contrast & Native Selects)
+  // 3. UI & STYLES
   // ==========================================================================
   const UI = {
     initStyles() {
       if (document.getElementById("al-friend-styles")) return;
       document.head.insertAdjacentHTML("beforeend", `<style id="al-friend-styles">
-        :root {
-          --al-blue: #3db4f2;
-          --al-blue-bg: #15273d;
-          --al-green: #22c55e;
-          --al-green-bg: #112d20;
-          --al-surface: #111a26;
-          --al-border: #2a3d54;
+        /* Elevated card context when menu is open */
+        .al-card-open {
+          overflow: visible !important;
+          z-index: 999999 !important;
         }
 
         /* Floating Bottom Toolbar */
@@ -129,8 +174,8 @@
           bottom: 16px;
           left: 50%;
           transform: translateX(-50%);
-          background: var(--al-surface) !important;
-          border: 1.5px solid var(--al-border);
+          background: #111a26 !important;
+          border: 1.5px solid #2a3d54;
           box-shadow: 0 12px 36px rgba(0,0,0,0.85);
           border-radius: 30px;
           padding: 8px 18px;
@@ -140,16 +185,23 @@
           z-index: 99990;
           font-family: inherit;
         }
-        .al-friend-bar span { font-size: 13px; color: #9fadbd; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
         .al-friend-bar b { color: #fff; }
+        .al-avatar {
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          object-fit: cover;
+          border: 1.5px solid #3db4f2;
+          display: inline-block;
+          vertical-align: middle;
+          flex-shrink: 0;
+        }
         .al-filter-label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #e2e8f0; cursor: pointer; user-select: none; font-weight: 600; }
-        .al-filter-label input { cursor: pointer; width: 15px; height: 15px; accent-color: var(--al-blue); }
-
-        /* Native Select Dropdown in Toolbar */
+        .al-filter-label input { cursor: pointer; width: 15px; height: 15px; accent-color: #3db4f2; }
         .al-select {
           background: #0b1622 !important;
           color: #fff !important;
-          border: 1.5px solid var(--al-blue) !important;
+          border: 1.5px solid #3db4f2 !important;
           border-radius: 6px !important;
           padding: 5px 8px;
           font-size: 12px;
@@ -157,106 +209,221 @@
           outline: none;
           cursor: pointer;
         }
-        .al-select option { background: #0e1622; color: #fff; }
 
-        /* Contiguous Unified Split Button Component */
-        .al-split-btn {
-          display: flex;
-          align-items: stretch;
-          width: 100%;
-          box-sizing: border-box;
-          margin-top: 6px;
-          border-radius: 6px;
-          border: 1.5px solid var(--al-blue);
-          background: var(--al-blue-bg);
-          overflow: hidden;
-          transition: border-color 0.15s, background 0.15s;
-          position: relative;
-          z-index: 5;
+        /* Single Contiguous Split Button Component */
+        .al-split-box {
+          display: inline-flex !important;
+          align-items: stretch !important;
+          border-radius: 6px !important;
+          overflow: visible !important;
+          position: relative !important;
+          z-index: 10;
+          height: 26px !important;
+          min-height: 26px !important;
+          box-sizing: border-box !important;
+          border: 1.5px solid transparent;
+        }
+        .al-split-box.is-open {
+          z-index: 999999 !important;
+        }
+
+        /* In Grid View: compact floating pill over the top-right corner of the anime cover image */
+        .entry-card, .media-card, .entry-card .cover, .media-card .cover {
+          position: relative !important;
+        }
+        .entry-card:hover .cover img,
+        .media-card:hover .cover img {
+          transform: scale(1.04);
+          transition: transform 0.25s ease;
+        }
+
+        .entry-card .al-split-box,
+        .media-card .al-split-box,
+        .entry-card .cover .al-split-box,
+        .cover .al-split-box {
+          position: absolute !important;
+          top: 8px !important;
+          right: 8px !important;
+          bottom: auto !important;
+          left: auto !important;
+          width: auto !important;
+          max-width: calc(100% - 16px) !important;
+          margin: 0 !important;
+          height: 22px !important;
+          min-height: 22px !important;
+          border-radius: 4px !important;
+          backdrop-filter: blur(8px) !important;
+          box-shadow: 0 4px 14px rgba(0,0,0,0.8) !important;
+          z-index: 99999 !important;
+          pointer-events: auto !important;
+          transition: opacity 0.2s ease !important;
+        }
+
+        /* Buttons in Grid View: always visible if already in list (.is-added), but on-hover for unadded */
+        .entry-card .al-split-box.is-added,
+        .media-card .al-split-box.is-added {
+          opacity: 1 !important;
+          pointer-events: auto !important;
+        }
+
+        @media (hover: hover) {
+          .entry-card .al-split-box:not(.is-added),
+          .media-card .al-split-box:not(.is-added) {
+            opacity: 0;
+            pointer-events: none;
+          }
+          .entry-card:hover .al-split-box:not(.is-added),
+          .media-card:hover .al-split-box:not(.is-added),
+          .entry-card .al-split-box.is-open,
+          .media-card .al-split-box.is-open {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+          }
+        }
+
+        .entry-card .al-btn-main,
+        .media-card .al-btn-main {
+          font-size: 10px !important;
+          padding: 0 6px !important;
+          height: 19px !important;
+          line-height: 19px !important;
+        }
+        .entry-card .al-btn-arrow,
+        .media-card .al-btn-arrow {
+          width: 18px !important;
+          flex: 0 0 18px !important;
+          font-size: 8px !important;
+          height: 19px !important;
+          line-height: 19px !important;
+        }
+
+        /* In Table View: placed directly after the anime title link */
+        .title .al-split-box {
+          display: inline-flex !important;
+          margin-left: 8px !important;
+          vertical-align: middle !important;
+          height: 22px !important;
+          min-height: 22px !important;
+          width: auto !important;
+        }
+        .title .al-split-box .al-btn-main {
+          font-size: 10px !important;
+          padding: 0 7px !important;
+        }
+        .title .al-split-box .al-btn-arrow {
+          width: 20px !important;
+          flex: 0 0 20px !important;
+          font-size: 9px !important;
         }
 
         /* Left Main Action Button */
-        .al-btn-action {
-          flex: 1;
+        .al-btn-main {
+          flex: 1 1 auto;
           background: transparent !important;
-          color: var(--al-blue) !important;
+          color: inherit !important;
           border: none !important;
-          border-right: 1.5px solid var(--al-blue) !important;
-          padding: 6px 8px;
-          font-size: 11px;
-          font-weight: 700;
+          border-right: 1px solid rgba(255, 255, 255, 0.2) !important;
+          border-radius: 4px 0 0 4px !important;
+          padding: 0 8px !important;
+          font-size: 11px !important;
+          font-weight: 700 !important;
           cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
           gap: 4px;
-          min-height: 32px;
+          height: 100% !important;
           white-space: nowrap;
           text-overflow: ellipsis;
           overflow: hidden;
-          transition: background 0.15s, color 0.15s;
+          transition: background 0.15s;
           text-decoration: none !important;
         }
-        .al-btn-action:hover {
-          background: var(--al-blue) !important;
-          color: #0b1622 !important;
+        .al-btn-main:hover {
+          background: rgba(255, 255, 255, 0.12) !important;
         }
 
-        /* Right Arrow Dropdown Box (Integrated into same component) */
-        .al-arrow-box {
-          position: relative;
-          width: 32px;
-          min-height: 32px;
+        /* Right Dropdown Toggle Arrow */
+        .al-btn-arrow {
+          flex: 0 0 24px !important;
+          width: 24px !important;
+          background: transparent !important;
+          color: inherit !important;
+          border: none !important;
+          border-radius: 0 4px 4px 0 !important;
+          font-size: 10px !important;
+          font-weight: 900 !important;
+          cursor: pointer;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          height: 100% !important;
+          transition: background 0.15s;
+          padding: 0 !important;
+        }
+        .al-btn-arrow:hover {
+          background: rgba(255, 255, 255, 0.15) !important;
+        }
+
+        /* Dropdown Menu (Color-coded) */
+        .al-stat-drop {
+          position: absolute;
+          top: calc(100% + 4px);
+          right: 0;
+          background: #0e1622 !important;
+          border: 1.5px solid #2a3d54;
+          border-radius: 8px;
+          box-shadow: 0 12px 36px rgba(0,0,0,0.95);
+          z-index: 999999 !important;
+          min-width: 165px;
+          display: none;
+          flex-direction: column;
+          overflow: hidden;
+          padding: 4px;
+          gap: 2px;
+          box-sizing: border-box;
+        }
+        .al-stat-drop.show {
+          display: flex !important;
+        }
+
+        .al-drop-opt {
+          background: #111a26 !important;
+          border: 1px solid transparent !important;
+          border-radius: 5px;
+          padding: 6px 10px;
+          font-size: 11px;
+          font-weight: 700;
+          text-align: left;
+          color: #f1f5f9 !important;
+          cursor: pointer;
           display: flex;
           align-items: center;
-          justify-content: center;
-          color: var(--al-blue);
-          cursor: pointer;
-          transition: background 0.15s, color 0.15s;
-        }
-        .al-arrow-box:hover {
-          background: var(--al-blue);
-          color: #0b1622;
-        }
-        .al-arrow-icon {
-          pointer-events: none;
-          font-size: 11px;
-          font-weight: 900;
-        }
-        .al-native-sel {
-          position: absolute;
-          inset: 0;
+          gap: 8px;
           width: 100%;
-          height: 100%;
-          opacity: 0;
-          cursor: pointer;
-          border: none;
+          transition: all 0.12s ease;
+          box-sizing: border-box;
         }
-        .al-native-sel option {
-          background: #0e1622;
-          color: #fff;
-          font-size: 13px;
+        .al-drop-opt:hover {
+          border-color: #3db4f2 !important;
+          background: #192738 !important;
+        }
+        .al-drop-opt .dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          display: inline-block;
+          flex-shrink: 0;
         }
 
-        /* Unified Split Button when ALREADY IN LIST (Green Solid Theme) */
-        .al-split-btn.is-added {
-          border-color: var(--al-green);
-          background: var(--al-green-bg);
+        .al-drop-del {
+          color: #f87171 !important;
+          border-top: 1px solid #2a3d54 !important;
+          margin-top: 2px;
         }
-        .al-split-btn.is-added .al-btn-action {
-          color: #4ade80 !important;
-          border-right-color: var(--al-green) !important;
-        }
-        .al-split-btn.is-added .al-btn-action:hover {
-          background: var(--al-green) !important;
-          color: #0b1622 !important;
-        }
-        .al-split-btn.is-added .al-arrow-box {
-          color: #4ade80;
-        }
-        .al-split-btn.is-added .al-arrow-box:hover {
-          background: var(--al-green);
-          color: #0b1622;
+        .al-drop-del:hover {
+          background: #331518 !important;
+          border-color: #ef4444 !important;
         }
 
         /* Toast Notifications */
@@ -267,8 +434,8 @@
           transform: translateX(-50%);
           background: #0e1a29;
           color: #fff;
-          border: 1.5px solid var(--al-blue);
-          border-left: 5px solid var(--al-blue);
+          border: 1.5px solid #3db4f2;
+          border-left: 5px solid #3db4f2;
           padding: 10px 20px;
           border-radius: 8px;
           z-index: 1000000;
@@ -279,13 +446,12 @@
         }
         .al-toast.alert { border-color: #ef4444; border-left-color: #ef4444; }
 
-        /* Modal Overlay */
+        /* Modal */
         .al-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 999999; }
-        .al-modal { background: #111a26; border: 1.5px solid var(--al-border); border-radius: 12px; width: 90%; max-width: 420px; padding: 20px; color: #fff; }
+        .al-modal { background: #111a26; border: 1.5px solid #2a3d54; border-radius: 12px; width: 90%; max-width: 420px; padding: 20px; color: #fff; }
 
         .al-card-hidden { display: none !important; }
 
-        /* Mobile Viewport */
         @media (max-width: 768px) {
           .al-friend-bar {
             width: calc(100% - 24px);
@@ -299,8 +465,6 @@
           .al-friend-bar span { font-size: 11px; }
           .al-filter-label { font-size: 11px; }
           .al-select { font-size: 11px; padding: 3px 6px; }
-          .al-btn-add { font-size: 11px; padding: 4px 6px; min-height: 30px; }
-          .al-native-quick-sel { font-size: 11px; min-height: 30px; }
         }
       </style>`);
     },
@@ -321,10 +485,10 @@
       wrap.className = "al-overlay";
       wrap.innerHTML = `
         <div class="al-modal">
-          <h3 style="margin:0 0 12px;color:var(--al-blue);font-size:17px;">🔑 Connect AniList</h3>
+          <h3 style="margin:0 0 12px;color:#3db4f2;font-size:17px;">🔑 Connect AniList</h3>
           <p style="font-size:13px;color:#9fadbd;margin-bottom:12px;">Authorize the app to sync with your AniList account:</p>
           <div style="background:rgba(61,180,242,0.12);border:1px solid rgba(61,180,242,0.3);border-radius:8px;padding:10px;margin-bottom:12px;">
-            <a href="${API.oauthUrl}" target="_blank" rel="noopener noreferrer" style="color:var(--al-blue);font-size:13px;font-weight:700;text-decoration:none;">
+            <a href="${API.oauthUrl}" target="_blank" rel="noopener noreferrer" style="color:#3db4f2;font-size:13px;font-weight:700;text-decoration:none;">
               🔗 Open AniList OAuth Authorization
             </a>
             <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Click "Authorize" and copy the generated access token.</div>
@@ -332,7 +496,7 @@
           <input type="password" id="al-tok-in" placeholder="Paste access token here..." value="${Storage.get("anilist_token") || ""}" style="width:100%;box-sizing:border-box;background:#080d14;border:1px solid #202f43;border-radius:6px;padding:8px 10px;color:#fff;outline:none;" />
           <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
             <button type="button" id="al-m-cancel" style="background:#1c2838;color:#fff;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;">Cancel</button>
-            <button type="button" id="al-m-ok" style="background:var(--al-blue);color:#0b1622;border:none;border-radius:6px;padding:6px 16px;font-weight:700;cursor:pointer;">Save</button>
+            <button type="button" id="al-m-ok" style="background:#3db4f2;color:#0b1622;border:none;border-radius:6px;padding:6px 16px;font-weight:700;cursor:pointer;">Save</button>
           </div>
         </div>`;
       document.body.appendChild(wrap);
@@ -416,10 +580,10 @@
       Storage.del("anilist_token");
       currentUser = null;
       userEntries.clear();
-      document.querySelectorAll(".al-actions-wrap, #al-friend-bar").forEach(el => el.remove());
+      document.querySelectorAll(".al-split-box, #al-friend-bar").forEach(el => el.remove());
     },
 
-    // Bottom floating toolbar with native select for Default Action
+    // Bottom floating toolbar with Default Action selector
     renderFloatingBar() {
       if (!App.isFriendList() && currentUser) {
         document.getElementById("al-friend-bar")?.remove();
@@ -437,7 +601,7 @@
       if (!currentUser) {
         bar.innerHTML = `
           <span>🔑 Token not configured</span>
-          <button type="button" id="al-bar-login" style="background:var(--al-blue);color:#0b1622;border:none;border-radius:15px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;">Connect AniList</button>`;
+          <button type="button" id="al-bar-login" style="background:#3db4f2;color:#0b1622;border:none;border-radius:15px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;">Connect AniList</button>`;
         bar.querySelector("#al-bar-login").onclick = () => UI.openTokenModal();
         return;
       }
@@ -445,18 +609,21 @@
       const defAct = App.getDefaultAction();
 
       bar.innerHTML = `
-        <span>👤 <b>${currentUser.name}</b></span>
-        <span style="color:var(--al-border);">|</span>
+        <span style="display:inline-flex;align-items:center;gap:7px;">
+          <img src="${currentUser.avatar?.medium || 'https://anilist.co/img/icons/icon.svg'}" class="al-avatar" alt="${currentUser.name}" />
+          <b>${currentUser.name}</b>
+        </span>
+        <span style="color:#2a3d54;">|</span>
         <label class="al-filter-label" id="al-filter-toggle">
           <input type="checkbox" id="al-hide-chk" ${hideAlreadyAdded ? "checked" : ""}>
           <span>Hide in my list</span>
         </label>
-        <span style="color:var(--al-border);">|</span>
+        <span style="color:#2a3d54;">|</span>
         <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#cbd5e1;font-weight:600;">
           <span>Default action:</span>
           <select class="al-select" id="al-default-sel">
-            ${Object.entries(STATUSES).map(([k, v]) => `
-              <option value="${k}" ${defAct === k ? "selected" : ""}>${v}</option>
+            ${Object.entries(STATUS_CONFIG).map(([k, cfg]) => `
+              <option value="${k}" ${defAct === k ? "selected" : ""}>${cfg.name}</option>
             `).join("")}
           </select>
         </label>`;
@@ -469,12 +636,12 @@
       bar.querySelector("#al-default-sel").onchange = (e) => {
         const newAct = e.target.value;
         App.setDefaultAction(newAct);
-        UI.toast(`Default action: ${STATUSES[newAct] || newAct}`);
+        const cfg = STATUS_CONFIG[newAct] || STATUS_CONFIG.PLANNING;
+        UI.toast(`Default action: ${cfg.name}`);
 
-        // Update all unadded buttons dynamically
-        document.querySelectorAll(".al-split-btn:not(.is-added)").forEach(box => {
-          const btn = box.querySelector(".al-btn-action");
-          if (btn) btn.innerText = `➕ Add (${STATUSES[newAct]})`;
+        // Update all unadded buttons with new default status & colors
+        document.querySelectorAll(".al-split-box:not(.is-added)").forEach(box => {
+          App.applyButtonTheme(box, newAct, false);
         });
       };
     },
@@ -485,6 +652,37 @@
         const exists = userEntries.has(mediaId);
         card.classList.toggle("al-card-hidden", hideAlreadyAdded && exists);
       });
+    },
+
+    // Applies status color theme to a split box component
+    applyButtonTheme(box, statusKey, isAdded) {
+      const cfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG.PLANNING;
+      const mainBtn = box.querySelector(".al-btn-main");
+      const arrowBtn = box.querySelector(".al-btn-arrow");
+      if (!mainBtn || !arrowBtn) return;
+
+      box.classList.toggle("is-added", isAdded);
+
+      // Solid color theme directly on the split box itself (no outer transparent wrapper!)
+      box.style.background = cfg.bg;
+      box.style.borderColor = cfg.border;
+      box.style.color = cfg.text;
+
+      mainBtn.style.color = cfg.text;
+      arrowBtn.style.color = cfg.text;
+
+      if (isAdded) {
+        mainBtn.innerHTML = `<span>${cfg.icon} ${cfg.name}</span>`;
+        mainBtn.title = `Current status: ${cfg.name} (click to change)`;
+      } else {
+        mainBtn.innerHTML = `<span>➕ ${cfg.name}</span>`;
+        mainBtn.title = `Add as ${cfg.name}`;
+      }
+
+      const delBtn = box.querySelector(".al-drop-del");
+      if (delBtn) {
+        delBtn.style.display = isAdded ? "flex" : "none";
+      }
     },
 
     // Save anime without modifying the global default action
@@ -504,8 +702,16 @@
       const res = await API.saveEntry(params);
       if (res?.SaveMediaListEntry) {
         userEntries.set(mediaId, res.SaveMediaListEntry);
-        UI.toast(`✓ Added as ${STATUSES[status] || status}!`);
-        App.scanAndEnhanceDOM();
+        const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.PLANNING;
+        UI.toast(`✓ Added as ${cfg.name}!`);
+
+        // Targeted DOM update
+        const card = document.querySelector(`[data-al-media-id="${mediaId}"]`);
+        if (card) {
+          const box = card.querySelector(".al-split-box");
+          if (box) App.applyButtonTheme(box, status, true);
+          if (hideAlreadyAdded) card.classList.add("al-card-hidden");
+        }
       }
     },
 
@@ -516,109 +722,144 @@
         if (res?.DeleteMediaListEntry?.deleted) {
           userEntries.delete(mediaId);
           UI.toast("Anime removed from your list");
-          App.scanAndEnhanceDOM();
+
+          // Reset button to unadded default state
+          const card = document.querySelector(`[data-al-media-id="${mediaId}"]`);
+          if (card) {
+            const box = card.querySelector(".al-split-box");
+            if (box) App.applyButtonTheme(box, App.getDefaultAction(), false);
+            card.classList.remove("al-card-hidden");
+          }
         }
       }
     },
 
-    // Enhance card or row using unified split button with integrated native select
+    // Enhance card or row: creates split button ONCE (never clobbers during polling!)
     enhanceEntry(container, mediaId, totalEpisodes) {
       container.setAttribute("data-al-media-id", mediaId);
+
+      // CRITICAL: If button already exists, DO NOT RECREATE IT!
+      if (container.querySelector(".al-split-box")) return;
+
       const existing = userEntries.get(mediaId);
       const isAdded = !!existing;
       const defAct = App.getDefaultAction();
+      const currentStatus = isAdded ? existing.status : defAct;
 
-      let box = container.querySelector(".al-split-btn");
+      const box = document.createElement("div");
+      box.className = `al-split-box ${isAdded ? "is-added" : ""}`;
 
-      const buildHtml = () => {
-        if (!isAdded) {
-          return `
-            <button type="button" class="al-btn-action" title="Quick add as ${STATUSES[defAct]}">
-              ➕ Add (${STATUSES[defAct]})
+      // Prevent card click navigation or drag handlers from hijacking clicks
+      box.onclick = (e) => e.stopPropagation();
+      box.onmousedown = (e) => e.stopPropagation();
+
+      box.innerHTML = `
+        <button type="button" class="al-btn-main"></button>
+        <button type="button" class="al-btn-arrow" title="Change status">▾</button>
+        <div class="al-stat-drop">
+          ${Object.entries(STATUS_CONFIG).map(([k, cfg]) => `
+            <button type="button" class="al-drop-opt" data-status="${k}">
+              <span class="dot" style="background:${cfg.dot}"></span>
+              <span>${cfg.name}</span>
             </button>
-            <div class="al-arrow-box" title="Select specific status">
-              <span class="al-arrow-icon">▾</span>
-              <select class="al-native-sel">
-                <option value="" disabled selected></option>
-                ${Object.entries(STATUSES).map(([k, v]) => `
-                  <option value="${k}">${v}</option>
-                `).join("")}
-              </select>
-            </div>`;
-        } else {
-          return `
-            <button type="button" class="al-btn-action" title="Current status (click to change)">
-              ✓ ${STATUSES[existing.status] || existing.status}
-            </button>
-            <div class="al-arrow-box" title="Change status or remove">
-              <span class="al-arrow-icon">▾</span>
-              <select class="al-native-sel">
-                ${Object.entries(STATUSES).map(([k, v]) => `
-                  <option value="${k}" ${existing.status === k ? "selected" : ""}>${v}</option>
-                `).join("")}
-                <option value="DELETE" style="color:#f87171;">🗑️ Remove from list</option>
-              </select>
-            </div>`;
+          `).join("")}
+          <button type="button" class="al-drop-opt al-drop-del" data-del="1" style="display:${isAdded ? 'flex' : 'none'};">
+            <span>🗑️ Remove from list</span>
+          </button>
+        </div>`;
+
+      App.applyButtonTheme(box, currentStatus, isAdded);
+
+      const drop = box.querySelector(".al-stat-drop");
+      const arrowBtn = box.querySelector(".al-btn-arrow");
+      const mainBtn = box.querySelector(".al-btn-main");
+
+      const toggleDropdown = (forceState) => {
+        const willOpen = forceState !== undefined ? forceState : !drop.classList.contains("show");
+        document.querySelectorAll(".al-stat-drop").forEach(d => d.classList.remove("show"));
+        document.querySelectorAll(".al-split-box").forEach(b => b.classList.remove("is-open"));
+        document.querySelectorAll(".al-card-open").forEach(c => c.classList.remove("al-card-open"));
+
+        if (willOpen) {
+          drop.classList.add("show");
+          box.classList.add("is-open");
+          container.classList.add("al-card-open");
         }
       };
 
-      if (box) {
-        box.className = `al-split-btn ${isAdded ? "is-added" : ""}`;
-        box.innerHTML = buildHtml();
-      } else {
-        box = document.createElement("div");
-        box.className = `al-split-btn ${isAdded ? "is-added" : ""}`;
-        box.innerHTML = buildHtml();
+      // Arrow click opens dropdown
+      arrowBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleDropdown();
+      };
 
-        const titleEl = container.querySelector(".title, .title a, a.title") || container;
-        if (container.classList.contains("entry-card") || container.querySelector(".cover")) {
-          container.appendChild(box);
+      // Main button click:
+      // If not added: quick-add with default action!
+      // If already added: toggle dropdown to change status!
+      mainBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!userEntries.has(mediaId)) {
+          App.handleSave(mediaId, App.getDefaultAction(), totalEpisodes);
         } else {
-          titleEl.after(box);
+          toggleDropdown();
         }
-      }
+      };
 
-      // Event Listeners on unified component
-      const actionBtn = box.querySelector(".al-btn-action");
-      const nativeSel = box.querySelector(".al-native-sel");
-
-      if (actionBtn && nativeSel) {
-        actionBtn.onclick = (e) => {
+      // Dropdown option click
+      drop.querySelectorAll("button[data-status]").forEach(btn => {
+        btn.onclick = (e) => {
           e.preventDefault();
           e.stopPropagation();
-          if (!isAdded) {
-            App.handleSave(mediaId, App.getDefaultAction(), totalEpisodes);
-          } else {
-            if (typeof nativeSel.showPicker === "function") {
-              nativeSel.showPicker();
-            } else {
-              nativeSel.focus();
-              nativeSel.click();
-            }
-          }
+          toggleDropdown(false);
+          const selStatus = btn.getAttribute("data-status");
+          App.handleSave(mediaId, selStatus, totalEpisodes);
+          box.querySelector(".al-drop-del").style.display = "flex";
         };
+      });
 
-        nativeSel.onchange = (e) => {
+      const delBtn = box.querySelector(".al-drop-del");
+      if (delBtn) {
+        delBtn.onclick = (e) => {
           e.preventDefault();
           e.stopPropagation();
-          const chosen = e.target.value;
-          if (chosen === "DELETE") {
-            App.handleDelete(mediaId, existing?.id);
-          } else if (chosen && (!existing || chosen !== existing.status)) {
-            App.handleSave(mediaId, chosen, totalEpisodes);
+          toggleDropdown(false);
+          const curEntry = userEntries.get(mediaId);
+          if (curEntry) {
+            App.handleDelete(mediaId, curEntry.id);
+            delBtn.style.display = "none";
           }
         };
       }
 
-      // Filter visibility
+      // Append into DOM:
+      // If it's Grid View (.entry-card): append directly to card container at top-right (z-index 99999), completely independent of cover and title!
+      // If it's Table View (.entry.row, .list-table): append inside title cell after the link.
+      const isGridCard = container.classList.contains("entry-card") || container.classList.contains("media-card");
+      const titleCell = container.querySelector(".title");
+
+      if (isGridCard) {
+        container.style.position = "relative";
+        container.appendChild(box);
+      } else if (titleCell) {
+        const titleLink = titleCell.querySelector("a");
+        if (titleLink) {
+          titleLink.after(box);
+        } else {
+          titleCell.appendChild(box);
+        }
+      } else {
+        container.style.position = "relative";
+        container.appendChild(box);
+      }
+
       if (hideAlreadyAdded && isAdded) {
         container.classList.add("al-card-hidden");
-      } else {
-        container.classList.remove("al-card-hidden");
       }
     },
 
-    // Scan DOM for anime cards and table rows
+    // Scans DOM ONLY for un-enhanced cards
     scanAndEnhanceDOM() {
       if (!App.isFriendList() || !currentUser) return;
 
@@ -630,7 +871,8 @@
 
         const mediaId = parseInt(match[1]);
         const card = link.closest(".entry-card, .media-card, .entry, .row");
-        if (card) {
+        // Only enhance if not already enhanced!
+        if (card && !card.querySelector(".al-split-box")) {
           let totalEp = null;
           const epText = card.innerText;
           const epMatch = epText.match(/\/\s*(\d+)/);
@@ -645,7 +887,14 @@
       UI.initStyles();
       App.initUser();
 
-      // SPA navigation and virtual scroll polling
+      // Close dropdowns on outside click
+      document.addEventListener("click", () => {
+        document.querySelectorAll(".al-stat-drop").forEach(d => d.classList.remove("show"));
+        document.querySelectorAll(".al-split-box").forEach(b => b.classList.remove("is-open"));
+        document.querySelectorAll(".al-card-open").forEach(c => c.classList.remove("al-card-open"));
+      });
+
+      // SPA navigation and virtual scroll polling (only scans new items, never mutates open ones)
       let lastPath = window.location.pathname;
       setInterval(() => {
         if (window.location.pathname !== lastPath) {
