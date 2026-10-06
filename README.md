@@ -3,7 +3,7 @@
 **English** | [Italiano](README.it.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-1.0.0-brightgreen.svg)]()
+[![Version](https://img.shields.io/badge/Version-1.1.0-brightgreen.svg)]()
 [![Platform](https://img.shields.io/badge/Browser-Safari%20%7C%20Chrome-blueviolet.svg)]()
 
 A modern, lightweight, and responsive Userscript to automatically sync anime watch progress, list statuses (*Watching*, *Completed*, etc.), and personal scores directly with **[AniList](https://anilist.co)** from the AnimeUnity web interface on both **Desktop** and **Mobile**.
@@ -68,9 +68,10 @@ Once the extension is installed, click the link below:
 ### 📺 Episode Tracking & Quick Advance
 - **Cleaned seen episode styling**: Removed the harsh bright pastel blue background of default seen items in favor of a clean dark theme (`#17212e`).
 - **Glow & Badge for latest episode**: The most recently tracked AniList episode stands out with a **radiant glow effect**, slight enlargement, and a **"✓" checkmark badge**.
-- **Dual Buttons (+1 and -1)**:
+- **Smart Progress Buttons (+1 and -1)**:
   - Below the episode grid, access both `[ ✓ Mark Episode {X} completed (+1) ]` and `[ ↶ Back to Ep. {X-1} (-1) ]` in case you accidentally clicked.
-  - Quick action buttons below the video player (`#video-bottom`) allow updating without scrolling down.
+  - **Catch-up Detection**: The "+1" button automatically hides when you are caught up with the released episodes on AnimeUnity, displaying a clean status badge (*"✓ You are caught up"*).
+  - **Auto-Completion & Dates**: Marking the final episode automatically sets the status to **Completed** on AniList and records today's date (`completedAt`). The start date (`startedAt`) is also saved automatically when you begin watching!
 
 ### 🔍 Smart Title Resolution
 - **Automatic Title Cleaning**: Strips noisy suffixes like `(ITA)`, `(SUB ITA)`, `ITA`, `Season 2` before searching AniList to ensure instant matches.

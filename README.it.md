@@ -3,7 +3,7 @@
 [English](README.md) | **Italiano**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-1.0.0-brightgreen.svg)]()
+[![Version](https://img.shields.io/badge/Version-1.1.0-brightgreen.svg)]()
 [![Platform](https://img.shields.io/badge/Browser-Safari%20%7C%20Chrome-blueviolet.svg)]()
 
 Un Userscript moderno, ultra-leggero e reattivo per sincronizzare automaticamente il progresso degli anime, lo stato di visualizzazione (*Watching*, *Completed*, ecc.) e i voti personali su **[AniList](https://anilist.co)** direttamente dall'interfaccia di AnimeUnity, sia su **Desktop** che su **Mobile**.
@@ -68,9 +68,10 @@ Una volta installata l'estensione, clicca sul link qui sotto:
 ### 📺 Controllo Episodi & Avanzamento Rapido
 - **Pulizia grafica episodi visti**: Rimosso l'azzurro pastello accecante di default di AnimeUnity in favore di un tema scuro coerente (`#17212e`).
 - **Glow & Badge per l'ultimo episodio**: L'ultimo episodio visto risalta con **effetto glow luminoso**, leggero ingrandimento e un **badge con la spunta "✓"**.
-- **Doppio Pulsante (+1 e -1)**:
+- **Pulsanti Intelligenti (+1 e -1)**:
   - Sotto la griglia trovi sia `[ ✓ Segna Episodio {X} completato (+1) ]` sia `[ ↶ Torna a Ep. {X-1} (-1) ]` se hai sbagliato a cliccare.
-  - Sotto al player video (`#video-bottom`) ci sono i pulsanti rapidi compatti per aggiornare mentre guardi senza scrollare la pagina.
+  - **Riconoscimento Parità Episodi**: Il pulsante "+1" scompare automaticamente se sei già in pari con gli episodi usciti su AnimeUnity, mostrando un badge pulito (*"✓ Sei in pari con gli episodi"*).
+  - **Auto-Completamento & Date**: Segnando l'ultimo episodio della serie, lo script imposta automaticamente lo stato a **Completed** su AniList e registra la data odierna di fine (`completedAt`). Inoltre salva in automatico la data di inizio (`startedAt`) non appena inizi a guardare la serie!
 
 ### 🔍 Risoluzione Intelligente dei Titoli
 - **Pulizia Automatica**: Elimina dal titolo stringhe fastidiose come `(ITA)`, `(SUB ITA)`, `ITA`, `Season 2` per matchare AniList al primo colpo.
