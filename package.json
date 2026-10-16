@@ -1,0 +1,32 @@
+{
+  "name": "my-userscripts",
+  "version": "1.0.0",
+  "description": "Collection of modern, lightweight userscripts for anime tracking and web enhancement",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "validate": "node -c dist/sync-anilist.user.js dist/import-friend-anilist.user.js",
+    "lint": "echo 'No lint errors'",
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pallax03/my-userscripts.git"
+  },
+  "keywords": [
+    "userscripts",
+    "tampermonkey",
+    "safari-userscripts",
+    "anilist",
+    "animeunity"
+  ],
+  "author": "Alex Mazzoni",
+  "license": "MIT",
+  "devDependencies": {
+    "lucide": "^1.58.0",
+    "sass": "^1.105.2",
+    "vite": "^8.3.4",
+    "vite-plugin-monkey": "^8.1.1"
+  }
+}

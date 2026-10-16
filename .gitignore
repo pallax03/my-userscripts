@@ -1,0 +1,13 @@
+.DS_Store
+*.local
+*.html
+node_modules/
+
+# Track only userscript distribution bundles in dist
+dist/*
+!dist/*.user.js
+
+# Environment files
+.env
+.env.*
+!.env.example
