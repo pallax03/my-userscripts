@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    "src/sync-anilist": {
+      "release-type": "simple",
+      "package-name": "sync-anilist",
+      "component": "sync-anilist"
+    },
+    "src/import-friend-anilist": {
+      "release-type": "simple",
+      "package-name": "import-friend-anilist",
+      "component": "import-friend-anilist"
+    }
+  }
+}

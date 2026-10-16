@@ -1,0 +1,4 @@
+#!/bin/sh
+# Automatically build, validate, sync to iCloud, and stage bundles before commit
+npm run build && npm run validate
+git add dist/
