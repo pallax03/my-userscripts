@@ -68,28 +68,29 @@ $status-colors: (
 }
 
 // --- Floating Bottom Toolbar ---
+// High z-index (99990) to ensure anime card buttons never overlap when scrolling
 .al-friend-bar {
   position: fixed;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(13, 22, 34, 0.92) !important;
+  background: rgba(13, 22, 34, 0.94) !important;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(61, 180, 242, 0.3);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(61, 180, 242, 0.15);
+  border: 1px solid rgba(61, 180, 242, 0.35);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(61, 180, 242, 0.18);
   border-radius: 9999px;
-  padding: 6px 16px;
+  padding: 6px 14px;
   display: flex;
   align-items: center;
-  z-index: 99990;
+  z-index: 99990 !important;
   font-family: inherit;
   transition: all 0.25s ease;
 
   .al-bar-content {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
   }
 
   .al-bar-user {
@@ -121,53 +122,16 @@ $status-colors: (
     background: rgba(255, 255, 255, 0.15);
   }
 
-  .al-bar-filter {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: #cbd5e1;
-    cursor: pointer;
-    user-select: none;
-    font-weight: 600;
-    transition: color 0.15s ease;
-
-    &:hover {
-      color: #fff;
-    }
-
-    input[type="checkbox"] {
-      cursor: pointer;
-      width: 14px;
-      height: 14px;
-      accent-color: $al-blue;
-      margin: 0;
-    }
-
-    .al-filter-icon {
-      display: inline-flex;
-      align-items: center;
-      color: $al-blue;
-    }
-  }
-
   .al-bar-default {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-
-    .al-bar-label {
-      font-size: 12px;
-      color: #94a3b8;
-      font-weight: 600;
-    }
   }
 
   .al-select {
     background: rgba(10, 18, 28, 0.9) !important;
     color: #e2e8f0 !important;
     border: 1px solid rgba(61, 180, 242, 0.35) !important;
-    border-radius: 6px !important;
+    border-radius: 7px !important;
     padding: 4px 8px;
     font-size: 12px;
     font-weight: 600;
@@ -178,6 +142,33 @@ $status-colors: (
     &:focus, &:hover {
       border-color: $al-blue !important;
       box-shadow: 0 0 8px rgba(61, 180, 242, 0.3);
+    }
+  }
+
+  .al-bar-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #cbd5e1;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(61, 180, 242, 0.2);
+      border-color: $al-blue;
+      color: #fff;
+      box-shadow: 0 0 10px rgba(61, 180, 242, 0.35);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
     }
   }
 
@@ -192,9 +183,10 @@ $status-colors: (
 }
 
 // --- Card Elevation When Menu is Open ---
+// Kept at z-index 800 to stay beneath the bottom floating toolbar (99990)
 .al-card-open {
   overflow: visible !important;
-  z-index: 999999 !important;
+  z-index: 800 !important;
 }
 
 // --- Split Action Box Component ---
@@ -204,7 +196,7 @@ $status-colors: (
   border-radius: 6px !important;
   overflow: visible !important;
   position: relative !important;
-  z-index: 10;
+  z-index: 20;
   height: 24px !important;
   min-height: 24px !important;
   box-sizing: border-box !important;
@@ -216,7 +208,7 @@ $status-colors: (
   transition: all 0.2s ease;
 
   &.is-open {
-    z-index: 999999 !important;
+    z-index: 850 !important;
   }
 
   .al-btn-main {
@@ -341,7 +333,7 @@ $status-colors: (
   max-width: calc(100% - 16px) !important;
   margin: 0 !important;
   height: 24px !important;
-  z-index: 99999 !important;
+  z-index: 25 !important;
   pointer-events: auto !important;
   transition: opacity 0.2s ease, transform 0.2s ease !important;
 
@@ -373,6 +365,7 @@ $status-colors: (
     opacity: 1 !important;
     pointer-events: auto !important;
     transform: translateY(0);
+    z-index: 35 !important;
   }
 }
 
@@ -406,7 +399,7 @@ $status-colors: (
   border: 1px solid rgba(61, 180, 242, 0.3);
   border-radius: 10px;
   box-shadow: 0 16px 45px rgba(0, 0, 0, 0.9), 0 0 20px rgba(61, 180, 242, 0.15);
-  z-index: 999999 !important;
+  z-index: 880 !important;
   min-width: 170px;
   display: none;
   flex-direction: column;
@@ -485,6 +478,122 @@ $status-colors: (
   }
 }
 
+// --- Preferences Modal ---
+.al-prefs-modal {
+  max-width: 440px !important;
+
+  .al-prefs-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .al-pref-group {
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+
+    &.is-active {
+      border-color: rgba(61, 180, 242, 0.35);
+      background: rgba(61, 180, 242, 0.04);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .al-pref-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px 14px;
+      margin: 0;
+      transition: background 0.15s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.03);
+      }
+    }
+
+    .al-pref-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .al-pref-title {
+      color: #f1f5f9;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .al-pref-desc {
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 500;
+    }
+  }
+
+  .al-switch {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 36px;
+    height: 20px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.16);
+    position: relative;
+    outline: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s ease;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+
+    &:checked {
+      background: #3db4f2;
+      &::after {
+        transform: translateX(16px);
+        background: #06101e;
+      }
+    }
+  }
+
+  .al-avatar-sm {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid $al-blue;
+    box-shadow: 0 0 6px rgba(61, 180, 242, 0.3);
+  }
+
+  .al-btn-logout {
+    font-size: 11px;
+    padding: 5px 10px;
+    color: #fca5a5 !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.2) !important;
+      border-color: #ef4444 !important;
+      color: #fff !important;
+    }
+  }
+}
+
 // --- Toast Notifications ---
 .al-toast {
   position: fixed;
@@ -499,7 +608,7 @@ $status-colors: (
   border-left: 4px solid $al-blue;
   padding: 10px 20px;
   border-radius: 10px;
-  z-index: 1000000;
+  z-index: 1000000 !important;
   font-weight: 700;
   font-size: 13px;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85), 0 0 16px rgba(61, 180, 242, 0.25);
@@ -523,7 +632,7 @@ $status-colors: (
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 999999;
+  z-index: 999999 !important;
 }
 
 .al-modal {
@@ -666,7 +775,7 @@ $status-colors: (
     width: calc(100% - 24px);
     max-width: 440px;
     bottom: 12px;
-    padding: 8px 14px;
+    padding: 6px 12px;
     border-radius: 16px;
 
     .al-bar-content {
@@ -677,17 +786,9 @@ $status-colors: (
 
     .al-bar-user .al-username {
       font-size: 12px;
-      max-width: 80px;
+      max-width: 100px;
       overflow: hidden;
       text-overflow: ellipsis;
-    }
-
-    .al-bar-filter {
-      font-size: 11px;
-    }
-
-    .al-bar-default .al-bar-label {
-      display: none;
     }
 
     .al-select {

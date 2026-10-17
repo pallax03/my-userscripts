@@ -15,16 +15,16 @@ Install the recommended userscript manager for your browser:
 
 ---
 
-## 2. Install Scripts
+## 2. Scripts & Documentation
 
-Click **Install** to add the script directly into your browser extension:
+Click **Install** to add the script directly into your browser extension, or open the **Documentation** to see detailed features and screenshots:
 
-| Script | Target Site | Install Link |
-| :--- | :--- | :--- |
-| **`sync-anilist.user.js`** | `animeunity.so` | [👉 Install (Raw)](https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/sync-anilist.user.js) |
-| **`import-friend-anilist.user.js`** | `anilist.co` | [👉 Install (Raw)](https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/import-friend-anilist.user.js) |
+| Script | Target Site | Documentation & Screenshots | Install Link |
+| :--- | :--- | :--- | :--- |
+| **`sync-anilist.user.js`** | `animeunity.so` | [📖 Read Guide & Screenshots](src/sync-anilist/README.md) | [👉 Install (Raw)](https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/sync-anilist.user.js) |
+| **`import-friend-anilist.user.js`** | `anilist.co` | [📖 Read Guide & Screenshots](src/import-friend-anilist/README.md) | [👉 Install (Raw)](https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/import-friend-anilist.user.js) |
 
-*Note: AniList token is shared across scripts automatically.*
+*Note: AniList OAuth tokens are securely stored and shared across scripts via GM storage.*
 
 ---
 

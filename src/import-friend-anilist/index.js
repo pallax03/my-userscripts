@@ -3,8 +3,9 @@ import { Storage } from "../shared/storage.js";
 import { showToast } from "../shared/toast.js";
 import { AniListAPI } from "../shared/anilist/api.js";
 import { handleUrlToken, getTodayDate, openTokenModal } from "../shared/anilist/auth.js";
-import { iconHtml, KeyRound, Plus, Trash2, ChevronDown, Eye, EyeOff } from "../shared/icons.js";
+import { iconHtml, KeyRound, Plus, Trash2, ChevronDown, Sliders } from "../shared/icons.js";
 import { STATUS_CONFIG } from "./ui.js";
+import { openFriendPreferencesModal } from "./components/preferences-modal.js";
 
 handleUrlToken();
 
@@ -71,6 +72,8 @@ export const App = {
     currentUser = null;
     userEntries.clear();
     document.querySelectorAll(".al-split-box, #al-friend-bar").forEach((el) => el.remove());
+    showToast("AniList session disconnected");
+    App.renderFloatingBar();
   },
 
   renderFloatingBar() {
@@ -107,35 +110,23 @@ export const App = {
 
     bar.innerHTML = `
       <div class="al-bar-content">
-        <div class="al-bar-user">
+        <div class="al-bar-user" title="Logged in as ${currentUser.name}">
           <img src="${currentUser.avatar?.medium || "https://anilist.co/img/icons/icon.svg"}" class="al-avatar" alt="${currentUser.name}" />
           <span class="al-username">${currentUser.name}</span>
         </div>
         <div class="al-bar-divider"></div>
-        <label class="al-bar-filter" title="Hide anime already in your collection">
-          <input type="checkbox" id="al-hide-chk" ${hideAlreadyAdded ? "checked" : ""}>
-          <span class="al-filter-icon">${iconHtml(hideAlreadyAdded ? EyeOff : Eye, { width: 13, height: 13 })}</span>
-          <span>Hide in my list</span>
-        </label>
-        <div class="al-bar-divider"></div>
-        <div class="al-bar-default">
-          <span class="al-bar-label">Default:</span>
+        <div class="al-bar-default" title="Default quick-add status">
           <select class="al-select" id="al-default-sel">
             ${Object.entries(STATUS_CONFIG)
               .map(([k, cfg]) => `<option value="${k}" ${defAct === k ? "selected" : ""}>${cfg.name}</option>`)
               .join("")}
           </select>
         </div>
+        <div class="al-bar-divider"></div>
+        <button type="button" class="al-bar-btn al-bar-prefs" title="Preferences">
+          ${iconHtml(Sliders, { width: 14, height: 14 })}
+        </button>
       </div>`;
-
-    const chk = bar.querySelector("#al-hide-chk");
-    const iconSpan = bar.querySelector(".al-filter-icon");
-    chk.onchange = (e) => {
-      hideAlreadyAdded = e.target.checked;
-      Storage.set("al_hide_friend_entries", hideAlreadyAdded);
-      iconSpan.innerHTML = iconHtml(hideAlreadyAdded ? EyeOff : Eye, { width: 13, height: 13 });
-      App.applyVisibilityFilter();
-    };
 
     bar.querySelector("#al-default-sel").onchange = (e) => {
       const newAct = e.target.value;
@@ -145,6 +136,29 @@ export const App = {
 
       document.querySelectorAll(".al-split-box:not(.is-added)").forEach((box) => {
         App.applyButtonTheme(box, newAct, false);
+      });
+    };
+
+    bar.querySelector(".al-bar-prefs").onclick = () => {
+      openFriendPreferencesModal({
+        currentUser,
+        hideAlreadyAdded,
+        defaultAction: App.getDefaultAction(),
+        onHideToggle: (active) => {
+          hideAlreadyAdded = active;
+          Storage.set("al_hide_friend_entries", active);
+          App.applyVisibilityFilter();
+        },
+        onDefaultActionChange: (newAct) => {
+          App.setDefaultAction(newAct);
+          const cfg = STATUS_CONFIG[newAct] || STATUS_CONFIG.PLANNING;
+          showToast(`Default action: ${cfg.name}`);
+          App.renderFloatingBar();
+          document.querySelectorAll(".al-split-box:not(.is-added)").forEach((box) => {
+            App.applyButtonTheme(box, newAct, false);
+          });
+        },
+        onLogout: () => App.logout()
       });
     };
   },
