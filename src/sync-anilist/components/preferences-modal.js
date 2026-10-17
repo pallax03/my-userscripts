@@ -1,6 +1,5 @@
 import { createModal } from "../../shared/modal.js";
 import { iconHtml, Sliders, Clock, RotateCcw, Check, Zap, Play } from "../../shared/icons.js";
-import { showToast } from "../../shared/toast.js";
 import { Settings } from "../settings.js";
 
 /**
@@ -16,7 +15,7 @@ export function openPreferencesModal({ onSave } = {}) {
     className: "al-prefs-modal",
     icon: Sliders,
     title: "Preferences",
-    subtitle: "Playback, audio, and homepage settings",
+    subtitle: "Playback and homepage settings",
     onClose: () => {
       if (typeof onSave === "function") onSave();
     },
@@ -55,21 +54,7 @@ export function openPreferencesModal({ onSave } = {}) {
         </div>
       </div>
 
-      <!-- 2. Audio Priority -->
-      <div class="al-pref-group is-active" style="margin-top: 10px;">
-        <div class="al-pref-header">
-          <div class="al-pref-info">
-            <span class="al-pref-title">Preferred Audio</span>
-            <span class="al-pref-desc">Default version when both SUB-ITA and ITA are available</span>
-          </div>
-          <select class="al-select-xs al-sel-lang">
-            <option value="sub" ${settings.language === "sub" ? "selected" : ""}>SUB-ITA</option>
-            <option value="dub" ${settings.language === "dub" ? "selected" : ""}>ITA (Dub)</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- 3. Homepage Shelf -->
+      <!-- 2. Homepage Shelf -->
       <div class="al-pref-group ${settings.homeShelf ? "is-active" : ""}" style="margin-top: 10px;">
         <div class="al-pref-header" style="cursor: pointer;">
           <div class="al-pref-info">
@@ -150,15 +135,6 @@ export function openPreferencesModal({ onSave } = {}) {
   if (rewindCheckbox) {
     rewindCheckbox.addEventListener("change", (e) => {
       Settings.set("preventRewind", e.target.checked);
-    });
-  }
-
-  // Bind Language
-  const langSelect = modal.querySelector(".al-sel-lang");
-  if (langSelect) {
-    langSelect.addEventListener("change", (e) => {
-      Settings.set("language", e.target.value);
-      showToast("Audio preference updated, URL cache cleared");
     });
   }
 

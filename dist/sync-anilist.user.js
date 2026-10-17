@@ -628,7 +628,7 @@
 			className: "al-prefs-modal",
 			icon: SlidersVertical,
 			title: "Preferences",
-			subtitle: "Playback, audio, and homepage settings",
+			subtitle: "Playback and homepage settings",
 			onClose: () => {
 				if (typeof onSave === "function") onSave();
 			},
@@ -673,21 +673,7 @@
         </div>
       </div>
 
-      <!-- 2. Audio Priority -->
-      <div class="al-pref-group is-active" style="margin-top: 10px;">
-        <div class="al-pref-header">
-          <div class="al-pref-info">
-            <span class="al-pref-title">Preferred Audio</span>
-            <span class="al-pref-desc">Default version when both SUB-ITA and ITA are available</span>
-          </div>
-          <select class="al-select-xs al-sel-lang">
-            <option value="sub" ${settings.language === "sub" ? "selected" : ""}>SUB-ITA</option>
-            <option value="dub" ${settings.language === "dub" ? "selected" : ""}>ITA (Dub)</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- 3. Homepage Shelf -->
+      <!-- 2. Homepage Shelf -->
       <div class="al-pref-group ${settings.homeShelf ? "is-active" : ""}" style="margin-top: 10px;">
         <div class="al-pref-header" style="cursor: pointer;">
           <div class="al-pref-info">
@@ -762,11 +748,6 @@
 		});
 		if (rewindCheckbox) rewindCheckbox.addEventListener("change", (e) => {
 			Settings.set("preventRewind", e.target.checked);
-		});
-		const langSelect = modal.querySelector(".al-sel-lang");
-		if (langSelect) langSelect.addEventListener("change", (e) => {
-			Settings.set("language", e.target.value);
-			showToast("Audio preference updated, URL cache cleared");
 		});
 		const homeShelfToggle = modal.querySelector(".al-toggle-homeshelf");
 		const unwatchedCheckbox = modal.querySelector(".al-chk-unwatched");
@@ -1251,6 +1232,13 @@
 		if (!targetEp || isNaN(targetEp) || targetEp <= 0) return;
 		const currentKey = `${window.location.pathname}_ep${targetEp}`;
 		if (lastAutoSelectedKey === currentKey) return;
+		lastAutoSelectedKey = currentKey;
+		sessionStorage.removeItem("al_target_ep");
+		if (urlParams.has("ep")) {
+			const cleanUrl = new URL(window.location.href);
+			cleanUrl.searchParams.delete("ep");
+			window.history.replaceState({}, document.title, cleanUrl.pathname + (cleanUrl.search ? cleanUrl.search : ""));
+		}
 		let switched = false;
 		const playerVue = document.querySelector("video-player")?.__vue__ || document.querySelector(".episode-wrapper")?.__vue__;
 		if (playerVue && Array.isArray(playerVue.episodes) && playerVue.episodes.length > 0) {
@@ -1269,27 +1257,13 @@
 		const items = document.querySelectorAll(".episode-wrapper .episode-item");
 		if (items.length > 0) {
 			for (const item of items) if (parseInt(item.innerText.trim(), 10) === targetEp) {
-				if (!switched && !item.classList.contains("active")) {
-					(item.querySelector("a") || item).click();
-					switched = true;
-				}
-				try {
-					item.scrollIntoView({
-						block: "nearest",
-						inline: "center",
-						behavior: "smooth"
-					});
-				} catch (_) {}
+				if (!switched && !item.classList.contains("active")) (item.querySelector("a") || item).click();
+				const wrapper = item.closest(".episode-wrapper");
+				if (wrapper && wrapper.scrollWidth > wrapper.clientWidth) wrapper.scrollTo({
+					left: item.offsetLeft - wrapper.clientWidth / 2 + item.clientWidth / 2,
+					behavior: "smooth"
+				});
 				break;
-			}
-		}
-		if (switched) {
-			lastAutoSelectedKey = currentKey;
-			sessionStorage.removeItem("al_target_ep");
-			if (urlParams.has("ep")) {
-				const cleanUrl = new URL(window.location.href);
-				cleanUrl.searchParams.delete("ep");
-				window.history.replaceState({}, document.title, cleanUrl.pathname + (cleanUrl.search ? cleanUrl.search : ""));
 			}
 		}
 	}

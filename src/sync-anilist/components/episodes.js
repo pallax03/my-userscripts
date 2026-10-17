@@ -64,6 +64,14 @@ export function autoSelectTargetEpisode(media, trackedProgress) {
 
   const currentKey = `${window.location.pathname}_ep${targetEp}`;
   if (lastAutoSelectedKey === currentKey) return;
+  lastAutoSelectedKey = currentKey;
+
+  sessionStorage.removeItem("al_target_ep");
+  if (urlParams.has("ep")) {
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.searchParams.delete("ep");
+    window.history.replaceState({}, document.title, cleanUrl.pathname + (cleanUrl.search ? cleanUrl.search : ""));
+  }
 
   let switched = false;
 
@@ -90,7 +98,7 @@ export function autoSelectTargetEpisode(media, trackedProgress) {
     }
   }
 
-  // 2. DOM fallback / selector active sync & scroll
+  // 2. DOM fallback: sync active state & horizontally center within .episode-wrapper only
   const items = document.querySelectorAll(".episode-wrapper .episode-item");
   if (items.length > 0) {
     for (const item of items) {
@@ -99,23 +107,17 @@ export function autoSelectTargetEpisode(media, trackedProgress) {
         if (!switched && !item.classList.contains("active")) {
           const clickEl = item.querySelector("a") || item;
           clickEl.click();
-          switched = true;
         }
-        try {
-          item.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
-        } catch (_) {}
+        // Only scroll the horizontal wrapper container, never scroll the vertical page window
+        const wrapper = item.closest(".episode-wrapper");
+        if (wrapper && wrapper.scrollWidth > wrapper.clientWidth) {
+          wrapper.scrollTo({
+            left: item.offsetLeft - wrapper.clientWidth / 2 + item.clientWidth / 2,
+            behavior: "smooth"
+          });
+        }
         break;
       }
-    }
-  }
-
-  if (switched) {
-    lastAutoSelectedKey = currentKey;
-    sessionStorage.removeItem("al_target_ep");
-    if (urlParams.has("ep")) {
-      const cleanUrl = new URL(window.location.href);
-      cleanUrl.searchParams.delete("ep");
-      window.history.replaceState({}, document.title, cleanUrl.pathname + (cleanUrl.search ? cleanUrl.search : ""));
     }
   }
 }
