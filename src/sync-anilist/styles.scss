@@ -1282,4 +1282,13 @@ a[href*="/login"].btn-danger {
   }
 }
 
+.search-backdrop {
+  z-index: 99999 !important;
+
+  &.show {
+    opacity: 1 !important;
+  }
+}
+
+
 

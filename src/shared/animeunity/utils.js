@@ -28,27 +28,21 @@ export function generateSearchCandidates(media) {
   const eng = media.title?.english;
   const rom = media.title?.romaji;
 
-  if (eng) {
-    // 1. Full English title cleaned
-    const cleanEng = cleanTitle(eng);
-    if (cleanEng) candidates.push(cleanEng);
+  for (const raw of [eng, rom]) {
+    if (!raw) continue;
+    const clean = cleanTitle(raw);
+    if (clean && clean.length >= 3) candidates.push(clean);
 
-    // 2. Base title before colon, dash, or number
-    const baseEng = eng.split(/[:\-\d]/)[0].trim();
-    if (baseEng.length >= 3) candidates.push(baseEng);
-  }
+    // Split on colon, dash, or parenthesis and take every segment
+    const parts = raw.split(/[:\-\(\)]+/).map((p) => cleanTitle(p.trim())).filter((p) => p.length >= 3);
+    candidates.push(...parts);
 
-  if (rom) {
-    // 3. Cleaned Romaji title
-    const cleanRom = cleanTitle(rom);
-    if (cleanRom) candidates.push(cleanRom);
+    // Base before first number or season
+    const noSeason = clean.split(/\b(?:\d+th|1st|2nd|3rd|\d+)\s+season\b/i)[0].trim();
+    if (noSeason && noSeason.length >= 3) candidates.push(noSeason);
 
-    // 4. Base Romaji before colon, dash, or number
-    const baseRom = rom.split(/[:\-\d]/)[0].trim();
-    if (baseRom.length >= 3) candidates.push(baseRom);
-
-    // 5. First 2-3 words of Romaji title
-    const words = rom.split(/\s+/).slice(0, 3).join(" ").trim();
+    // First 2-3 words
+    const words = clean.split(/\s+/).slice(0, 3).join(" ").trim();
     if (words.length >= 3) candidates.push(words);
   }
 
@@ -62,7 +56,7 @@ export function generateSearchCandidates(media) {
  * @param {Object} media - AniList media object
  * @param {Object} [options]
  * @param {string} [options.preferredDub] - "sub" (default) or "dub"
- * @returns {Promise<{ id: number, slug: string, dub: number, title?: string } | null>}
+ * @returns {Promise<{ id: number, slug: string, dub: number, title?: string, matchingQuery?: string } | null>}
  */
 export async function resolveAnimeUnityAnime(media, { preferredDub } = {}) {
   if (!media?.id) return null;
@@ -70,7 +64,8 @@ export async function resolveAnimeUnityAnime(media, { preferredDub } = {}) {
   const pref = preferredDub || Storage.get("al_pref_language") || "sub";
   const prefDubInt = pref === "dub" ? 1 : 0;
 
-  const map = Storage.get("al_au_map") || {};
+  const rawMap = Storage.get("al_au_map");
+  const map = (rawMap && typeof rawMap === "object" && !Array.isArray(rawMap)) ? rawMap : {};
   const cached = map[media.id];
 
   // Return cached result if dub matches or no alternative exists
@@ -113,6 +108,7 @@ export async function resolveAnimeUnityAnime(media, { preferredDub } = {}) {
           slug: selected.slug,
           dub: selected.dub,
           title: selected.title || selected.title_eng,
+          matchingQuery: query,
           hasAlternativeDub: matches.length > 1,
           updatedAt: Date.now()
         };
