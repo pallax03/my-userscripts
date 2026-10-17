@@ -601,11 +601,7 @@
 			else if (key === "preventRewind") Storage.set("al_opt_prevent_rewind", String(val));
 			else if (key === "language") {
 				Storage.set("al_pref_language", String(val));
-				const map = Storage.get("al_au_map") || {};
-				Object.keys(map).forEach((k) => {
-					if (map[k].hasAlternativeDub) delete map[k];
-				});
-				Storage.set("al_au_map", map);
+				Storage.del("al_au_map");
 			} else if (key === "homeShelf") Storage.set("al_home_shelf_enabled", String(val));
 			else if (key === "homeOnlyUnwatched") Storage.set("al_pref_default_unwatched", String(val));
 			else if (key === "searchAutoSelectDelay") Storage.set("al_pref_search_autoselect", String(val));
@@ -753,6 +749,7 @@
 		const langSelect = modal.querySelector(".al-sel-lang");
 		if (langSelect) langSelect.onchange = (e) => {
 			Settings.set("language", e.target.value);
+			showToast("Audio preference updated, URL cache cleared");
 		};
 		const homeShelfToggle = modal.querySelector(".al-toggle-homeshelf");
 		const unwatchedCheckbox = modal.querySelector(".al-chk-unwatched");

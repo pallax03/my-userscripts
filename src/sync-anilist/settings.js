@@ -23,12 +23,8 @@ export const Settings = {
     else if (key === "preventRewind") Storage.set("al_opt_prevent_rewind", String(val));
     else if (key === "language") {
       Storage.set("al_pref_language", String(val));
-      // Invalidate alternative dub cache
-      const map = Storage.get("al_au_map") || {};
-      Object.keys(map).forEach((k) => {
-        if (map[k].hasAlternativeDub) delete map[k];
-      });
-      Storage.set("al_au_map", map);
+      // Invalidate full URL mapping cache so all series re-resolve with new audio preference
+      Storage.del("al_au_map");
     }
     else if (key === "homeShelf") Storage.set("al_home_shelf_enabled", String(val));
     else if (key === "homeOnlyUnwatched") Storage.set("al_pref_default_unwatched", String(val));

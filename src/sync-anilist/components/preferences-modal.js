@@ -1,5 +1,6 @@
 import { createModal } from "../../shared/modal.js";
 import { iconHtml, Sliders, Clock, RotateCcw, Check, Zap, Play } from "../../shared/icons.js";
+import { showToast } from "../../shared/toast.js";
 import { Settings } from "../settings.js";
 
 /**
@@ -144,6 +145,7 @@ export function openPreferencesModal({ onSave } = {}) {
   if (langSelect) {
     langSelect.onchange = (e) => {
       Settings.set("language", e.target.value);
+      showToast("Audio preference updated, URL cache cleared");
     };
   }
 
