@@ -1,6 +1,6 @@
 # AnimeUnity to AniList Sync (`sync-anilist.user.js`)
 
-> Seamlessly track your AnimeUnity watch history directly into AniList in real time.
+> Seamlessly track your AnimeUnity watch history into AniList in real time and enjoy a personalized homepage Continue Watching shelf.
 
 ---
 
@@ -18,26 +18,36 @@
 
 ## ✨ Features
 
+- **🏠 Homepage Continue Watching Shelf**:
+  - Mounted directly above the latest releases on `https://animeunity.so/`.
+  - Shows currently tracked series with progress bars and airing status.
+  - **Smart Episode Detection**: Calculates if new episodes have aired (`⚡ Ep. X ready`) vs caught up (`🕒 Ep. X in [time]`).
+  - **Only Unwatched Filter**: Quick toggle to show only series with unwatched aired episodes.
+  - **1-Click Episode Playback**: Clicking `▶ Ep. X` navigates to the anime page and automatically switches to that episode.
+
 - **📺 Video Bottom Player Bar (`#video-bottom`)**:
   - Embedded directly below the video player.
   - Interactive auto-sync countdown with quick-action icon buttons: Cancel (`✕`), Save (`✓`), or Synced (`refresh-ccw`).
   - Mobile & landscape layout optimized with edge anchoring for `Precedente` and `Successivo` episode buttons.
 
-- **⚙️ Preferences Modal**:
-  - Modern cyberpunk / glassmorphic dialog.
-  - **Auto-track on episode select**: Continuous accordion toggle card that smoothly expands sub-options.
-  - **Grace delay**: Configurable timer (Instant, 10s, 15s, 30s) to prevent false syncs when quickly previewing episodes.
-  - **Rewatch rewind prevention**: Guards your progress from accidentally decreasing when rewatching past episodes.
+- **⚙️ Unified Preferences Modal**:
+  - Compact, 3-section glassmorphic dialog:
+    1. **Playback & Auto-Track**: Continuous toggle card with grace delay (0s, 10s, 15s, 30s) and rewind protection.
+    2. **Preferred Audio**: Choose between **SUB-ITA** (default) and **ITA** (Italian dub) priority when both versions exist.
+    3. **Homepage Shelf**: Enable/disable shelf display and customize default filter behavior.
 
 - **🎯 Smart Metadata Resolver**:
-  - Automatically identifies anime by checking player metadata, poster image URLs, and Romaji titles.
+  - Automatically identifies anime by querying AnimeUnity's internal `/livesearch` API and matching exact AniList IDs.
+  - Resolves direct `/anime/:id-:slug` URLs without relying on broken search pages.
   - Manual override dialog to search AniList or link a specific ID if automatic detection needs adjustment.
 
-- **🎨 Episode Grid Highlights**:
-  - Highlights currently tracked episode (`.al-highlight`) and completed episodes (`.al-done`) on the AnimeUnity episode list.
+- **🎨 Episode Grid Highlights & Auto-Select**:
+  - Highlights currently tracked episode (`.al-tracked`) and completed episodes (`.al-done`).
+  - Automatically selects target episode when arriving from Continue Watching.
 
-- **👤 Cohesive Profile Widget**:
-  - Replaces AnimeUnity's login buttons in both desktop navbar (`#left-nav`) and mobile menu (`.nav-top-mobile`) with your AniList avatar and dropdown menu.
+- **👤 Safe Hover Profile Widget**:
+  - Replaces login buttons in both desktop navbar (`#left-nav`) and mobile menu (`.nav-top-mobile`) with your AniList avatar.
+  - Implements the safe hover triangle (transparent bridge + grace timeout) so moving cursor diagonally never closes the dropdown.
 
 ---
 

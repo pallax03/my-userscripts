@@ -10,11 +10,6 @@
       "release-type": "simple",
       "package-name": "import-friend-anilist",
       "component": "import-friend-anilist"
-    },
-    "src/home-anilist": {
-      "release-type": "simple",
-      "package-name": "home-anilist",
-      "component": "home-anilist"
     }
   }
 }

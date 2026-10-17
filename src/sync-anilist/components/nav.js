@@ -111,11 +111,36 @@ export function renderNav(currentUser, callbacks) {
         </div>`;
 
       const menu = container.querySelector("#al-nav-dropdown");
+      let closeTimer = null;
+
+      const openDropdown = () => {
+        if (closeTimer) clearTimeout(closeTimer);
+        closeTimer = null;
+        menu.classList.add("show");
+      };
+
+      const closeDropdownWithDelay = () => {
+        if (closeTimer) clearTimeout(closeTimer);
+        closeTimer = setTimeout(() => {
+          menu.classList.remove("show");
+        }, 220); // 220ms grace window (safe triangle trajectory)
+      };
+
+      container.addEventListener("mouseenter", openDropdown);
+      container.addEventListener("mouseleave", closeDropdownWithDelay);
+      menu.addEventListener("mouseenter", openDropdown);
+      menu.addEventListener("mouseleave", closeDropdownWithDelay);
+
       container.querySelector("a").onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
         menu.classList.toggle("show");
       };
+
+      document.addEventListener("click", (e) => {
+        if (!container.contains(e.target)) menu.classList.remove("show");
+      });
+
       bindDropdown(menu, callbacks);
     }
   }

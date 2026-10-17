@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "validate": "node -c dist/sync-anilist.user.js dist/import-friend-anilist.user.js dist/home-anilist.user.js",
+    "validate": "node -c dist/sync-anilist.user.js dist/import-friend-anilist.user.js",
     "lint": "echo 'No lint errors'",
     "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
   },

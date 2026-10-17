@@ -2,7 +2,7 @@ import { Storage } from "../../shared/storage.js";
 import { iconHtml, Play, Clock, Check, ChevronLeft, ChevronRight, Zap, ExternalLink, Sliders } from "../../shared/icons.js";
 import { openTokenModal } from "../../shared/anilist/auth.js";
 import { getAnimeUnityUrl, resolveAnimeUnityAnime, scanAnimeUnityPageMap } from "../../shared/animeunity/utils.js";
-import { openHomePreferencesModal } from "./preferences-modal.js";
+import { openPreferencesModal } from "./preferences-modal.js";
 
 /**
  * Formats seconds into human-readable countdown
@@ -246,9 +246,10 @@ function createCard(entry) {
  * @param {Object} options
  * @param {Array} options.entries - List of watching media list entries
  * @param {Object|null} options.viewer - Current logged-in AniList viewer
+ * @param {Function} [options.onRefresh] - Callback to refresh data
  * @returns {HTMLElement} Shelf container element
  */
-export function renderWatchingShelf({ entries = [], viewer = null } = {}) {
+export function renderWatchingShelf({ entries = [], viewer = null, onRefresh = null } = {}) {
   // Harvest any page anime data
   scanAnimeUnityPageMap();
 
@@ -286,19 +287,20 @@ export function renderWatchingShelf({ entries = [], viewer = null } = {}) {
   const controls = document.createElement("div");
   controls.className = "al-shelf-controls";
 
-  // Preferences Button (Audio SUB vs ITA & Shelf options)
+  // Preferences Button
   const prefBtn = document.createElement("button");
   prefBtn.type = "button";
   prefBtn.className = "al-shelf-pref-btn";
   prefBtn.title = "Preferences (Audio & Shelf)";
   prefBtn.innerHTML = iconHtml(Sliders, { width: 14, height: 14 });
   prefBtn.addEventListener("click", () => {
-    openHomePreferencesModal({
-      onSave: ({ onlyUnwatched }) => {
-        unwatchedOnly = onlyUnwatched;
+    openPreferencesModal({
+      onSave: () => {
+        unwatchedOnly = Storage.get("al_home_only_unwatched") === true;
         toggleBox.classList.toggle("active", unwatchedOnly);
         toggleKnob.classList.toggle("active", unwatchedOnly);
-        updateTrack();
+        if (typeof onRefresh === "function") onRefresh();
+        else updateTrack();
       }
     });
   });

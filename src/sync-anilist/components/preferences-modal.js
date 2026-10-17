@@ -1,23 +1,28 @@
 import { createModal } from "../../shared/modal.js";
-import { Storage } from "../../shared/storage.js";
-import { iconHtml, Sliders, Clock, RotateCcw, Check } from "../../shared/icons.js";
+import { iconHtml, Sliders, Clock, RotateCcw, Check, Zap, Play } from "../../shared/icons.js";
 import { Settings } from "../settings.js";
 
-export function openPreferencesModal() {
+/**
+ * Opens unified preferences modal for playback, language, and homepage shelf
+ * @param {Object} [options]
+ * @param {Function} [options.onSave]
+ */
+export function openPreferencesModal({ onSave } = {}) {
   const settings = Settings.get();
 
-  const { modal } = createModal({
+  const { modal, close } = createModal({
     id: "al-prefs-overlay",
     className: "al-prefs-modal",
     icon: Sliders,
-    title: "Sync Preferences",
-    subtitle: "Configure auto-tracking and playback rules",
+    title: "Preferences",
+    subtitle: "Playback, audio, and homepage settings",
     body: `
+      <!-- 1. Playback & Auto-Track -->
       <div class="al-pref-group ${settings.autoTrack ? "is-active" : ""}">
-        <label class="al-pref-header">
+        <label class="al-pref-header" style="cursor: pointer;">
           <div class="al-pref-info">
-            <span class="al-pref-title">Auto-track on episode select</span>
-            <span class="al-pref-desc">Sync episode to AniList automatically when selected</span>
+            <span class="al-pref-title">Auto-track episodes</span>
+            <span class="al-pref-desc">Sync episode progress to AniList automatically when playing</span>
           </div>
           <input type="checkbox" class="al-switch al-toggle-autotrack" ${settings.autoTrack ? "checked" : ""} />
         </label>
@@ -36,7 +41,7 @@ export function openPreferencesModal() {
             </select>
           </div>
 
-          <label class="al-pref-row">
+          <label class="al-pref-row" style="cursor: pointer;">
             <span class="al-pref-sub-label">
               ${iconHtml(RotateCcw, { width: 13, height: 13 })}
               <span>Prevent rewind when rewatching</span>
@@ -46,27 +51,60 @@ export function openPreferencesModal() {
         </div>
       </div>
 
-      <div class="al-pref-group is-active" style="margin-top: 12px;">
+      <!-- 2. Audio Priority -->
+      <div class="al-pref-group is-active" style="margin-top: 10px;">
         <div class="al-pref-header">
           <div class="al-pref-info">
             <span class="al-pref-title">Preferred Audio</span>
-            <span class="al-pref-desc">Default version when both SUB-ITA and ITA exist</span>
+            <span class="al-pref-desc">Default version when both SUB-ITA and ITA are available</span>
           </div>
           <select class="al-select-xs al-sel-lang">
-            <option value="sub" ${(Storage.get("al_pref_language") || "sub") === "sub" ? "selected" : ""}>SUB-ITA</option>
-            <option value="dub" ${Storage.get("al_pref_language") === "dub" ? "selected" : ""}>ITA (Dub)</option>
+            <option value="sub" ${settings.language === "sub" ? "selected" : ""}>SUB-ITA</option>
+            <option value="dub" ${settings.language === "dub" ? "selected" : ""}>ITA (Dub)</option>
           </select>
         </div>
       </div>
+
+      <!-- 3. Homepage Shelf -->
+      <div class="al-pref-group ${settings.homeShelf ? "is-active" : ""}" style="margin-top: 10px;">
+        <label class="al-pref-header" style="cursor: pointer;">
+          <div class="al-pref-info">
+            <span class="al-pref-title">Continue Watching shelf</span>
+            <span class="al-pref-desc">Show AniList Continue Watching shelf on homepage</span>
+          </div>
+          <input type="checkbox" class="al-switch al-toggle-homeshelf" ${settings.homeShelf ? "checked" : ""} />
+        </label>
+
+        <div class="al-pref-sub ${settings.homeShelf ? "" : "is-hidden"}" id="al-shelf-sub-opts">
+          <label class="al-pref-row" style="cursor: pointer;">
+            <span class="al-pref-sub-label">
+              ${iconHtml(Zap, { width: 13, height: 13 })}
+              <span>Default to unwatched only</span>
+            </span>
+            <input type="checkbox" class="al-checkbox al-chk-unwatched" ${settings.homeOnlyUnwatched ? "checked" : ""} />
+          </label>
+        </div>
+      </div>
     `,
-    actions: [{ label: "Done", primary: true, icon: Check }]
+    actions: [
+      {
+        label: "Done",
+        primary: true,
+        icon: Check,
+        onClick: () => {
+          close();
+          if (typeof onSave === "function") onSave();
+        }
+      }
+    ]
   });
 
+  // Bind Auto-track
   const autoTrackToggle = modal.querySelector(".al-toggle-autotrack");
   const delaySelect = modal.querySelector(".al-sel-delay");
   const rewindCheckbox = modal.querySelector(".al-chk-rewind");
-  const prefSub = modal.querySelector(".al-pref-sub");
-  const prefGroup = modal.querySelector(".al-pref-group");
+  const prefGroup = autoTrackToggle?.closest(".al-pref-group");
+  const prefSub = prefGroup?.querySelector(".al-pref-sub");
 
   if (autoTrackToggle) {
     autoTrackToggle.onchange = (e) => {
@@ -89,10 +127,32 @@ export function openPreferencesModal() {
     };
   }
 
+  // Bind Language
   const langSelect = modal.querySelector(".al-sel-lang");
   if (langSelect) {
     langSelect.onchange = (e) => {
-      Storage.set("al_pref_language", e.target.value);
+      Settings.set("language", e.target.value);
+    };
+  }
+
+  // Bind Home Shelf
+  const homeShelfToggle = modal.querySelector(".al-toggle-homeshelf");
+  const unwatchedCheckbox = modal.querySelector(".al-chk-unwatched");
+  const shelfGroup = homeShelfToggle?.closest(".al-pref-group");
+  const shelfSub = modal.querySelector("#al-shelf-sub-opts");
+
+  if (homeShelfToggle) {
+    homeShelfToggle.onchange = (e) => {
+      const active = e.target.checked;
+      Settings.set("homeShelf", active);
+      shelfGroup?.classList.toggle("is-active", active);
+      if (shelfSub) shelfSub.classList.toggle("is-hidden", !active);
+    };
+  }
+
+  if (unwatchedCheckbox) {
+    unwatchedCheckbox.onchange = (e) => {
+      Settings.set("homeOnlyUnwatched", e.target.checked);
     };
   }
 }
