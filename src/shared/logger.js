@@ -24,27 +24,29 @@ function emit(level, message, data) {
     console.log(prefix, message, data || "");
   }
 
-  // Stream to local log bridge if active
-  try {
-    const payload = JSON.stringify({ level, message, data });
-    if (typeof GM_xmlhttpRequest === "function") {
-      GM_xmlhttpRequest({
-        method: "POST",
-        url: LOG_ENDPOINT,
-        headers: { "Content-Type": "application/json" },
-        data: payload,
-        timeout: 1000,
-        onerror: () => {},
-        ontimeout: () => {}
-      });
-    } else {
-      fetch(LOG_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payload
-      }).catch(() => {});
-    }
-  } catch (_) {}
+  // Stream to local log bridge only if explicit debug flag is set in console
+  if (typeof window !== "undefined" && window.__AU_DEBUG__) {
+    try {
+      const payload = JSON.stringify({ level, message, data });
+      if (typeof GM_xmlhttpRequest === "function") {
+        GM_xmlhttpRequest({
+          method: "POST",
+          url: LOG_ENDPOINT,
+          headers: { "Content-Type": "application/json" },
+          data: payload,
+          timeout: 500,
+          onerror: () => {},
+          ontimeout: () => {}
+        });
+      } else {
+        fetch(LOG_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload
+        }).catch(() => {});
+      }
+    } catch (_) {}
+  }
 }
 
 export const Logger = {

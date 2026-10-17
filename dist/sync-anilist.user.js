@@ -105,7 +105,7 @@
 		if (level === "ERROR") console.error(prefix, message, data || "");
 		else if (level === "WARN") console.warn(prefix, message, data || "");
 		else console.log(prefix, message, data || "");
-		try {
+		if (typeof window !== "undefined" && window.__AU_DEBUG__) try {
 			const payload = JSON.stringify({
 				level,
 				message,
@@ -116,7 +116,7 @@
 				url: LOG_ENDPOINT,
 				headers: { "Content-Type": "application/json" },
 				data: payload,
-				timeout: 1e3,
+				timeout: 500,
 				onerror: () => {},
 				ontimeout: () => {}
 			});
