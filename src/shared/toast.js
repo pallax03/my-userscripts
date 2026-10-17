@@ -3,7 +3,7 @@ export function showToast(text, isAlert = false, duration = 2200) {
   document.querySelectorAll(".al-toast").forEach((el) => el.remove());
 
   const el = document.createElement("div");
-  el.className = `al-toast ${isAlert ? "alert" : ""}`;
+  el.className = `al-toast ${isAlert ? "al-toast-alert" : ""}`;
   el.innerText = text;
   document.body.appendChild(el);
 

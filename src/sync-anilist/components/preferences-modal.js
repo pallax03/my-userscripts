@@ -75,7 +75,7 @@ export function openPreferencesModal({ onSave } = {}) {
           <input type="checkbox" class="al-switch al-toggle-homeshelf" ${settings.homeShelf ? "checked" : ""} />
         </label>
 
-        <div class="al-pref-sub ${settings.homeShelf ? "" : "is-hidden"}" id="al-shelf-sub-opts">
+        <div id="al-shelf-sub-opts" class="al-pref-sub ${settings.homeShelf ? "" : "is-hidden"}">
           <label class="al-pref-row" style="cursor: pointer;">
             <span class="al-pref-sub-label">
               ${iconHtml(Zap, { width: 13, height: 13 })}
@@ -83,6 +83,20 @@ export function openPreferencesModal({ onSave } = {}) {
             </span>
             <input type="checkbox" class="al-checkbox al-chk-unwatched" ${settings.homeOnlyUnwatched ? "checked" : ""} />
           </label>
+
+          <div class="al-pref-row">
+            <span class="al-pref-sub-label">
+              ${iconHtml(Clock, { width: 13, height: 13 })}
+              <span>Auto-open search match</span>
+            </span>
+            <select class="al-select-xs al-sel-autoselect">
+              <option value="1" ${settings.searchAutoSelectDelay === 1 ? "selected" : ""}>1 second</option>
+              <option value="2" ${settings.searchAutoSelectDelay === 2 ? "selected" : ""}>2 seconds</option>
+              <option value="3" ${settings.searchAutoSelectDelay === 3 ? "selected" : ""}>3 seconds</option>
+              <option value="5" ${settings.searchAutoSelectDelay === 5 ? "selected" : ""}>5 seconds</option>
+              <option value="0" ${settings.searchAutoSelectDelay === 0 ? "selected" : ""}>Manual (No timer)</option>
+            </select>
+          </div>
         </div>
       </div>
     `,
@@ -153,6 +167,13 @@ export function openPreferencesModal({ onSave } = {}) {
   if (unwatchedCheckbox) {
     unwatchedCheckbox.onchange = (e) => {
       Settings.set("homeOnlyUnwatched", e.target.checked);
+    };
+  }
+
+  const autoSelect = modal.querySelector(".al-sel-autoselect");
+  if (autoSelect) {
+    autoSelect.onchange = (e) => {
+      Settings.set("searchAutoSelectDelay", parseInt(e.target.value, 10));
     };
   }
 }

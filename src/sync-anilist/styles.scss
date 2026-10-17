@@ -696,22 +696,34 @@ a[href*="/login"].btn-danger {
 
 // --- Toast Notifications ---
 .al-toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  background: linear-gradient(135deg, #102538 0%, #091724 100%);
-  color: #fff;
-  border-left: 4px solid $al-blue;
-  padding: 12px 20px;
-  border-radius: 9px;
-  z-index: 100000;
-  font-weight: 600;
-  font-size: 13px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(61, 180, 242, 0.2);
-  pointer-events: none;
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+  width: auto !important;
+  max-width: 380px !important;
+  height: auto !important;
+  min-height: unset !important;
+  line-height: 1.4 !important;
+  background: linear-gradient(135deg, #102538 0%, #091724 100%) !important;
+  color: #fff !important;
+  border: 1px solid rgba(61, 180, 242, 0.35) !important;
+  border-left: 4px solid $al-blue !important;
+  padding: 12px 20px !important;
+  border-radius: 9px !important;
+  z-index: 100000 !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(61, 180, 242, 0.2) !important;
+  pointer-events: none !important;
 
+  &.al-toast-alert,
   &.alert {
-    border-left-color: #ef4444;
+    border-left-color: #ef4444 !important;
+    border-color: rgba(239, 68, 68, 0.45) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(239, 68, 68, 0.25) !important;
   }
 }
 
@@ -971,10 +983,17 @@ a[href*="/login"].btn-danger {
   flex-direction: column;
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s, border-color 0.22s;
   position: relative;
+  cursor: pointer;
 
   @media (max-width: 576px) {
     flex: 0 0 150px;
     width: 150px;
+  }
+
+  &.al-card-loading {
+    opacity: 0.65;
+    cursor: wait;
+    pointer-events: none;
   }
 
   &:hover {
@@ -1215,6 +1234,51 @@ a[href*="/login"].btn-danger {
   }
   100% {
     background-position: -200% 0;
+  }
+}
+
+// --- Agentic Search Simulation ---
+.al-agent-candidate {
+  position: relative;
+  outline: 2px solid $al-blue !important;
+  background: rgba(61, 180, 242, 0.12) !important;
+  border-radius: 8px;
+  animation: al-candidate-pulse 2s infinite ease-in-out;
+  transition: all 0.2s ease;
+}
+
+@keyframes al-candidate-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(61, 180, 242, 0.7), 0 0 14px rgba(61, 180, 242, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(61, 180, 242, 1), 0 0 22px rgba(61, 180, 242, 0.55);
+  }
+}
+
+.al-agent-countdown-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 6px;
+  padding: 4px 10px;
+  background: rgba(61, 180, 242, 0.18);
+  border: 1px solid rgba(61, 180, 242, 0.4);
+  border-radius: 6px;
+  font-size: 11px;
+  color: #e2e8f0;
+  pointer-events: none;
+
+  strong {
+    color: $al-blue;
+    font-weight: 700;
+  }
+
+  .al-agent-cancel-hint {
+    font-size: 10px;
+    color: #94a3b8;
   }
 }
 

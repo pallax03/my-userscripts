@@ -179,7 +179,7 @@ export function scanAnimeUnityPageMap() {
  * @returns {string} Relative URL to anime page or archive search
  */
 export function getAnimeUnityUrl(media, { targetEp } = {}) {
-  if (!media) return "/";
+  if (!media) return "";
 
   const map = Storage.get("al_au_map") || {};
   const mapped = map[media.id];
@@ -189,7 +189,5 @@ export function getAnimeUnityUrl(media, { targetEp } = {}) {
     return `/anime/${mapped.id}-${mapped.slug}${epSuffix}`;
   }
 
-  const candidates = generateSearchCandidates(media);
-  const bestSearch = candidates[candidates.length - 1] || media.title?.english || media.title?.romaji || "";
-  return `/archivio?title=${encodeURIComponent(bestSearch)}`;
+  return "";
 }

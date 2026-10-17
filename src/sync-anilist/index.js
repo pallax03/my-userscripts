@@ -339,11 +339,26 @@ export const App = {
     if (meta.anilistId) {
       currentMedia = (await AniListAPI.getMediaById(meta.anilistId))?.Media || null;
     }
-    if (!currentMedia && meta.romajiTitle) {
+    // Only search by title if no exact AniList ID exists on the page
+    if (!currentMedia && !meta.anilistId && meta.romajiTitle) {
       currentMedia = await findMediaByTitle(meta.romajiTitle);
     }
-    if (!currentMedia && currentTitle) {
+    if (!currentMedia && !meta.anilistId && currentTitle) {
       currentMedia = await findMediaByTitle(currentTitle);
+    }
+
+    // Auto-learn: cache direct AnimeUnity ID and slug for this AniList media
+    if (currentMedia?.id) {
+      const match = window.location.pathname.match(/\/anime\/(\d+)(?:-([^\/]+))?/i);
+      if (match && match[1]) {
+        const map = Storage.get("al_au_map") || {};
+        map[currentMedia.id] = {
+          id: parseInt(match[1], 10),
+          slug: match[2] || "",
+          updatedAt: Date.now()
+        };
+        Storage.set("al_au_map", map);
+      }
     }
 
     trackedProgress = currentMedia?.mediaListEntry ? currentMedia.mediaListEntry.progress : -1;
@@ -412,8 +427,15 @@ export const App = {
         highlightEpisodes(trackedProgress);
       }
 
-      if (!document.getElementById("al-nav-desktop")) {
-        App.render();
+      if (!isHome()) {
+        const needsVideoBottom = document.getElementById("video-bottom") && !document.getElementById("al-video-bottom-widget");
+        if (!document.getElementById("al-nav-desktop") || needsVideoBottom) {
+          App.render();
+        }
+      } else {
+        if (!document.getElementById("al-nav-desktop")) {
+          App.render();
+        }
       }
     }, 600);
   }

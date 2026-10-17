@@ -1,8 +1,10 @@
 import { Storage } from "../../shared/storage.js";
 import { iconHtml, Play, Clock, Check, ChevronLeft, ChevronRight, Zap, ExternalLink, Sliders } from "../../shared/icons.js";
 import { openTokenModal } from "../../shared/anilist/auth.js";
-import { getAnimeUnityUrl, resolveAnimeUnityAnime, scanAnimeUnityPageMap } from "../../shared/animeunity/utils.js";
+import { getAnimeUnityUrl, scanAnimeUnityPageMap } from "../../shared/animeunity/utils.js";
 import { openPreferencesModal } from "./preferences-modal.js";
+import { simulateAgenticSearch } from "./agent-search.js";
+import { Settings } from "../settings.js";
 
 /**
  * Formats seconds into human-readable countdown
@@ -173,7 +175,7 @@ function createCard(entry) {
   cardBody.className = "al-card-body";
 
   const titleLink = document.createElement("a");
-  titleLink.href = auUrl;
+  titleLink.href = auUrl || "#";
   titleLink.className = "al-card-title";
   titleLink.title = title;
   titleLink.textContent = title;
@@ -183,7 +185,7 @@ function createCard(entry) {
   actions.className = "al-card-actions";
 
   const btn = document.createElement("a");
-  btn.href = auUrl;
+  btn.href = auUrl || "#";
   btn.className = "al-card-btn";
 
   if (state.hasUnwatchedAired) {
@@ -194,49 +196,48 @@ function createCard(entry) {
     btn.innerHTML = `${iconHtml(Clock, { width: 12, height: 12 })} Ep. ${state.progress}`;
   } else {
     btn.classList.add("al-btn-caughtup");
-    btn.innerHTML = `${iconHtml(Check, { width: 12, height: 12 })} In pari`;
+    btn.innerHTML = `${iconHtml(Check, { width: 12, height: 12 })} Caught up`;
   }
   actions.appendChild(btn);
   cardBody.appendChild(actions);
 
   card.appendChild(cardBody);
 
-  // Asynchronously resolve direct AnimeUnity link via /livesearch in the background
-  resolveAnimeUnityAnime(media).then((resolved) => {
-    if (resolved?.id && resolved?.slug) {
-      card._resolved = resolved;
-      const directUrl = `/anime/${resolved.id}-${resolved.slug}`;
-      titleLink.href = directUrl;
-      btn.href = `${directUrl}${epTarget ? `?ep=${epTarget}` : ""}`;
-    }
-  });
-
-  // Intercept navigation to prevent landing on broken /archivio searches
+  // Entire card is clickable (Level 1: direct cache, Level 3: agentic search)
   async function handleCardNavigate(e) {
+    if (e.target.closest(".al-card-al-link")) return;
+    e.preventDefault();
+
     if (state.hasUnwatchedAired) {
       sessionStorage.setItem("al_target_ep", String(state.nextToWatch));
     }
 
-    if (!card._resolved && (btn.href.includes("/archivio") || titleLink.href.includes("/archivio"))) {
-      e.preventDefault();
-      btn.style.opacity = "0.7";
-      btn.style.pointerEvents = "none";
+    // Level 1: In local cache
+    const directUrl = getAnimeUnityUrl(media, { targetEp: epTarget });
+    if (directUrl) {
+      window.location.href = directUrl;
+      return;
+    }
 
-      const resolved = await resolveAnimeUnityAnime(media);
+    // Level 3: Uncached -> Agentic Search Simulation
+    card.classList.add("al-card-loading");
+    btn.style.opacity = "0.7";
+    btn.style.pointerEvents = "none";
+
+    const settings = Settings.get();
+    try {
+      await simulateAgenticSearch(media, {
+        epTarget,
+        autoSelectDelay: settings.searchAutoSelectDelay
+      });
+    } finally {
+      card.classList.remove("al-card-loading");
       btn.style.opacity = "";
       btn.style.pointerEvents = "";
-
-      if (resolved?.id && resolved?.slug) {
-        const directUrl = `/anime/${resolved.id}-${resolved.slug}${epTarget ? `?ep=${epTarget}` : ""}`;
-        window.location.href = directUrl;
-        return;
-      }
-      window.location.href = btn.href;
     }
   }
 
-  titleLink.addEventListener("click", handleCardNavigate);
-  btn.addEventListener("click", handleCardNavigate);
+  card.addEventListener("click", handleCardNavigate);
 
   return card;
 }
@@ -253,7 +254,7 @@ export function renderWatchingShelf({ entries = [], viewer = null, onRefresh = n
   // Harvest any page anime data
   scanAnimeUnityPageMap();
 
-  let unwatchedOnly = Storage.get("al_home_only_unwatched") === true;
+  let unwatchedOnly = Settings.get().homeOnlyUnwatched;
 
   const shelfContainer = document.createElement("div");
   shelfContainer.id = "al-home-continue-watching";
@@ -296,7 +297,7 @@ export function renderWatchingShelf({ entries = [], viewer = null, onRefresh = n
   prefBtn.addEventListener("click", () => {
     openPreferencesModal({
       onSave: () => {
-        unwatchedOnly = Storage.get("al_home_only_unwatched") === true;
+        unwatchedOnly = Settings.get().homeOnlyUnwatched;
         toggleBox.classList.toggle("active", unwatchedOnly);
         toggleKnob.classList.toggle("active", unwatchedOnly);
         if (typeof onRefresh === "function") onRefresh();
@@ -425,7 +426,6 @@ export function renderWatchingShelf({ entries = [], viewer = null, onRefresh = n
   // Filter click handler
   filterWrap.addEventListener("click", () => {
     unwatchedOnly = !unwatchedOnly;
-    Storage.set("al_home_only_unwatched", unwatchedOnly);
     toggleBox.classList.toggle("active", unwatchedOnly);
     toggleKnob.classList.toggle("active", unwatchedOnly);
     updateTrack();

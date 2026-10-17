@@ -10,7 +10,10 @@ export const Settings = {
       preventRewind: Storage.get("al_opt_prevent_rewind") !== "false",
       language: Storage.get("al_pref_language") || "sub",
       homeShelf: Storage.get("al_home_shelf_enabled") !== "false",
-      homeOnlyUnwatched: Storage.get("al_home_only_unwatched") === true
+      homeOnlyUnwatched: Storage.get("al_pref_default_unwatched") === "true",
+      searchAutoSelectDelay: Storage.get("al_pref_search_autoselect") !== null && Storage.get("al_pref_search_autoselect") !== undefined
+        ? parseInt(Storage.get("al_pref_search_autoselect"), 10)
+        : 3
     };
   },
 
@@ -28,7 +31,8 @@ export const Settings = {
       Storage.set("al_au_map", map);
     }
     else if (key === "homeShelf") Storage.set("al_home_shelf_enabled", String(val));
-    else if (key === "homeOnlyUnwatched") Storage.set("al_home_only_unwatched", Boolean(val));
+    else if (key === "homeOnlyUnwatched") Storage.set("al_pref_default_unwatched", String(val));
+    else if (key === "searchAutoSelectDelay") Storage.set("al_pref_search_autoselect", String(val));
 
     const current = Settings.get();
     listeners.forEach((fn) => {
