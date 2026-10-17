@@ -1,0 +1,698 @@
+// ==============================================================================
+// AniList Friend List Quick Add & Sync Design System (SCSS)
+// Modern Glassmorphic / Cyberpunk UI Matching Sync-AniList
+// ==============================================================================
+
+@use "sass:color";
+
+$al-blue: #3db4f2;
+$al-blue-glow: rgba(61, 180, 242, 0.35);
+$al-bg-dark: #0e1622;
+$al-card-bg: linear-gradient(135deg, rgba(17, 26, 38, 0.94) 0%, rgba(10, 18, 28, 0.98) 100%);
+
+$status-colors: (
+  "COMPLETED": #22c55e,
+  "CURRENT": #3db4f2,
+  "REPEATING": #06b6d4,
+  "DROPPED": #ef4444,
+  "PLANNING": #94a3b8,
+  "PAUSED": #eab308
+);
+
+// --- Shared Button Styles ---
+.al-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  white-space: nowrap;
+
+  &:hover {
+    transform: translateY(-1px);
+    text-decoration: none;
+  }
+  &:active {
+    transform: translateY(0);
+  }
+
+  &.primary {
+    background: linear-gradient(135deg, #3db4f2 0%, #0284c7 100%);
+    color: #06101e !important;
+    box-shadow: 0 4px 14px rgba(61, 180, 242, 0.35);
+
+    &:hover {
+      box-shadow: 0 6px 20px rgba(61, 180, 242, 0.55);
+      filter: brightness(1.08);
+      color: #06101e !important;
+    }
+  }
+
+  &.secondary {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #e2e8f0 !important;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.14);
+      color: #fff !important;
+    }
+  }
+}
+
+// --- Floating Bottom Toolbar ---
+.al-friend-bar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(13, 22, 34, 0.92) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(61, 180, 242, 0.3);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(61, 180, 242, 0.15);
+  border-radius: 9999px;
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  z-index: 99990;
+  font-family: inherit;
+  transition: all 0.25s ease;
+
+  .al-bar-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .al-bar-user {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    .al-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1.5px solid $al-blue;
+      box-shadow: 0 0 8px rgba(61, 180, 242, 0.4);
+      flex-shrink: 0;
+    }
+
+    .al-username {
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+  }
+
+  .al-bar-divider {
+    width: 1px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  .al-bar-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #cbd5e1;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 600;
+    transition: color 0.15s ease;
+
+    &:hover {
+      color: #fff;
+    }
+
+    input[type="checkbox"] {
+      cursor: pointer;
+      width: 14px;
+      height: 14px;
+      accent-color: $al-blue;
+      margin: 0;
+    }
+
+    .al-filter-icon {
+      display: inline-flex;
+      align-items: center;
+      color: $al-blue;
+    }
+  }
+
+  .al-bar-default {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    .al-bar-label {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+  }
+
+  .al-select {
+    background: rgba(10, 18, 28, 0.9) !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(61, 180, 242, 0.35) !important;
+    border-radius: 6px !important;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:focus, &:hover {
+      border-color: $al-blue !important;
+      box-shadow: 0 0 8px rgba(61, 180, 242, 0.3);
+    }
+  }
+
+  .al-bar-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #facc15;
+    font-size: 12px;
+    font-weight: 600;
+  }
+}
+
+// --- Card Elevation When Menu is Open ---
+.al-card-open {
+  overflow: visible !important;
+  z-index: 999999 !important;
+}
+
+// --- Split Action Box Component ---
+.al-split-box {
+  display: inline-flex !important;
+  align-items: stretch !important;
+  border-radius: 6px !important;
+  overflow: visible !important;
+  position: relative !important;
+  z-index: 10;
+  height: 24px !important;
+  min-height: 24px !important;
+  box-sizing: border-box !important;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(13, 22, 34, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s ease;
+
+  &.is-open {
+    z-index: 999999 !important;
+  }
+
+  .al-btn-main {
+    flex: 1 1 auto;
+    background: transparent !important;
+    color: #cbd5e1;
+    border: none !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 5px 0 0 5px !important;
+    padding: 0 8px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px;
+    height: 100% !important;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    transition: background 0.15s ease, color 0.15s ease;
+    text-decoration: none !important;
+
+    svg {
+      flex-shrink: 0;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1) !important;
+    }
+  }
+
+  .al-btn-arrow {
+    flex: 0 0 20px !important;
+    width: 20px !important;
+    background: transparent !important;
+    color: #94a3b8;
+    border: none !important;
+    border-radius: 0 5px 5px 0 !important;
+    font-size: 10px !important;
+    cursor: pointer;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 100% !important;
+    padding: 0 !important;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    svg {
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.12) !important;
+      color: #fff;
+    }
+  }
+
+  &.is-open .al-btn-arrow svg {
+    transform: rotate(180deg);
+  }
+
+  // Generate color schemes for each status
+  @each $status, $color in $status-colors {
+    &[data-status="#{$status}"] {
+      border-color: rgba($color, 0.4);
+      background: rgba(13, 22, 34, 0.9);
+
+      &:hover {
+        border-color: rgba($color, 0.7);
+        box-shadow: 0 4px 14px rgba($color, 0.25);
+      }
+
+      .al-btn-main {
+        color: color.adjust($color, $lightness: 12%);
+        svg {
+          color: $color;
+        }
+      }
+
+      .al-btn-arrow {
+        color: color.adjust($color, $lightness: 10%);
+        &:hover {
+          color: #fff;
+        }
+      }
+
+      &.is-added {
+        background: rgba($color, 0.18) !important;
+        border-color: rgba($color, 0.65) !important;
+        box-shadow: 0 0 10px rgba($color, 0.2);
+
+        .al-btn-main {
+          color: #fff !important;
+          font-weight: 700 !important;
+        }
+      }
+    }
+  }
+}
+
+// --- Position in AniList Grid View ---
+.entry-card,
+.media-card,
+.entry-card .cover,
+.media-card .cover {
+  position: relative !important;
+}
+
+.entry-card .al-split-box,
+.media-card .al-split-box,
+.entry-card .cover .al-split-box,
+.cover .al-split-box {
+  position: absolute !important;
+  top: 8px !important;
+  right: 8px !important;
+  bottom: auto !important;
+  left: auto !important;
+  width: auto !important;
+  max-width: calc(100% - 16px) !important;
+  margin: 0 !important;
+  height: 24px !important;
+  z-index: 99999 !important;
+  pointer-events: auto !important;
+  transition: opacity 0.2s ease, transform 0.2s ease !important;
+
+  .al-btn-main {
+    font-size: 10.5px !important;
+    padding: 0 7px !important;
+  }
+}
+
+// Visibility in Grid View: always visible if added, on hover if unadded
+.entry-card .al-split-box.is-added,
+.media-card .al-split-box.is-added {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+@media (hover: hover) {
+  .entry-card .al-split-box:not(.is-added),
+  .media-card .al-split-box:not(.is-added) {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-2px);
+  }
+
+  .entry-card:hover .al-split-box:not(.is-added),
+  .media-card:hover .al-split-box:not(.is-added),
+  .entry-card .al-split-box.is-open,
+  .media-card .al-split-box.is-open {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: translateY(0);
+  }
+}
+
+// --- Position in AniList Table View ---
+.title .al-split-box {
+  display: inline-flex !important;
+  margin-left: 10px !important;
+  vertical-align: middle !important;
+  height: 22px !important;
+  min-height: 22px !important;
+
+  .al-btn-main {
+    font-size: 10px !important;
+    padding: 0 6px !important;
+  }
+
+  .al-btn-arrow {
+    width: 18px !important;
+    flex: 0 0 18px !important;
+  }
+}
+
+// --- Status Selection Dropdown ---
+.al-stat-drop {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  background: rgba(13, 21, 33, 0.98) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(61, 180, 242, 0.3);
+  border-radius: 10px;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.9), 0 0 20px rgba(61, 180, 242, 0.15);
+  z-index: 999999 !important;
+  min-width: 170px;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 5px;
+  gap: 2px;
+  box-sizing: border-box;
+  animation: al-drop-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &.show {
+    display: flex !important;
+  }
+
+  .al-drop-opt {
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-align: left;
+    color: #e2e8f0 !important;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    transition: all 0.15s ease;
+    box-sizing: border-box;
+
+    svg {
+      flex-shrink: 0;
+      opacity: 0.85;
+    }
+
+    &:hover {
+      background: rgba(61, 180, 242, 0.15) !important;
+      border-color: rgba(61, 180, 242, 0.35) !important;
+      color: #fff !important;
+
+      svg {
+        opacity: 1;
+      }
+    }
+
+    .al-stat-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+
+      @each $status, $color in $status-colors {
+        &[data-status="#{$status}"] {
+          background: $color;
+          box-shadow: 0 0 6px rgba($color, 0.6);
+        }
+      }
+    }
+  }
+
+  .al-drop-del {
+    color: #f87171 !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    margin-top: 3px;
+    padding-top: 7px;
+
+    svg {
+      color: #f87171;
+    }
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.18) !important;
+      border-color: rgba(239, 68, 68, 0.4) !important;
+      color: #fff !important;
+    }
+  }
+}
+
+// --- Toast Notifications ---
+.al-toast {
+  position: fixed;
+  bottom: 85px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(14, 26, 41, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+  border: 1px solid $al-blue;
+  border-left: 4px solid $al-blue;
+  padding: 10px 20px;
+  border-radius: 10px;
+  z-index: 1000000;
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85), 0 0 16px rgba(61, 180, 242, 0.25);
+  pointer-events: none;
+  animation: al-drop-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &.alert {
+    border-color: #ef4444;
+    border-left-color: #ef4444;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85), 0 0 16px rgba(239, 68, 68, 0.25);
+  }
+}
+
+// --- Auth Modal & Overlay ---
+.al-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 7, 13, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+}
+
+.al-modal {
+  background: linear-gradient(135deg, #101a27 0%, #080f18 100%);
+  border: 1px solid rgba(61, 180, 242, 0.35);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 440px;
+  padding: 24px;
+  color: #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85), 0 0 30px rgba(61, 180, 242, 0.18);
+  animation: al-drop-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+
+  .al-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .al-modal-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(61, 180, 242, 0.2), rgba(2, 132, 199, 0.1));
+    border: 1px solid rgba(61, 180, 242, 0.4);
+    color: $al-blue;
+    box-shadow: 0 0 15px rgba(61, 180, 242, 0.3);
+    flex-shrink: 0;
+  }
+
+  .al-modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .al-modal-subtitle {
+    font-size: 12px;
+    color: #94a3b8;
+    margin: 3px 0 0;
+    line-height: 1.3;
+  }
+
+  .al-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .al-auth-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, rgba(61, 180, 242, 0.15), rgba(14, 165, 233, 0.08));
+    border: 1px solid rgba(61, 180, 242, 0.35);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: $al-blue !important;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.2s ease;
+
+    .al-auth-tag {
+      background: $al-blue;
+      color: #06101e;
+      font-size: 10px;
+      font-weight: 900;
+      padding: 2px 6px;
+      border-radius: 5px;
+      text-transform: uppercase;
+    }
+
+    &:hover {
+      background: linear-gradient(135deg, rgba(61, 180, 242, 0.25), rgba(14, 165, 233, 0.16));
+      border-color: $al-blue;
+    }
+  }
+
+  .al-auth-hint {
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .al-input-group {
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      background: rgba(13, 21, 33, 0.85);
+      border: 1px solid rgba(61, 180, 242, 0.35);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+      transition: all 0.2s ease;
+
+      &:focus {
+        border-color: $al-blue;
+        box-shadow: 0 0 15px rgba(61, 180, 242, 0.3);
+      }
+    }
+  }
+
+  .al-modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+  }
+}
+
+.al-card-hidden {
+  display: none !important;
+}
+
+@keyframes al-drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// --- Responsive Mobile Styling ---
+@media (max-width: 768px) {
+  .al-friend-bar {
+    width: calc(100% - 24px);
+    max-width: 440px;
+    bottom: 12px;
+    padding: 8px 14px;
+    border-radius: 16px;
+
+    .al-bar-content {
+      width: 100%;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .al-bar-user .al-username {
+      font-size: 12px;
+      max-width: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .al-bar-filter {
+      font-size: 11px;
+    }
+
+    .al-bar-default .al-bar-label {
+      display: none;
+    }
+
+    .al-select {
+      font-size: 11px;
+      padding: 3px 6px;
+    }
+  }
+}

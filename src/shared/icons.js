@@ -17,7 +17,11 @@ import {
   X,
   CheckCheck,
   Sliders,
-  Eye
+  Eye,
+  EyeOff,
+  Play,
+  Pause,
+  ChevronDown
 } from "lucide";
 
 export function iconHtml(iconNode, attrs = { width: 12, height: 12 }) {
@@ -42,7 +46,11 @@ export {
   X,
   CheckCheck,
   Sliders,
-  Eye
+  Eye,
+  EyeOff,
+  Play,
+  Pause,
+  ChevronDown
 };
 
 
