@@ -59,9 +59,14 @@ export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay =
     return false;
   }
 
-  // Ensure backdrop has .show
+  // Ensure backdrop is attached to body and has .show
   const backdrop = document.querySelector(".search-backdrop");
-  if (backdrop) backdrop.classList.add("show");
+  if (backdrop) {
+    backdrop.classList.add("show");
+    if (backdrop.parentElement !== document.body) {
+      document.body.appendChild(backdrop);
+    }
+  }
 
   // 4. Fill in query and trigger search immediately
   input.focus();

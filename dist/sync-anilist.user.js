@@ -183,7 +183,7 @@
 		getMedia: (search) => AniListAPI.call(`query($s:String){Media(search:$s,type:ANIME){id episodes title{romaji english}mediaListEntry{id status score progress startedAt{year month day}completedAt{year month day}}}}`, { s: search }, { silent: true }),
 		getMediaById: (id) => AniListAPI.call(`query($id:Int){Media(id:$id,type:ANIME){id episodes title{romaji english}mediaListEntry{id status score progress startedAt{year month day}completedAt{year month day}}}}`, { id: Number(id) }, { silent: true }),
 		getUserCollection: (userId) => AniListAPI.call(`query($u:Int){MediaListCollection(userId:$u,type:ANIME){lists{entries{id mediaId status score progress media{id episodes title{romaji english}}}}}}`, { u: userId }, { silent: true }),
-		getUserWatching: (userId) => AniListAPI.call(`query($u:Int){MediaListCollection(userId:$u,type:ANIME,status:CURRENT,sort:UPDATED_TIME_DESC){lists{entries{id mediaId status score progress updatedAt media{id episodes status siteUrl bannerImage coverImage{extraLarge large medium}title{romaji english}nextAiringEpisode{episode airingAt timeUntilAiring}}}}}}`, { u: userId }, { silent: true }),
+		getUserWatching: (userId) => AniListAPI.call(`query($u:Int){MediaListCollection(userId:$u,type:ANIME,status_in:[CURRENT,REPEATING],sort:UPDATED_TIME_DESC){lists{entries{id mediaId status score progress updatedAt media{id episodes status siteUrl bannerImage coverImage{extraLarge large medium}title{romaji english}nextAiringEpisode{episode airingAt timeUntilAiring}}}}}}`, { u: userId }, { silent: true }),
 		saveEntry: (args) => AniListAPI.call(`mutation($mediaId:Int,$status:MediaListStatus,$score:Float,$progress:Int,$startedAt:FuzzyDateInput,$completedAt:FuzzyDateInput){
         SaveMediaListEntry(mediaId:$mediaId,status:$status,score:$score,progress:$progress,startedAt:$startedAt,completedAt:$completedAt){
           id mediaId status score progress startedAt{year month day} completedAt{year month day}
@@ -1245,7 +1245,10 @@
 			return false;
 		}
 		const backdrop = document.querySelector(".search-backdrop");
-		if (backdrop) backdrop.classList.add("show");
+		if (backdrop) {
+			backdrop.classList.add("show");
+			if (backdrop.parentElement !== document.body) document.body.appendChild(backdrop);
+		}
 		input.focus();
 		input.value = query;
 		input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -1351,12 +1354,13 @@
 		const nextAir = media.nextAiringEpisode;
 		const totalEp = media.episodes;
 		const status = media.status;
+		const isRepeating = entry.status === "REPEATING";
 		let latestAired = 0;
 		if (nextAir?.episode) latestAired = nextAir.episode - 1;
 		else if (status === "FINISHED") latestAired = totalEp || progress;
 		else if (totalEp && totalEp > 0) latestAired = totalEp;
 		else latestAired = progress;
-		const hasUnwatchedAired = latestAired > progress;
+		const hasUnwatchedAired = isRepeating ? latestAired === 0 || latestAired > progress : latestAired > progress;
 		const unwatchedCount = Math.max(0, latestAired - progress);
 		const isCaughtUp = !hasUnwatchedAired;
 		const nextToWatch = progress + 1;
@@ -1368,7 +1372,8 @@
 			hasUnwatchedAired,
 			unwatchedCount,
 			isCaughtUp,
-			nextToWatch
+			nextToWatch,
+			isRepeating
 		};
 	}
 	function createCard(entry) {
@@ -1391,7 +1396,17 @@
 		coverWrap.appendChild(coverImg);
 		const badgeWrap = document.createElement("div");
 		badgeWrap.className = "al-card-badge-top-left";
-		if (state.hasUnwatchedAired) {
+		if (state.isRepeating) {
+			const badge = document.createElement("span");
+			badge.className = "al-badge al-badge-REPEATING";
+			const dot = document.createElement("span");
+			dot.className = "al-dot";
+			badge.appendChild(dot);
+			const txt = document.createElement("span");
+			txt.textContent = state.hasUnwatchedAired ? `Rewatching • Ep. ${state.nextToWatch}` : "Rewatching • Caught up";
+			badge.appendChild(txt);
+			badgeWrap.appendChild(badge);
+		} else if (state.hasUnwatchedAired) {
 			const badge = document.createElement("span");
 			badge.className = "al-badge al-badge-CURRENT";
 			const dot = document.createElement("span");
@@ -1444,10 +1459,10 @@
 		const progressLabel = document.createElement("span");
 		progressLabel.textContent = `Ep. ${state.progress} / ${state.totalEp || state.latestAired || "?"}`;
 		progressText.appendChild(progressLabel);
-		if (state.hasUnwatchedAired) {
+		if (state.hasUnwatchedAired || state.isRepeating) {
 			const readyTag = document.createElement("span");
-			readyTag.style.color = "#3db4f2";
-			readyTag.textContent = "Ready";
+			readyTag.style.color = state.isRepeating ? "#06b6d4" : "#3db4f2";
+			readyTag.textContent = state.isRepeating ? "Rewatching" : "Ready";
 			progressText.appendChild(readyTag);
 		}
 		overlay.appendChild(progressText);
@@ -1475,8 +1490,9 @@
 		const btn = document.createElement("a");
 		btn.href = auUrl || "#";
 		btn.className = "al-card-btn";
-		if (state.hasUnwatchedAired) {
+		if (state.hasUnwatchedAired || state.isRepeating) {
 			btn.classList.add("al-btn-play");
+			if (state.isRepeating) btn.style.background = "#06b6d4";
 			btn.innerHTML = `${iconHtml(Play, {
 				width: 12,
 				height: 12
@@ -1797,8 +1813,9 @@
 		}
 		try {
 			homeEntries = ((await AniListAPI.getUserWatching(currentUser.id))?.MediaListCollection?.lists || []).flatMap((l) => l.entries || []);
+			homeEntries.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 		} catch (err) {
-			console.warn("[sync-anilist] Error loading watching collection:", err);
+			Logger.warn("Error loading watching collection:", err);
 			homeEntries = [];
 		} finally {
 			homeFetching = false;

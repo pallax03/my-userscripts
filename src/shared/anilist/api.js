@@ -75,7 +75,7 @@ export const AniListAPI = {
 
   getUserWatching: (userId) =>
     AniListAPI.call(
-      `query($u:Int){MediaListCollection(userId:$u,type:ANIME,status:CURRENT,sort:UPDATED_TIME_DESC){lists{entries{id mediaId status score progress updatedAt media{id episodes status siteUrl bannerImage coverImage{extraLarge large medium}title{romaji english}nextAiringEpisode{episode airingAt timeUntilAiring}}}}}}`,
+      `query($u:Int){MediaListCollection(userId:$u,type:ANIME,status_in:[CURRENT,REPEATING],sort:UPDATED_TIME_DESC){lists{entries{id mediaId status score progress updatedAt media{id episodes status siteUrl bannerImage coverImage{extraLarge large medium}title{romaji english}nextAiringEpisode{episode airingAt timeUntilAiring}}}}}}`,
       { u: userId },
       { silent: true }
     ),

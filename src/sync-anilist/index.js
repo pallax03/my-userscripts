@@ -148,8 +148,9 @@ async function loadHomeWatching() {
     const data = await AniListAPI.getUserWatching(currentUser.id);
     const lists = data?.MediaListCollection?.lists || [];
     homeEntries = lists.flatMap((l) => l.entries || []);
+    homeEntries.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
   } catch (err) {
-    console.warn("[sync-anilist] Error loading watching collection:", err);
+    Logger.warn("Error loading watching collection:", err);
     homeEntries = [];
   } finally {
     homeFetching = false;
