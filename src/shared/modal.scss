@@ -3,10 +3,62 @@
 // Reused across all userscripts in my-userscripts
 // ==============================================================================
 
+@use "sass:color";
+
 $al-blue: #3db4f2;
 $al-blue-glow: rgba(61, 180, 242, 0.35);
 $al-bg-dark: #0e1622;
 $al-card-bg: linear-gradient(135deg, rgba(17, 26, 38, 0.94) 0%, rgba(10, 18, 28, 0.98) 100%);
+
+$status-colors: (
+  "CURRENT": #3db4f2,
+  "PLANNING": #94a3b8,
+  "COMPLETED": #22c55e,
+  "PAUSED": #eab308,
+  "REPEATING": #06b6d4,
+  "DROPPED": #ef4444
+);
+
+// --- Standardized AniList Status Badges & Dots ---
+.al-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  line-height: 1.2;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid transparent;
+
+  svg {
+    flex-shrink: 0;
+  }
+
+  @each $status, $color in $status-colors {
+    &.al-badge-#{$status} {
+      background: rgba($color, 0.16);
+      border-color: rgba($color, 0.45);
+      color: color.adjust($color, $lightness: 12%);
+
+      .al-dot {
+        background: $color;
+        box-shadow: 0 0 6px rgba($color, 0.6);
+      }
+    }
+  }
+}
+
+.al-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
 
 // --- Universal Buttons ---
 .al-btn {

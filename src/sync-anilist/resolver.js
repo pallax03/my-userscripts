@@ -50,11 +50,4 @@ export const extractPageMetadata = () => {
   return { anilistId, romajiTitle };
 };
 
-export const cleanTitle = (t) =>
-  t
-    ? t
-        .replace(/\s*\((ITA|SUB|SUB ITA|DUB|ITA SUB|OVA|TV)\)/gi, "")
-        .replace(/\s+(ITA|SUB|DUB)$/gi, "")
-        .replace(/\s+Season\s+\d+/gi, "")
-        .trim()
-    : "";
+export { cleanTitle } from "../shared/animeunity/utils.js";

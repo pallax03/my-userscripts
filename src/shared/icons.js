@@ -21,7 +21,9 @@ import {
   EyeOff,
   Play,
   Pause,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight
 } from "lucide";
 
 export function iconHtml(iconNode, attrs = { width: 12, height: 12 }) {
@@ -50,7 +52,9 @@ export {
   EyeOff,
   Play,
   Pause,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight
 };
 
 

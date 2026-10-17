@@ -1,4 +1,5 @@
 {
   "src/sync-anilist": "1.0.0",
-  "src/import-friend-anilist": "0.1.0"
+  "src/import-friend-anilist": "0.1.0",
+  "src/home-anilist": "1.0.0"
 }

@@ -47,6 +47,23 @@ const SCRIPTS = [
       grant: ["GM_getValue", "GM_setValue", "GM_deleteValue"],
       "run-at": "document-idle"
     }
+  },
+  {
+    name: "home-anilist",
+    entry: "src/home-anilist/index.js",
+    outFile: "home-anilist.user.js",
+    meta: {
+      name: "AnimeUnity Home - AniList Continue Watching",
+      namespace: "https://github.com/pallax03/my-userscripts",
+      version: manifest["src/home-anilist"] || "0.0.0",
+      description: "Personalized AnimeUnity homepage with AniList Continue Watching shelf, release tracker, and quick progress",
+      author: "Alex Mazzoni",
+      match: ["*://*.animeunity.so/*"],
+      updateURL: "https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/home-anilist.user.js",
+      downloadURL: "https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/home-anilist.user.js",
+      grant: ["GM_getValue", "GM_setValue", "GM_deleteValue"],
+      "run-at": "document-idle"
+    }
   }
 ];
 

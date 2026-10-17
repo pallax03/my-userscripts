@@ -73,6 +73,13 @@ export const AniListAPI = {
       { silent: true }
     ),
 
+  getUserWatching: (userId) =>
+    AniListAPI.call(
+      `query($u:Int){MediaListCollection(userId:$u,type:ANIME,status:CURRENT,sort:UPDATED_TIME_DESC){lists{entries{id mediaId status score progress updatedAt media{id episodes status siteUrl bannerImage coverImage{extraLarge large medium}title{romaji english}nextAiringEpisode{episode airingAt timeUntilAiring}}}}}}`,
+      { u: userId },
+      { silent: true }
+    ),
+
   saveEntry: (args) =>
     AniListAPI.call(
       `mutation($mediaId:Int,$status:MediaListStatus,$score:Float,$progress:Int,$startedAt:FuzzyDateInput,$completedAt:FuzzyDateInput){
