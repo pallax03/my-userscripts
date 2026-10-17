@@ -22,35 +22,37 @@ export function openPreferencesModal() {
       </div>
 
       <div class="al-modal-body al-prefs-body">
-        <label class="al-pref-item">
-          <div class="al-pref-info">
-            <span class="al-pref-title">Auto-track on episode select</span>
-            <span class="al-pref-desc">Sync episode to AniList automatically when selected</span>
-          </div>
-          <input type="checkbox" class="al-switch al-toggle-autotrack" ${settings.autoTrack ? "checked" : ""} />
-        </label>
-
-        <div class="al-pref-sub ${settings.autoTrack ? "" : "is-hidden"}">
-          <div class="al-pref-row">
-            <span class="al-pref-sub-label">
-              ${iconHtml(Clock, { width: 13, height: 13 })}
-              <span>Grace delay before saving</span>
-            </span>
-            <select class="al-select-xs al-sel-delay">
-              <option value="0" ${settings.delay === 0 ? "selected" : ""}>Instant (0s)</option>
-              <option value="10" ${settings.delay === 10 ? "selected" : ""}>10 seconds</option>
-              <option value="15" ${settings.delay === 15 ? "selected" : ""}>15 seconds</option>
-              <option value="30" ${settings.delay === 30 ? "selected" : ""}>30 seconds</option>
-            </select>
-          </div>
-
-          <label class="al-pref-row">
-            <span class="al-pref-sub-label">
-              ${iconHtml(RotateCcw, { width: 13, height: 13 })}
-              <span>Prevent rewind when rewatching</span>
-            </span>
-            <input type="checkbox" class="al-checkbox al-chk-rewind" ${settings.preventRewind ? "checked" : ""} />
+        <div class="al-pref-group ${settings.autoTrack ? "is-active" : ""}">
+          <label class="al-pref-header">
+            <div class="al-pref-info">
+              <span class="al-pref-title">Auto-track on episode select</span>
+              <span class="al-pref-desc">Sync episode to AniList automatically when selected</span>
+            </div>
+            <input type="checkbox" class="al-switch al-toggle-autotrack" ${settings.autoTrack ? "checked" : ""} />
           </label>
+
+          <div class="al-pref-sub ${settings.autoTrack ? "" : "is-hidden"}">
+            <div class="al-pref-row">
+              <span class="al-pref-sub-label">
+                ${iconHtml(Clock, { width: 13, height: 13 })}
+                <span>Grace delay before saving</span>
+              </span>
+              <select class="al-select-xs al-sel-delay">
+                <option value="0" ${settings.delay === 0 ? "selected" : ""}>Instant (0s)</option>
+                <option value="10" ${settings.delay === 10 ? "selected" : ""}>10 seconds</option>
+                <option value="15" ${settings.delay === 15 ? "selected" : ""}>15 seconds</option>
+                <option value="30" ${settings.delay === 30 ? "selected" : ""}>30 seconds</option>
+              </select>
+            </div>
+
+            <label class="al-pref-row">
+              <span class="al-pref-sub-label">
+                ${iconHtml(RotateCcw, { width: 13, height: 13 })}
+                <span>Prevent rewind when rewatching</span>
+              </span>
+              <input type="checkbox" class="al-checkbox al-chk-rewind" ${settings.preventRewind ? "checked" : ""} />
+            </label>
+          </div>
         </div>
       </div>
 
@@ -73,6 +75,7 @@ export function openPreferencesModal() {
     autoTrackToggle.onchange = (e) => {
       const active = e.target.checked;
       Settings.set("autoTrack", active);
+      wrap.querySelector(".al-pref-group")?.classList.toggle("is-active", active);
       if (prefSub) prefSub.classList.toggle("is-hidden", !active);
     };
   }
