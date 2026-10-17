@@ -331,8 +331,7 @@ export function renderWatchingShelf({ entries = [], viewer = null, onRefresh = n
         unwatchedOnly = Settings.get().homeOnlyUnwatched;
         toggleBox.classList.toggle("active", unwatchedOnly);
         toggleKnob.classList.toggle("active", unwatchedOnly);
-        if (typeof onRefresh === "function") onRefresh();
-        else updateTrack();
+        updateTrack();
       }
     });
   });

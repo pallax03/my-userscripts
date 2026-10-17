@@ -17,6 +17,9 @@ export function openPreferencesModal({ onSave } = {}) {
     icon: Sliders,
     title: "Preferences",
     subtitle: "Playback, audio, and homepage settings",
+    onClose: () => {
+      if (typeof onSave === "function") onSave();
+    },
     body: `
       <!-- 1. Playback & Auto-Track -->
       <div class="al-pref-group ${settings.autoTrack ? "is-active" : ""}">

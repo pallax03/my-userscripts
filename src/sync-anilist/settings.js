@@ -4,15 +4,22 @@ const listeners = new Set();
 
 export const Settings = {
   get() {
+    const autoTrack = Storage.get("al_opt_autotrack");
+    const delay = Storage.get("al_opt_autodelay");
+    const preventRewind = Storage.get("al_opt_prevent_rewind");
+    const homeShelf = Storage.get("al_home_shelf_enabled");
+    const homeOnlyUnwatched = Storage.get("al_pref_default_unwatched");
+    const searchAutoSelectDelay = Storage.get("al_pref_search_autoselect");
+
     return {
-      autoTrack: Storage.get("al_opt_autotrack") === "true",
-      delay: parseInt(Storage.get("al_opt_autodelay"), 10) || 15,
-      preventRewind: Storage.get("al_opt_prevent_rewind") !== "false",
+      autoTrack: autoTrack === true || autoTrack === "true",
+      delay: parseInt(delay, 10) || 15,
+      preventRewind: preventRewind !== false && preventRewind !== "false",
       language: Storage.get("al_pref_language") || "sub",
-      homeShelf: Storage.get("al_home_shelf_enabled") !== "false",
-      homeOnlyUnwatched: Storage.get("al_pref_default_unwatched") === "true",
-      searchAutoSelectDelay: Storage.get("al_pref_search_autoselect") !== null && Storage.get("al_pref_search_autoselect") !== undefined
-        ? parseInt(Storage.get("al_pref_search_autoselect"), 10)
+      homeShelf: homeShelf !== false && homeShelf !== "false",
+      homeOnlyUnwatched: homeOnlyUnwatched === true || homeOnlyUnwatched === "true",
+      searchAutoSelectDelay: searchAutoSelectDelay !== null && searchAutoSelectDelay !== undefined
+        ? parseInt(searchAutoSelectDelay, 10)
         : 5
     };
   },

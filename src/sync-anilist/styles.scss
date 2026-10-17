@@ -1305,9 +1305,30 @@ a[href*="/login"].btn-danger {
 
 .search-backdrop {
   z-index: 99999 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  display: flex !important;
+  justify-content: center !important;
+  pointer-events: auto !important;
 
   &.show {
     opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  .search-container {
+    display: block !important;
+    opacity: 1 !important;
+    z-index: 100000 !important;
+  }
+
+  .results {
+    display: block !important;
+    opacity: 1 !important;
+    z-index: 100001 !important;
   }
 }
 
