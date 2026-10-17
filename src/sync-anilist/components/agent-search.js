@@ -1,9 +1,11 @@
 import { Storage } from "../../shared/storage.js";
+import { showToast } from "../../shared/toast.js";
+import { Logger } from "../../shared/logger.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Simulates an agentic search typing and auto-selection in AnimeUnity's native search modal
+ * Opens AnimeUnity's native search modal with pre-filled query and results
  * @param {Object} media - AniList media object with title
  * @param {Object} [options]
  * @param {number} [options.epTarget] - Target episode number to pass to single page
@@ -12,12 +14,28 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  */
 export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay = 3 } = {}) {
   const query = media?.title?.english || media?.title?.romaji || "";
-  if (!query) return false;
+  if (!query) {
+    Logger.warn("Cannot search: media has no valid title");
+    showToast("⚠️ Anime title missing", true);
+    return false;
+  }
+
+  Logger.info(`Initiating search for "${query}" (AniList ID: ${media?.id})...`);
 
   // 1. Open AnimeUnity search box
-  const searchBtn = document.querySelector("#left-nav button.input-group-text, .search-box button, nav-search button");
-  if (!searchBtn) return false;
-  searchBtn.click();
+  const navSearchEl = document.querySelector("nav-search");
+  const vueInstance = navSearchEl?.__vue__ || document.querySelector(".search-container")?.__vue__;
+  const searchBtn = document.querySelector("nav-search button, #left-nav .search-box button, .search-box button, button.input-group-text");
+
+  if (vueInstance && typeof vueInstance.searchClick === "function") {
+    vueInstance.searchClick();
+  } else if (searchBtn) {
+    searchBtn.click();
+  } else {
+    Logger.warn("Search button/component not found in DOM");
+    showToast(`⚠️ Search box not accessible`, true);
+    return false;
+  }
 
   // 2. Wait for search container and input to mount
   let input = null;
@@ -26,38 +44,49 @@ export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay =
     if (input) break;
     await sleep(40);
   }
-  if (!input) return false;
 
-  input.focus();
-  input.value = "";
-
-  // 3. Human-like typescripting simulation
-  for (let i = 0; i < query.length; i++) {
-    input.value += query[i];
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    await sleep(35);
+  if (!input) {
+    Logger.warn("Search input did not mount within timeout");
+    showToast(`⚠️ Could not open search input`, true);
+    return false;
   }
-  input.dispatchEvent(new Event("change", { bubbles: true }));
+
+  // 3. Fill in query and trigger search immediately
+  input.focus();
+  input.value = query;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+
+  if (vueInstance && typeof vueInstance.fetchAnime === "function") {
+    vueInstance.query = query;
+    vueInstance.fetchAnime({ target: { value: query } });
+  }
+
+  Logger.info(`Search modal opened with query "${query}"`);
 
   // 4. Wait for results to render
   let items = [];
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 35; i++) {
     items = Array.from(document.querySelectorAll(".results .result, .results .livesearch-item"));
     if (items.length > 0) break;
-    await sleep(80);
+    await sleep(70);
   }
-  if (!items.length) return true; // Modal is open with query ready for user
+
+  if (!items.length) {
+    Logger.info(`No search results returned for "${query}"`);
+    return true; // Modal is open with query ready for user to edit or browse
+  }
+
+  Logger.info(`Search results rendered: ${items.length} items`);
 
   // 5. Match candidate record
   const pref = Storage.get("al_pref_language") || "sub";
   const prefDubInt = pref === "dub" ? 1 : 0;
 
   let targetIndex = -1;
-  const navSearchEl = document.querySelector("nav-search");
-  const vueInstance = navSearchEl?.__vue__ || document.querySelector(".search-container")?.__vue__;
+  const currentVue = navSearchEl?.__vue__ || document.querySelector(".search-container")?.__vue__;
 
-  if (vueInstance?.animes && Array.isArray(vueInstance.animes)) {
-    const records = vueInstance.animes;
+  if (currentVue?.animes && Array.isArray(currentVue.animes)) {
+    const records = currentVue.animes;
     const matches = [];
     records.forEach((r, idx) => {
       if (r?.anilist_id === media.id) matches.push({ record: r, idx });
@@ -65,6 +94,7 @@ export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay =
     if (matches.length > 0) {
       const selected = matches.find((m) => m.record.dub === prefDubInt) || matches[0];
       targetIndex = selected.idx;
+      Logger.info(`Matched by AniList ID ${media.id}:`, selected.record);
     }
   }
 
@@ -76,6 +106,7 @@ export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay =
       return text.includes(cleanQ) || cleanQ.includes(text);
     });
     targetIndex = matchIdx >= 0 ? matchIdx : 0;
+    Logger.info(`Matched by title text index: ${targetIndex}`);
   }
 
   const targetEl = items[targetIndex] || items[0];
@@ -107,6 +138,7 @@ export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay =
   const onDocumentClick = (e) => {
     // If user clicked another result or backdrop, cancel the auto-redirect
     if (!targetEl.contains(e.target)) {
+      Logger.info("User clicked outside candidate: countdown cancelled");
       cancel();
     }
   };
@@ -118,6 +150,7 @@ export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay =
       badge.innerHTML = `<span>Auto-opening in <strong>${countdown}s</strong></span><span class="al-agent-cancel-hint">(Click any to choose)</span>`;
     } else {
       cancel();
+      Logger.info("Countdown finished: auto-clicking matched anime");
       if (epTarget) sessionStorage.setItem("al_target_ep", String(epTarget));
       targetLink.click();
     }

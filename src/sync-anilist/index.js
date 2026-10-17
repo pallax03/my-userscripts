@@ -1,6 +1,7 @@
 import "./styles.scss";
 import { Storage } from "../shared/storage.js";
 import { showToast } from "../shared/toast.js";
+import { Logger } from "../shared/logger.js";
 import { AniListAPI } from "../shared/anilist/api.js";
 import { handleUrlToken, getTodayDate, openTokenModal } from "../shared/anilist/auth.js";
 import { scanAnimeUnityPageMap } from "../shared/animeunity/utils.js";
@@ -351,13 +352,15 @@ export const App = {
     if (currentMedia?.id) {
       const match = window.location.pathname.match(/\/anime\/(\d+)(?:-([^\/]+))?/i);
       if (match && match[1]) {
-        const map = Storage.get("al_au_map") || {};
+        const rawMap = Storage.get("al_au_map");
+        const map = (rawMap && typeof rawMap === "object" && !Array.isArray(rawMap)) ? rawMap : {};
         map[currentMedia.id] = {
           id: parseInt(match[1], 10),
           slug: match[2] || "",
           updatedAt: Date.now()
         };
         Storage.set("al_au_map", map);
+        Logger.info(`Auto-learned mapping: AniList ${currentMedia.id} -> AU /anime/${match[1]}-${match[2]}`);
       }
     }
 

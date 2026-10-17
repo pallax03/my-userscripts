@@ -1,4 +1,6 @@
 import { Storage } from "../../shared/storage.js";
+import { showToast } from "../../shared/toast.js";
+import { Logger } from "../../shared/logger.js";
 import { iconHtml, Play, Clock, Check, ChevronLeft, ChevronRight, Zap, ExternalLink, Sliders } from "../../shared/icons.js";
 import { openTokenModal } from "../../shared/anilist/auth.js";
 import { getAnimeUnityUrl, scanAnimeUnityPageMap } from "../../shared/animeunity/utils.js";
@@ -203,10 +205,12 @@ function createCard(entry) {
 
   card.appendChild(cardBody);
 
-  // Entire card is clickable (Level 1: direct cache, Level 3: agentic search)
+  // Entire card is clickable (Level 1: direct cache, Level 3: search modal)
   async function handleCardNavigate(e) {
     if (e.target.closest(".al-card-al-link")) return;
     e.preventDefault();
+
+    Logger.info(`Card clicked: "${title}" (AniList ID: ${media.id})`);
 
     if (state.hasUnwatchedAired) {
       sessionStorage.setItem("al_target_ep", String(state.nextToWatch));
@@ -215,21 +219,32 @@ function createCard(entry) {
     // Level 1: In local cache
     const directUrl = getAnimeUnityUrl(media, { targetEp: epTarget });
     if (directUrl) {
+      Logger.info(`Level 1 direct cache HIT -> opening ${directUrl}`);
+      showToast(`⚡ Opening ${title}...`);
       window.location.href = directUrl;
       return;
     }
 
-    // Level 3: Uncached -> Agentic Search Simulation
+    Logger.info(`Level 1 direct cache MISS for ID ${media.id}. Opening search modal...`);
+    showToast(`🔍 Searching "${title}" on AnimeUnity...`, false, 2000);
+
+    // Level 3: Uncached -> Search Modal
     card.classList.add("al-card-loading");
     btn.style.opacity = "0.7";
     btn.style.pointerEvents = "none";
 
     const settings = Settings.get();
     try {
-      await simulateAgenticSearch(media, {
+      const ok = await simulateAgenticSearch(media, {
         epTarget,
         autoSelectDelay: settings.searchAutoSelectDelay
       });
+      if (!ok) {
+        showToast(`⚠️ Could not find or open search for "${title}"`, true);
+      }
+    } catch (err) {
+      Logger.error("Search error in handleCardNavigate:", err);
+      showToast(`⚠️ Search error: ${err.message}`, true);
     } finally {
       card.classList.remove("al-card-loading");
       btn.style.opacity = "";

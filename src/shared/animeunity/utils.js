@@ -134,7 +134,8 @@ export async function resolveAnimeUnityAnime(media, { preferredDub } = {}) {
  * @returns {Record<string, { id: number, slug: string, title?: string, latestEp?: number, dub?: number }>}
  */
 export function scanAnimeUnityPageMap() {
-  const map = Storage.get("al_au_map") || {};
+  const rawMap = Storage.get("al_au_map");
+  const map = (rawMap && typeof rawMap === "object" && !Array.isArray(rawMap)) ? rawMap : {};
   let updated = false;
 
   const layoutElements = document.querySelectorAll("layout-items[items-json]");
@@ -181,7 +182,8 @@ export function scanAnimeUnityPageMap() {
 export function getAnimeUnityUrl(media, { targetEp } = {}) {
   if (!media) return "";
 
-  const map = Storage.get("al_au_map") || {};
+  const rawMap = Storage.get("al_au_map");
+  const map = (rawMap && typeof rawMap === "object" && !Array.isArray(rawMap)) ? rawMap : {};
   const mapped = map[media.id];
 
   if (mapped?.id && mapped?.slug) {

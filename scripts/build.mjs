@@ -27,7 +27,8 @@ const SCRIPTS = [
       ],
       updateURL: "https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/sync-anilist.user.js",
       downloadURL: "https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/sync-anilist.user.js",
-      grant: ["GM_getValue", "GM_setValue", "GM_deleteValue"],
+      grant: ["GM_getValue", "GM_setValue", "GM_deleteValue", "GM_xmlhttpRequest"],
+      connect: ["127.0.0.1", "localhost"],
       "run-at": "document-idle"
     }
   },
