@@ -13,7 +13,7 @@ export const Settings = {
 
     return {
       autoTrack: autoTrack === true || autoTrack === "true",
-      delay: parseInt(delay, 10) || 15,
+      delay: delay !== null && delay !== undefined && !isNaN(parseInt(delay, 10)) ? parseInt(delay, 10) : 15,
       preventRewind: preventRewind !== false && preventRewind !== "false",
       language: Storage.get("al_pref_language") || "sub",
       homeShelf: homeShelf !== false && homeShelf !== "false",

@@ -906,36 +906,6 @@ a[href*="/login"].btn-danger {
   }
 }
 
-.al-shelf-nav {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-
-  .al-shelf-arrow {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: #94a3b8;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.12);
-      color: #ffffff;
-      border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    &:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
-    }
-  }
-}
 
 .al-shelf-carousel-wrap {
   position: relative;

@@ -23,13 +23,13 @@ export function openPreferencesModal({ onSave } = {}) {
     body: `
       <!-- 1. Playback & Auto-Track -->
       <div class="al-pref-group ${settings.autoTrack ? "is-active" : ""}">
-        <label class="al-pref-header" style="cursor: pointer;">
+        <div class="al-pref-header" style="cursor: pointer;">
           <div class="al-pref-info">
             <span class="al-pref-title">Auto-track episodes</span>
             <span class="al-pref-desc">Sync episode progress to AniList automatically when playing</span>
           </div>
           <input type="checkbox" class="al-switch al-toggle-autotrack" ${settings.autoTrack ? "checked" : ""} />
-        </label>
+        </div>
 
         <div class="al-pref-sub ${settings.autoTrack ? "" : "is-hidden"}">
           <div class="al-pref-row">
@@ -71,13 +71,13 @@ export function openPreferencesModal({ onSave } = {}) {
 
       <!-- 3. Homepage Shelf -->
       <div class="al-pref-group ${settings.homeShelf ? "is-active" : ""}" style="margin-top: 10px;">
-        <label class="al-pref-header" style="cursor: pointer;">
+        <div class="al-pref-header" style="cursor: pointer;">
           <div class="al-pref-info">
             <span class="al-pref-title">Continue Watching shelf</span>
             <span class="al-pref-desc">Show AniList Continue Watching shelf on homepage</span>
           </div>
           <input type="checkbox" class="al-switch al-toggle-homeshelf" ${settings.homeShelf ? "checked" : ""} />
-        </label>
+        </div>
 
         <div id="al-shelf-sub-opts" class="al-pref-sub ${settings.homeShelf ? "" : "is-hidden"}">
           <label class="al-pref-row" style="cursor: pointer;">
@@ -121,35 +121,45 @@ export function openPreferencesModal({ onSave } = {}) {
   const rewindCheckbox = modal.querySelector(".al-chk-rewind");
   const prefGroup = autoTrackToggle?.closest(".al-pref-group");
   const prefSub = prefGroup?.querySelector(".al-pref-sub");
+  const prefHeader = prefGroup?.querySelector(".al-pref-header");
 
   if (autoTrackToggle) {
-    autoTrackToggle.onchange = (e) => {
-      const active = e.target.checked;
+    const setAutoTrack = (active) => {
+      autoTrackToggle.checked = active;
       Settings.set("autoTrack", active);
       prefGroup?.classList.toggle("is-active", active);
       if (prefSub) prefSub.classList.toggle("is-hidden", !active);
     };
+
+    autoTrackToggle.addEventListener("change", (e) => {
+      setAutoTrack(e.target.checked);
+    });
+
+    prefHeader?.addEventListener("click", (e) => {
+      if (e.target === autoTrackToggle) return;
+      setAutoTrack(!autoTrackToggle.checked);
+    });
   }
 
   if (delaySelect) {
-    delaySelect.onchange = (e) => {
+    delaySelect.addEventListener("change", (e) => {
       Settings.set("delay", parseInt(e.target.value, 10));
-    };
+    });
   }
 
   if (rewindCheckbox) {
-    rewindCheckbox.onchange = (e) => {
+    rewindCheckbox.addEventListener("change", (e) => {
       Settings.set("preventRewind", e.target.checked);
-    };
+    });
   }
 
   // Bind Language
   const langSelect = modal.querySelector(".al-sel-lang");
   if (langSelect) {
-    langSelect.onchange = (e) => {
+    langSelect.addEventListener("change", (e) => {
       Settings.set("language", e.target.value);
       showToast("Audio preference updated, URL cache cleared");
-    };
+    });
   }
 
   // Bind Home Shelf
@@ -157,26 +167,36 @@ export function openPreferencesModal({ onSave } = {}) {
   const unwatchedCheckbox = modal.querySelector(".al-chk-unwatched");
   const shelfGroup = homeShelfToggle?.closest(".al-pref-group");
   const shelfSub = modal.querySelector("#al-shelf-sub-opts");
+  const shelfHeader = shelfGroup?.querySelector(".al-pref-header");
 
   if (homeShelfToggle) {
-    homeShelfToggle.onchange = (e) => {
-      const active = e.target.checked;
+    const setHomeShelf = (active) => {
+      homeShelfToggle.checked = active;
       Settings.set("homeShelf", active);
       shelfGroup?.classList.toggle("is-active", active);
       if (shelfSub) shelfSub.classList.toggle("is-hidden", !active);
     };
+
+    homeShelfToggle.addEventListener("change", (e) => {
+      setHomeShelf(e.target.checked);
+    });
+
+    shelfHeader?.addEventListener("click", (e) => {
+      if (e.target === homeShelfToggle) return;
+      setHomeShelf(!homeShelfToggle.checked);
+    });
   }
 
   if (unwatchedCheckbox) {
-    unwatchedCheckbox.onchange = (e) => {
+    unwatchedCheckbox.addEventListener("change", (e) => {
       Settings.set("homeOnlyUnwatched", e.target.checked);
-    };
+    });
   }
 
   const autoSelect = modal.querySelector(".al-sel-autoselect");
   if (autoSelect) {
-    autoSelect.onchange = (e) => {
+    autoSelect.addEventListener("change", (e) => {
       Settings.set("searchAutoSelectDelay", parseInt(e.target.value, 10));
-    };
+    });
   }
 }

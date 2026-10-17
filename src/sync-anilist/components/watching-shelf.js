@@ -1,7 +1,7 @@
 import { Storage } from "../../shared/storage.js";
 import { showToast } from "../../shared/toast.js";
 import { Logger } from "../../shared/logger.js";
-import { iconHtml, Play, Clock, Check, ChevronLeft, ChevronRight, Zap, ExternalLink, Sliders, Loader2 } from "../../shared/icons.js";
+import { iconHtml, Play, Clock, Check, Zap, ExternalLink, Sliders, Loader2 } from "../../shared/icons.js";
 import { openTokenModal } from "../../shared/anilist/auth.js";
 import { getAnimeUnityUrl, scanAnimeUnityPageMap } from "../../shared/animeunity/utils.js";
 import { openPreferencesModal } from "./preferences-modal.js";
@@ -359,30 +359,10 @@ export function renderWatchingShelf({ entries = [], viewer = null, onRefresh = n
   if (unwatchedEntries.length > 0) {
     const pill = document.createElement("span");
     pill.className = "al-shelf-unwatched-pill";
-    pill.textContent = `${unwatchedEntries.length} ready`;
+    pill.textContent = String(unwatchedEntries.length);
     filterWrap.appendChild(pill);
   }
   controls.appendChild(filterWrap);
-
-  // Navigation Arrows
-  const navWrap = document.createElement("div");
-  navWrap.className = "al-shelf-nav";
-
-  const prevBtn = document.createElement("button");
-  prevBtn.type = "button";
-  prevBtn.className = "al-shelf-arrow";
-  prevBtn.title = "Scroll Left";
-  prevBtn.innerHTML = iconHtml(ChevronLeft, { width: 16, height: 16 });
-
-  const nextBtn = document.createElement("button");
-  nextBtn.type = "button";
-  nextBtn.className = "al-shelf-arrow";
-  nextBtn.title = "Scroll Right";
-  nextBtn.innerHTML = iconHtml(ChevronRight, { width: 16, height: 16 });
-
-  navWrap.appendChild(prevBtn);
-  navWrap.appendChild(nextBtn);
-  controls.appendChild(navWrap);
 
   header.appendChild(controls);
   shelfContainer.appendChild(header);
@@ -393,13 +373,6 @@ export function renderWatchingShelf({ entries = [], viewer = null, onRefresh = n
 
   const track = document.createElement("div");
   track.className = "al-shelf-track";
-
-  prevBtn.addEventListener("click", () => {
-    track.scrollBy({ left: -380, behavior: "smooth" });
-  });
-  nextBtn.addEventListener("click", () => {
-    track.scrollBy({ left: 380, behavior: "smooth" });
-  });
 
   // Re-populates track cards
   function updateTrack() {
