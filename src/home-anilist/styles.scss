@@ -84,6 +84,27 @@
   gap: 12px;
 }
 
+// --- Preferences Button ---
+.al-shelf-pref-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(61, 180, 242, 0.15);
+    color: #3db4f2;
+    border-color: rgba(61, 180, 242, 0.35);
+  }
+}
+
 // --- Filter Toggle ---
 .al-shelf-filter {
   display: inline-flex;

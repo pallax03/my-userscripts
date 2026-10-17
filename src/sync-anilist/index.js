@@ -8,7 +8,7 @@ import { Settings } from "./settings.js";
 import { renderNav } from "./components/nav.js";
 import { renderActions } from "./components/actions.js";
 import { renderVideoBottom } from "./components/video-bottom.js";
-import { highlightEpisodes, getActiveEpisode } from "./components/episodes.js";
+import { highlightEpisodes, getActiveEpisode, autoSelectTargetEpisode } from "./components/episodes.js";
 
 handleUrlToken();
 
@@ -271,6 +271,7 @@ export const App = {
         App.render();
       }
 
+      autoSelectTargetEpisode();
       highlightEpisodes(trackedProgress);
     }, 600);
   }

@@ -1,7 +1,8 @@
 import { Storage } from "../../shared/storage.js";
 import { iconHtml, Play, Clock, Check, ChevronLeft, ChevronRight, Zap, ExternalLink, Sliders } from "../../shared/icons.js";
 import { openTokenModal } from "../../shared/anilist/auth.js";
-import { getAnimeUnityUrl, scanAnimeUnityPageMap } from "../../shared/animeunity/utils.js";
+import { getAnimeUnityUrl, resolveAnimeUnityAnime, scanAnimeUnityPageMap } from "../../shared/animeunity/utils.js";
+import { openHomePreferencesModal } from "./preferences-modal.js";
 
 /**
  * Formats seconds into human-readable countdown
@@ -66,7 +67,8 @@ export function calculateEntryState(entry) {
 function createCard(entry) {
   const media = entry.media || {};
   const state = calculateEntryState(entry);
-  const auUrl = getAnimeUnityUrl(media);
+  const epTarget = state.hasUnwatchedAired ? state.nextToWatch : undefined;
+  const auUrl = getAnimeUnityUrl(media, { targetEp: epTarget });
   const title = media.title?.romaji || media.title?.english || "Untitled";
   const coverUrl = media.coverImage?.large || media.coverImage?.medium || "";
   const alUrl = media.siteUrl || `https://anilist.co/anime/${media.id}`;
@@ -198,6 +200,44 @@ function createCard(entry) {
   cardBody.appendChild(actions);
 
   card.appendChild(cardBody);
+
+  // Asynchronously resolve direct AnimeUnity link via /livesearch in the background
+  resolveAnimeUnityAnime(media).then((resolved) => {
+    if (resolved?.id && resolved?.slug) {
+      card._resolved = resolved;
+      const directUrl = `/anime/${resolved.id}-${resolved.slug}`;
+      titleLink.href = directUrl;
+      btn.href = `${directUrl}${epTarget ? `?ep=${epTarget}` : ""}`;
+    }
+  });
+
+  // Intercept navigation to prevent landing on broken /archivio searches
+  async function handleCardNavigate(e) {
+    if (state.hasUnwatchedAired) {
+      sessionStorage.setItem("al_target_ep", String(state.nextToWatch));
+    }
+
+    if (!card._resolved && (btn.href.includes("/archivio") || titleLink.href.includes("/archivio"))) {
+      e.preventDefault();
+      btn.style.opacity = "0.7";
+      btn.style.pointerEvents = "none";
+
+      const resolved = await resolveAnimeUnityAnime(media);
+      btn.style.opacity = "";
+      btn.style.pointerEvents = "";
+
+      if (resolved?.id && resolved?.slug) {
+        const directUrl = `/anime/${resolved.id}-${resolved.slug}${epTarget ? `?ep=${epTarget}` : ""}`;
+        window.location.href = directUrl;
+        return;
+      }
+      window.location.href = btn.href;
+    }
+  }
+
+  titleLink.addEventListener("click", handleCardNavigate);
+  btn.addEventListener("click", handleCardNavigate);
+
   return card;
 }
 
@@ -245,6 +285,24 @@ export function renderWatchingShelf({ entries = [], viewer = null } = {}) {
   // Header Controls
   const controls = document.createElement("div");
   controls.className = "al-shelf-controls";
+
+  // Preferences Button (Audio SUB vs ITA & Shelf options)
+  const prefBtn = document.createElement("button");
+  prefBtn.type = "button";
+  prefBtn.className = "al-shelf-pref-btn";
+  prefBtn.title = "Preferences (Audio & Shelf)";
+  prefBtn.innerHTML = iconHtml(Sliders, { width: 14, height: 14 });
+  prefBtn.addEventListener("click", () => {
+    openHomePreferencesModal({
+      onSave: ({ onlyUnwatched }) => {
+        unwatchedOnly = onlyUnwatched;
+        toggleBox.classList.toggle("active", unwatchedOnly);
+        toggleKnob.classList.toggle("active", unwatchedOnly);
+        updateTrack();
+      }
+    });
+  });
+  controls.appendChild(prefBtn);
 
   // Filter Toggle ("Only unwatched")
   const unwatchedEntries = entries.filter((e) => calculateEntryState(e).hasUnwatchedAired);

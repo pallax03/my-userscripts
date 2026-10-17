@@ -15,11 +15,14 @@ Enhances the AnimeUnity homepage (`https://animeunity.so/`) with a native, glass
 - 🎯 **"Only Unwatched" Toggle Filter**:
   - Filter your shelf to only show anime that have new aired episodes waiting for you.
   - Persists your preference in local storage.
-- 🚀 **1-Click Progress Playback**:
-  - Direct quick action button (`▶ Ep. X`) that links to the AnimeUnity anime page.
-  - Automatic AnimeUnity slug caching from homepage metadata.
-  - Fast fallback to AnimeUnity archive search for unmapped titles.
-- 🔗 **AniList Quick Links**: Quick button on each card to view details on AniList.
+- 🚀 **Direct 1-Click Playback**:
+  - Automatically resolves exact direct anime URLs (`/anime/:id-:slug`) via AnimeUnity's internal `/livesearch` API matching your AniList ID.
+  - Never gets stranded on empty `/archivio` searches.
+  - Action button (`▶ Ep. X`) opens the anime and automatically activates the target episode in the video player.
+- 🌐 **Audio Preference (SUB-ITA vs ITA)**:
+  - Configure your preferred version in **Home Preferences** (modal with `Sliders` icon).
+  - Defaults to **SUB-ITA** (original Japanese audio with Italian subtitles), with support for **ITA** (Italian dub) when both releases exist (e.g., *Steel Ball Run*, *Dan Da Dan*).
+- 🔗 **AniList Quick Links**: Direct shortcut on each card to view anime details on AniList.
 - 📱 **Responsive & Smooth Carousel**: Touch-friendly horizontal scrolling track with scroll snap and desktop navigation chevrons.
 
 ---
@@ -35,5 +38,5 @@ Install directly via your userscript manager (Userscripts for Safari, Tampermonk
 ## Architecture
 
 - **Domain Helpers**: Reuses `src/shared/anilist/` for GraphQL API queries and OAuth token handling.
-- **AnimeUnity Helpers**: Uses `src/shared/animeunity/utils.js` for metadata harvesting, title sanitization, and URL resolution.
+- **AnimeUnity Helpers**: Uses `src/shared/animeunity/utils.js` for metadata harvesting, title sanitization, `/livesearch` resolution, and URL generation.
 - **Standardized Design**: Utilizes shared status colors and badge system from `src/shared/modal.scss` and `src/shared/anilist/statuses.js`.

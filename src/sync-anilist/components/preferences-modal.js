@@ -1,4 +1,5 @@
 import { createModal } from "../../shared/modal.js";
+import { Storage } from "../../shared/storage.js";
 import { iconHtml, Sliders, Clock, RotateCcw, Check } from "../../shared/icons.js";
 import { Settings } from "../settings.js";
 
@@ -44,6 +45,19 @@ export function openPreferencesModal() {
           </label>
         </div>
       </div>
+
+      <div class="al-pref-group is-active" style="margin-top: 12px;">
+        <div class="al-pref-header">
+          <div class="al-pref-info">
+            <span class="al-pref-title">Preferred Audio</span>
+            <span class="al-pref-desc">Default version when both SUB-ITA and ITA exist</span>
+          </div>
+          <select class="al-select-xs al-sel-lang">
+            <option value="sub" ${(Storage.get("al_pref_language") || "sub") === "sub" ? "selected" : ""}>SUB-ITA</option>
+            <option value="dub" ${Storage.get("al_pref_language") === "dub" ? "selected" : ""}>ITA (Dub)</option>
+          </select>
+        </div>
+      </div>
     `,
     actions: [{ label: "Done", primary: true, icon: Check }]
   });
@@ -72,6 +86,13 @@ export function openPreferencesModal() {
   if (rewindCheckbox) {
     rewindCheckbox.onchange = (e) => {
       Settings.set("preventRewind", e.target.checked);
+    };
+  }
+
+  const langSelect = modal.querySelector(".al-sel-lang");
+  if (langSelect) {
+    langSelect.onchange = (e) => {
+      Storage.set("al_pref_language", e.target.value);
     };
   }
 }

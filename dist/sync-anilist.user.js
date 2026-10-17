@@ -374,7 +374,7 @@
 	};
 	function cleanTitle(title) {
 		if (!title) return "";
-		return title.replace(/\s*\((ITA|SUB|SUB ITA|DUB|ITA SUB|OVA|TV)\)/gi, "").replace(/\s+(ITA|SUB|DUB)$/gi, "").replace(/\s+Season\s+\d+/gi, "").trim();
+		return title.replace(/\s*\((ITA|SUB|SUB ITA|DUB|ITA SUB|OVA|TV)\)/gi, "").replace(/\s+(ITA|SUB|DUB)$/gi, "").replace(/\s+\d+(?:st|nd|rd|th)\s+Season/gi, "").replace(/\s+Season\s+\d+/gi, "").replace(/\s+\d+-nensei-hen.*/gi, "").replace(/:\s*2nd\s*&\s*3rd\s*STAGE.*/gi, "").trim();
 	}
 	var getAnimeKey = () => {
 		const match = window.location.pathname.match(/\/anime\/(\d+)/i);
@@ -485,6 +485,19 @@
           </label>
         </div>
       </div>
+
+      <div class="al-pref-group is-active" style="margin-top: 12px;">
+        <div class="al-pref-header">
+          <div class="al-pref-info">
+            <span class="al-pref-title">Preferred Audio</span>
+            <span class="al-pref-desc">Default version when both SUB-ITA and ITA exist</span>
+          </div>
+          <select class="al-select-xs al-sel-lang">
+            <option value="sub" ${(Storage.get("al_pref_language") || "sub") === "sub" ? "selected" : ""}>SUB-ITA</option>
+            <option value="dub" ${Storage.get("al_pref_language") === "dub" ? "selected" : ""}>ITA (Dub)</option>
+          </select>
+        </div>
+      </div>
     `,
 			actions: [{
 				label: "Done",
@@ -508,6 +521,10 @@
 		};
 		if (rewindCheckbox) rewindCheckbox.onchange = (e) => {
 			Settings.set("preventRewind", e.target.checked);
+		};
+		const langSelect = modal.querySelector(".al-sel-lang");
+		if (langSelect) langSelect.onchange = (e) => {
+			Storage.set("al_pref_language", e.target.value);
 		};
 	}
 	var dropdownTpl = (user) => `
@@ -891,11 +908,19 @@
 		});
 	}
 	function getActiveEpisode() {
-		const activeEl = document.querySelector(".episode-wrapper .episode-item.active");
+		const activeEl = document.querySelector(".episode-wrapper .episode-item.active, .episode-item.active");
 		if (activeEl) {
 			const num = parseInt(activeEl.innerText.trim(), 10);
 			if (!isNaN(num) && num > 0) return num;
 		}
+		try {
+			const epAttr = document.querySelector("video-player")?.getAttribute("episode");
+			if (epAttr) {
+				const parsed = JSON.parse(epAttr);
+				const num = parseInt(parsed?.number, 10);
+				if (!isNaN(num) && num > 0) return num;
+			}
+		} catch (_) {}
 		return 0;
 	}
 	function highlightEpisodes(trackedProgress) {
@@ -909,6 +934,19 @@
 			el.classList.toggle("al-tracked", isTracked);
 			el.classList.toggle("al-done", isDone);
 		});
+	}
+	function autoSelectTargetEpisode() {
+		const targetStr = new URLSearchParams(window.location.search).get("ep") || sessionStorage.getItem("al_target_ep");
+		if (!targetStr) return;
+		const targetEp = parseInt(targetStr, 10);
+		if (!targetEp || isNaN(targetEp) || targetEp <= 0) return;
+		const items = document.querySelectorAll(".episode-wrapper .episode-item");
+		if (!items.length) return;
+		for (const item of items) if (parseInt(item.innerText.trim(), 10) === targetEp) {
+			if (!item.classList.contains("active")) item.click();
+			sessionStorage.removeItem("al_target_ep");
+			break;
+		}
 	}
 	handleUrlToken();
 	var currentUser = null;
@@ -1113,6 +1151,7 @@
 				const ep = getActiveEpisode();
 				if (ep && ep !== lastActiveEp) handleActiveEpisodeChange(ep);
 				if (!document.getElementById("al-nav-desktop") || !document.getElementById("al-video-bottom-widget")) App.render();
+				autoSelectTargetEpisode();
 				highlightEpisodes(trackedProgress);
 			}, 600);
 		}
