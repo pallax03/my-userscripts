@@ -1,7 +1,7 @@
 import { Storage } from "../../shared/storage.js";
 import { showToast } from "../../shared/toast.js";
 import { Logger } from "../../shared/logger.js";
-import { iconHtml, Play, Clock, Check, ChevronLeft, ChevronRight, Zap, ExternalLink, Sliders } from "../../shared/icons.js";
+import { iconHtml, Play, Clock, Check, ChevronLeft, ChevronRight, Zap, ExternalLink, Sliders, Loader2 } from "../../shared/icons.js";
 import { openTokenModal } from "../../shared/anilist/auth.js";
 import { getAnimeUnityUrl, scanAnimeUnityPageMap } from "../../shared/animeunity/utils.js";
 import { openPreferencesModal } from "./preferences-modal.js";
@@ -73,7 +73,7 @@ export function calculateEntryState(entry) {
 function createCard(entry) {
   const media = entry.media || {};
   const state = calculateEntryState(entry);
-  const epTarget = state.hasUnwatchedAired ? state.nextToWatch : undefined;
+  const epTarget = state.hasUnwatchedAired ? state.nextToWatch : (state.progress || 1);
   const auUrl = getAnimeUnityUrl(media, { targetEp: epTarget });
   const title = media.title?.romaji || media.title?.english || "Untitled";
   const coverUrl = media.coverImage?.large || media.coverImage?.medium || "";
@@ -225,13 +225,13 @@ function createCard(entry) {
 
     Logger.info(`Card clicked: "${title}" (AniList ID: ${media.id})`);
 
-    if (state.hasUnwatchedAired) {
-      sessionStorage.setItem("al_target_ep", String(state.nextToWatch));
+    if (epTarget) {
+      sessionStorage.setItem("al_target_ep", String(epTarget));
     }
 
-    // Level 1: In local cache
+    // Level 1: In local cache (direct anime page)
     const directUrl = getAnimeUnityUrl(media, { targetEp: epTarget });
-    if (directUrl) {
+    if (directUrl && directUrl.startsWith("/anime/")) {
       Logger.info(`Level 1 direct cache HIT -> opening ${directUrl}`);
       showToast(`⚡ Opening ${title}...`);
       window.location.href = directUrl;
@@ -243,7 +243,9 @@ function createCard(entry) {
 
     // Level 3: Uncached -> Search Modal
     card.classList.add("al-card-loading");
-    btn.style.opacity = "0.7";
+    const originalBtnHtml = btn.innerHTML;
+    btn.innerHTML = `${iconHtml(Loader2, { width: 12, height: 12, class: "al-spin" })} Loading...`;
+    btn.style.opacity = "0.75";
     btn.style.pointerEvents = "none";
 
     const settings = Settings.get();
@@ -260,6 +262,7 @@ function createCard(entry) {
       showToast(`⚠️ Search error: ${err.message}`, true);
     } finally {
       card.classList.remove("al-card-loading");
+      btn.innerHTML = originalBtnHtml;
       btn.style.opacity = "";
       btn.style.pointerEvents = "";
     }

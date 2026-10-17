@@ -14,7 +14,8 @@ export function renderVideoBottom({
   trackedProgress,
   hasToken,
   autoTrackState,
-  callbacks
+  callbacks,
+  isLoading = false
 }) {
   const container = document.getElementById("video-bottom");
   if (!container) return;
@@ -30,6 +31,11 @@ export function renderVideoBottom({
 
   if (!hasToken || !activeEp) {
     widget.innerHTML = "";
+    return;
+  }
+
+  if (isLoading) {
+    widget.innerHTML = `<div class="al-skeleton-pill" style="width: 105px; height: 26px; border-radius: 6px; opacity: 0.85;"></div>`;
     return;
   }
 

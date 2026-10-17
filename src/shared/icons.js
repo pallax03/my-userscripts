@@ -21,6 +21,7 @@ import {
   EyeOff,
   Play,
   Pause,
+  Loader2,
   ChevronDown,
   ChevronLeft,
   ChevronRight
@@ -52,6 +53,7 @@ export {
   EyeOff,
   Play,
   Pause,
+  Loader2,
   ChevronDown,
   ChevronLeft,
   ChevronRight

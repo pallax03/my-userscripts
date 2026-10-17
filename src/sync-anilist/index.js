@@ -21,6 +21,7 @@ let currentMedia = null;
 let currentTitle = "";
 let trackedProgress = -1;
 let lastActiveEp = 0;
+let isMediaLoading = false;
 
 let homeEntries = null;
 let homeFetching = false;
@@ -299,7 +300,7 @@ export const App = {
           App.sync();
         }
       }
-    });
+    }, { isLoading: isMediaLoading });
 
     renderVideoBottom({
       activeEp,
@@ -307,6 +308,7 @@ export const App = {
       total: currentMedia?.episodes || 0,
       hasToken,
       autoTrackState,
+      isLoading: isMediaLoading,
       callbacks: {
         onSave: (ep) => {
           cancelAutoTrack();
@@ -333,40 +335,51 @@ export const App = {
     if (!Storage.get("anilist_token")) {
       currentMedia = null;
       trackedProgress = -1;
+      isMediaLoading = false;
       App.render();
       return;
     }
 
-    const meta = extractPageMetadata();
-    if (meta.anilistId) {
-      currentMedia = (await AniListAPI.getMediaById(meta.anilistId))?.Media || null;
-    }
-    // Only search by title if no exact AniList ID exists on the page
-    if (!currentMedia && !meta.anilistId && meta.romajiTitle) {
-      currentMedia = await findMediaByTitle(meta.romajiTitle);
-    }
-    if (!currentMedia && !meta.anilistId && currentTitle) {
-      currentMedia = await findMediaByTitle(currentTitle);
-    }
+    try {
+      isMediaLoading = true;
+      App.render();
 
-    // Auto-learn: cache direct AnimeUnity ID and slug for this AniList media
-    if (currentMedia?.id) {
-      const match = window.location.pathname.match(/\/anime\/(\d+)(?:-([^\/]+))?/i);
-      if (match && match[1]) {
-        const rawMap = Storage.get("al_au_map");
-        const map = (rawMap && typeof rawMap === "object" && !Array.isArray(rawMap)) ? rawMap : {};
-        map[currentMedia.id] = {
-          id: parseInt(match[1], 10),
-          slug: match[2] || "",
-          updatedAt: Date.now()
-        };
-        Storage.set("al_au_map", map);
-        Logger.info(`Auto-learned mapping: AniList ${currentMedia.id} -> AU /anime/${match[1]}-${match[2]}`);
+      const meta = extractPageMetadata();
+      if (meta.anilistId) {
+        currentMedia = (await AniListAPI.getMediaById(meta.anilistId))?.Media || null;
       }
-    }
+      // Only search by title if no exact AniList ID exists on the page
+      if (!currentMedia && !meta.anilistId && meta.romajiTitle) {
+        currentMedia = await findMediaByTitle(meta.romajiTitle);
+      }
+      if (!currentMedia && !meta.anilistId && currentTitle) {
+        currentMedia = await findMediaByTitle(currentTitle);
+      }
 
-    trackedProgress = currentMedia?.mediaListEntry ? currentMedia.mediaListEntry.progress : -1;
-    App.render();
+      // Auto-learn: cache direct AnimeUnity ID and slug for this AniList media
+      if (currentMedia?.id) {
+        const match = window.location.pathname.match(/\/anime\/(\d+)(?:-([^\/]+))?/i);
+        if (match && match[1]) {
+          const rawMap = Storage.get("al_au_map");
+          const map = (rawMap && typeof rawMap === "object" && !Array.isArray(rawMap)) ? rawMap : {};
+          map[currentMedia.id] = {
+            id: parseInt(match[1], 10),
+            slug: match[2] || "",
+            updatedAt: Date.now()
+          };
+          Storage.set("al_au_map", map);
+          Logger.info(`Auto-learned mapping: AniList ${currentMedia.id} -> AU /anime/${match[1]}-${match[2]}`);
+        }
+      }
+
+      trackedProgress = currentMedia?.mediaListEntry ? currentMedia.mediaListEntry.progress : -1;
+    } catch (err) {
+      Logger.warn("Error during AniList sync:", err);
+    } finally {
+      isMediaLoading = false;
+      App.render();
+      autoSelectTargetEpisode(currentMedia, trackedProgress);
+    }
   },
 
   init() {
@@ -427,7 +440,7 @@ export const App = {
           handleActiveEpisodeChange(ep);
         }
 
-        autoSelectTargetEpisode();
+        autoSelectTargetEpisode(currentMedia, trackedProgress);
         highlightEpisodes(trackedProgress);
       }
 

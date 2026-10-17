@@ -90,11 +90,9 @@ export function openPreferencesModal({ onSave } = {}) {
               <span>Auto-open search match</span>
             </span>
             <select class="al-select-xs al-sel-autoselect">
-              <option value="1" ${settings.searchAutoSelectDelay === 1 ? "selected" : ""}>1 second</option>
-              <option value="2" ${settings.searchAutoSelectDelay === 2 ? "selected" : ""}>2 seconds</option>
-              <option value="3" ${settings.searchAutoSelectDelay === 3 ? "selected" : ""}>3 seconds</option>
-              <option value="5" ${settings.searchAutoSelectDelay === 5 ? "selected" : ""}>5 seconds</option>
-              <option value="0" ${settings.searchAutoSelectDelay === 0 ? "selected" : ""}>Manual (No timer)</option>
+              <option value="5" ${settings.searchAutoSelectDelay === 5 ? "selected" : ""}>5 seconds (Default)</option>
+              <option value="10" ${settings.searchAutoSelectDelay === 10 ? "selected" : ""}>10 seconds</option>
+              <option value="0" ${settings.searchAutoSelectDelay === 0 ? "selected" : ""}>Manual (No auto-open)</option>
             </select>
           </div>
         </div>

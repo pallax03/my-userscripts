@@ -13,7 +13,7 @@ export const Settings = {
       homeOnlyUnwatched: Storage.get("al_pref_default_unwatched") === "true",
       searchAutoSelectDelay: Storage.get("al_pref_search_autoselect") !== null && Storage.get("al_pref_search_autoselect") !== undefined
         ? parseInt(Storage.get("al_pref_search_autoselect"), 10)
-        : 3
+        : 5
     };
   },
 

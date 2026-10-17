@@ -1,7 +1,7 @@
 import { AniListAPI } from "../../shared/anilist/api.js";
 import { iconHtml, ExternalLink, Trash2, Plus, KeyRound } from "../../shared/icons.js";
 
-export function renderActions(media, hasToken, actions) {
+export function renderActions(media, hasToken, actions, { isLoading = false } = {}) {
   // Purge AnimeUnity personal account elements from DOM
   document.querySelectorAll(".cover-wrap .actions, .list-btn-mobile, #add-to-fav").forEach((el) => el.remove());
 
@@ -33,6 +33,21 @@ export function renderActions(media, hasToken, actions) {
         </button>
       </div>`;
     bar.querySelector("#al-bar-login").onclick = actions.onConnect;
+    return;
+  }
+
+  if (isLoading) {
+    bar.innerHTML = `
+      <div class="al-card-row" style="opacity: 0.85;">
+        <div class="al-left" style="display: flex; gap: 10px; align-items: center;">
+          <div class="al-skeleton-pill" style="width: 140px; height: 32px; border-radius: 9px;"></div>
+          <div class="al-skeleton-pill" style="width: 100px; height: 32px; border-radius: 9px;"></div>
+        </div>
+        <div class="al-right" style="display: flex; gap: 8px; align-items: center;">
+          <div class="al-skeleton-pill" style="width: 85px; height: 32px; border-radius: 8px;"></div>
+          <div class="al-skeleton-pill" style="width: 95px; height: 32px; border-radius: 8px;"></div>
+        </div>
+      </div>`;
     return;
   }
 

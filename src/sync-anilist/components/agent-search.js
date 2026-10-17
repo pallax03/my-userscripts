@@ -14,7 +14,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * @param {number} [options.autoSelectDelay] - Countdown seconds before auto-selecting match (0 = manual)
  * @returns {Promise<boolean>}
  */
-export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay = 3 } = {}) {
+export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay = 5 } = {}) {
   if (!media) return false;
 
   Logger.info(`Searching best query for media ID ${media.id}...`);
@@ -35,8 +35,16 @@ export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay =
   const navContainer = searchBtn?.closest(".search-box")?.parentElement;
   const vueInstance = navContainer?.__vue__ || document.querySelector("nav-search")?.__vue__;
 
-  if (vueInstance && typeof vueInstance.searchClick === "function") {
-    vueInstance.searchClick();
+  if (vueInstance) {
+    if (vueInstance.active) {
+      vueInstance.active = false;
+      await sleep(40);
+    }
+    if (typeof vueInstance.searchClick === "function") {
+      vueInstance.searchClick();
+    } else {
+      vueInstance.active = true;
+    }
   } else if (searchBtn) {
     searchBtn.click();
   } else {
@@ -59,13 +67,10 @@ export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay =
     return false;
   }
 
-  // Ensure backdrop is attached to body and has .show
+  // Ensure backdrop has .show
   const backdrop = document.querySelector(".search-backdrop");
   if (backdrop) {
     backdrop.classList.add("show");
-    if (backdrop.parentElement !== document.body) {
-      document.body.appendChild(backdrop);
-    }
   }
 
   // 4. Fill in query and trigger search immediately
