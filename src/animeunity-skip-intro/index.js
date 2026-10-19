@@ -5,18 +5,32 @@ if (window.self === window.top) {
   let activeOp = null;
   let activeDuration = 0;
 
-  function getCurrentEpisode() {
-    // 1. Vue component state (reactive and instantaneous on episode click)
+  function getCurrentEpisode(overrideEp) {
+    if (typeof overrideEp === "number" && overrideEp > 0) {
+      return overrideEp;
+    }
+
+    // 1. Primary: Extract episode ID from current URL path (/anime/<id>-<slug>/<ep_id>)
+    // and match against <video-player episodes="..."> HTML attribute.
+    // Works reliably in isolated userscript sandboxes without needing Vue access!
     try {
-      const playerEl = document.querySelector("video-player, layout-items");
-      const vue = playerEl?.__vue__ || document.querySelector(".episode-wrapper")?.__vue__;
-      if (vue?.episode_parsed?.number) {
-        const num = parseInt(vue.episode_parsed.number, 10);
-        if (!isNaN(num) && num > 0) return num;
+      const pathParts = window.location.pathname.split("/").filter(Boolean);
+      const epIdInUrl = parseInt(pathParts[pathParts.length - 1], 10);
+      if (epIdInUrl) {
+        const playerEl = document.querySelector("video-player");
+        const rawEps = playerEl?.getAttribute("episodes");
+        if (rawEps) {
+          const list = JSON.parse(rawEps);
+          const matched = list.find((e) => e.id === epIdInUrl);
+          if (matched?.number) {
+            const num = parseInt(matched.number, 10);
+            if (!isNaN(num) && num > 0) return num;
+          }
+        }
       }
     } catch (_) {}
 
-    // 2. Active element in episode list (.episode-item.active)
+    // 2. Active element in episode list (.episode-wrapper .episode-item.active)
     const activeItem = document.querySelector(".episode-wrapper .episode-item.active, .episode-item.active");
     if (activeItem) {
       const text = activeItem.innerText?.trim();
@@ -24,12 +38,17 @@ if (window.self === window.top) {
       if (!isNaN(num) && num > 0) return num;
     }
 
-    // 3. Map episode ID in current URL to episode number via Vue's episode list
+    // 3. Vue component state (if accessible via main world / unsafeWindow)
     try {
+      const uWin = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
+      const playerEl = uWin.document.querySelector("video-player, layout-items");
+      const vue = playerEl?.__vue__ || uWin.document.querySelector(".episode-wrapper")?.__vue__;
+      if (vue?.episode_parsed?.number) {
+        const num = parseInt(vue.episode_parsed.number, 10);
+        if (!isNaN(num) && num > 0) return num;
+      }
       const pathParts = window.location.pathname.split("/").filter(Boolean);
       const epIdInUrl = parseInt(pathParts[pathParts.length - 1], 10);
-      const playerEl = document.querySelector("video-player, layout-items");
-      const vue = playerEl?.__vue__ || document.querySelector(".episode-wrapper")?.__vue__;
       if (epIdInUrl && Array.isArray(vue?.episodes)) {
         const matched = vue.episodes.find((e) => e.id === epIdInUrl);
         if (matched?.number) {
@@ -55,8 +74,9 @@ if (window.self === window.top) {
 
   function getAnimeData() {
     try {
-      const playerEl = document.querySelector("video-player, layout-items");
-      const vue = playerEl?.__vue__ || document.querySelector(".episode-wrapper")?.__vue__;
+      const uWin = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
+      const playerEl = uWin.document.querySelector("video-player, layout-items");
+      const vue = playerEl?.__vue__ || uWin.document.querySelector(".episode-wrapper")?.__vue__;
       if (vue?.anime_parsed?.mal_id) {
         return { malId: vue.anime_parsed.mal_id };
       }
@@ -71,9 +91,9 @@ if (window.self === window.top) {
     return { malId: null };
   }
 
-  async function checkEpisode(duration = 0) {
+  async function checkEpisode(duration = 0, overrideEp = null) {
     const { malId } = getAnimeData();
-    const epNum = getCurrentEpisode();
+    const epNum = getCurrentEpisode(overrideEp);
     const roundedDur = Math.round(duration || 0);
 
     if (!malId || !epNum) return;
@@ -100,7 +120,11 @@ if (window.self === window.top) {
         `https://api.aniskip.com/v2/skip-times/${malId}/${epNum}?types=op&episodeLength=${activeDuration}`
       );
       if (!res.ok) {
-        console.warn(`[AU SkipIntro] ⚠️ AniSkip returned HTTP ${res.status} for MAL ${malId} Ep ${epNum}`);
+        if (res.status === 404) {
+          console.warn(`[AU SkipIntro] ℹ️ AniSkip has no skip times for MAL ${malId} Ep ${epNum} (HTTP 404 - Not submitted yet)`);
+        } else {
+          console.warn(`[AU SkipIntro] ⚠️ AniSkip returned HTTP ${res.status} for MAL ${malId} Ep ${epNum}`);
+        }
         activeOp = null;
         broadcastOp();
         return;
@@ -136,21 +160,59 @@ if (window.self === window.top) {
   const origPushState = history.pushState;
   history.pushState = function (...args) {
     origPushState.apply(this, args);
-    setTimeout(checkEpisode, 100);
+    setTimeout(() => checkEpisode(), 50);
+    setTimeout(() => checkEpisode(), 250);
   };
   const origReplaceState = history.replaceState;
   history.replaceState = function (...args) {
     origReplaceState.apply(this, args);
-    setTimeout(checkEpisode, 100);
+    setTimeout(() => checkEpisode(), 50);
   };
-  window.addEventListener("popstate", () => setTimeout(checkEpisode, 100));
+  window.addEventListener("popstate", () => {
+    setTimeout(() => checkEpisode(), 50);
+    setTimeout(() => checkEpisode(), 250);
+  });
 
-  // Listen for clicks on episode selectors
-  document.addEventListener("click", (e) => {
-    if (e.target.closest(".episode-item, .episode-wrapper, [class*='episode'], .pagination")) {
-      setTimeout(checkEpisode, 150);
+  // Listen for clicks on episode selectors and pagination
+  document.addEventListener(
+    "click",
+    (e) => {
+      const epItem = e.target.closest(".episode-item");
+      if (epItem) {
+        const num = parseInt(epItem.innerText.trim(), 10);
+        if (!isNaN(num) && num > 0) {
+          checkEpisode(0, num);
+          return;
+        }
+      }
+      if (e.target.closest(".episode-wrapper, [class*='episode'], .pagination, #video-bottom, .player-controls")) {
+        setTimeout(() => checkEpisode(), 80);
+        setTimeout(() => checkEpisode(), 300);
+      }
+    },
+    true
+  );
+
+  // Observe iframe src replacements (when Vue re-renders the embed player)
+  const iframeObserver = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      if (m.type === "attributes" && m.attributeName === "src") {
+        setTimeout(() => checkEpisode(), 100);
+        break;
+      }
     }
   });
+
+  function observeIframes() {
+    document.querySelectorAll("iframe").forEach((f) => {
+      if (!f.__au_observed) {
+        f.__au_observed = true;
+        iframeObserver.observe(f, { attributes: true, attributeFilter: ["src"] });
+      }
+    });
+  }
+  setInterval(observeIframes, 1000);
+  observeIframes();
 
   window.addEventListener("message", (e) => {
     if (e.data?.type === "AU_FRAME_READY") {
@@ -162,7 +224,7 @@ if (window.self === window.top) {
     }
   });
 
-  setInterval(() => checkEpisode(), 600);
+  setInterval(() => checkEpisode(), 800);
   setInterval(broadcastOp, 2000);
   checkEpisode();
 }
@@ -172,7 +234,7 @@ else {
   let rawOp = null;
   let currentOp = null;
   let btn = null;
-  let hasReportedDur = false;
+  let lastReportedDur = 0;
   let lastLoggedDur = null;
   let lastLoggedOffset = null;
   let isBtnVisible = false;
@@ -201,11 +263,13 @@ else {
   }
 
   function notifyReady() {
-    const dur = getDuration();
-    try {
-      window.top.postMessage({ type: "AU_FRAME_READY", duration: dur }, "*");
-      if (dur > 0) hasReportedDur = true;
-    } catch (_) {}
+    const dur = Math.round(getDuration());
+    if (dur > 0 && dur !== lastReportedDur) {
+      lastReportedDur = dur;
+      try {
+        window.top.postMessage({ type: "AU_FRAME_READY", duration: dur }, "*");
+      } catch (_) {}
+    }
   }
 
   function computeAdjustedOp() {
@@ -335,7 +399,9 @@ else {
       target.style.position = "relative";
     }
     target.appendChild(btn);
+  }
 
+  function bindPlayerEvents() {
     const video = document.querySelector("video");
     if (video && !video.__au_skip_bound) {
       video.__au_skip_bound = true;
@@ -344,16 +410,26 @@ else {
         notifyReady();
         computeAdjustedOp();
       });
+      video.addEventListener("play", notifyReady);
     }
 
     const jw = getPlayer();
     if (jw && typeof jw.on === "function" && !jw.__au_skip_bound) {
       jw.__au_skip_bound = true;
       jw.on("time", checkTime);
+      jw.on("ready", notifyReady);
+      jw.on("play", notifyReady);
+      jw.on("meta", () => {
+        notifyReady();
+        computeAdjustedOp();
+      });
     }
   }
 
   function checkTime() {
+    bindPlayerEvents();
+    notifyReady();
+
     if (!rawOp) {
       if (btn && isBtnVisible) {
         btn.style.display = "none";
@@ -367,10 +443,6 @@ else {
     if (!currentOp) return;
 
     const pos = getPos();
-
-    if (!hasReportedDur && getDuration() > 0) {
-      notifyReady();
-    }
 
     const showStart = Math.max(0, currentOp.start - 1.5);
     // Hide button 2 seconds before the end of the OP
