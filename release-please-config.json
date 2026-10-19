@@ -10,6 +10,11 @@
       "release-type": "simple",
       "package-name": "import-friend-anilist",
       "component": "import-friend-anilist"
+    },
+    "src/animeunity-skip-intro": {
+      "release-type": "simple",
+      "package-name": "animeunity-skip-intro",
+      "component": "animeunity-skip-intro"
     }
   }
 }

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AniList Friend List - Quick Add & Sync
 // @namespace    https://github.com/pallax03/my-userscripts
-// @version      0.1.0
+// @version      0.2.0
 // @author       Alex Mazzoni
 // @description  Add and sync anime directly from a friend's AniList list into your collection with color-coded split buttons
 // @license      MIT
@@ -135,10 +135,10 @@
 			silent: true,
 			onAuthError
 		}),
-		getMedia: (search) => AniListAPI.call(`query($s:String){Media(search:$s,type:ANIME){id episodes title{romaji english}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}`, { s: search }, { silent: true }),
-		getMediaById: (id) => AniListAPI.call(`query($id:Int){Media(id:$id,type:ANIME){id episodes title{romaji english}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}`, { id: Number(id) }, { silent: true }),
-		getUserCollection: (userId) => AniListAPI.call(`query($u:Int){MediaListCollection(userId:$u,type:ANIME){lists{entries{id mediaId status score progress notes repeat startedAt{year month day}completedAt{year month day} media{id episodes title{romaji english}}}}}}`, { u: userId }, { silent: true }),
-		getUserWatching: (userId) => AniListAPI.call(`query($u:Int){MediaListCollection(userId:$u,type:ANIME,status_in:[CURRENT,REPEATING],sort:UPDATED_TIME_DESC){lists{entries{id mediaId status score progress notes repeat startedAt{year month day}completedAt{year month day}updatedAt media{id episodes status siteUrl bannerImage coverImage{extraLarge large medium}title{romaji english}nextAiringEpisode{episode airingAt timeUntilAiring}}}}}}`, { u: userId }, { silent: true }),
+		getMedia: (search) => AniListAPI.call(`query($s:String){Media(search:$s,type:ANIME){id idMal episodes title{romaji english}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}`, { s: search }, { silent: true }),
+		getMediaById: (id) => AniListAPI.call(`query($id:Int){Media(id:$id,type:ANIME){id idMal episodes title{romaji english}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}`, { id: Number(id) }, { silent: true }),
+		getUserCollection: (userId) => AniListAPI.call(`query($u:Int){MediaListCollection(userId:$u,type:ANIME){lists{entries{id mediaId status score progress notes repeat startedAt{year month day}completedAt{year month day} media{id idMal episodes title{romaji english}}}}}}`, { u: userId }, { silent: true }),
+		getUserWatching: (userId) => AniListAPI.call(`query($u:Int){MediaListCollection(userId:$u,type:ANIME,status_in:[CURRENT,REPEATING],sort:UPDATED_TIME_DESC){lists{entries{id mediaId status score progress notes repeat startedAt{year month day}completedAt{year month day}updatedAt media{id idMal episodes status siteUrl bannerImage coverImage{extraLarge large medium}title{romaji english}nextAiringEpisode{episode airingAt timeUntilAiring}}}}}}`, { u: userId }, { silent: true }),
 		getUserFollowing: (userId, page = 1) => AniListAPI.call(`query($u:Int!,$p:Int){Page(page:$p,perPage:50){pageInfo{hasNextPage} following(userId:$u){id name avatar{medium}}}}`, {
 			u: Number(userId),
 			p: Number(page)
