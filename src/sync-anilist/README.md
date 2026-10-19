@@ -32,7 +32,7 @@
 
 - **⏩ AniSkip Opening Skip & Auto-Skip**:
   - Automatically fetches opening interval timings via AniSkip API based on AniList MAL ID.
-  - Displays glassmorphic **"Salta Intro"** button (with shortcut `S`) during opening themes.
+  - Displays glassmorphic **"Skip Intro"** button (with shortcut `S`) during opening themes.
   - Optional **"Auto-skip opening intro"** toggle in Preferences to seamlessly skip openings without touching the controls.
   - Automatically compensates for video pre-roll bumpers between AnimeUnity and TV broadcast timings.
 
