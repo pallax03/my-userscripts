@@ -10,18 +10,16 @@ if (window.self === window.top) {
       return overrideEp;
     }
 
-    // 1. Primary: Extract episode ID from current URL path (/anime/<id>-<slug>/<ep_id>)
-    // and match against <video-player episodes="..."> HTML attribute.
-    // Works reliably in isolated userscript sandboxes without needing Vue access!
+    // 1. Episode ID from URL path matched against <video-player, layout-items episodes="...">
     try {
-      const pathParts = window.location.pathname.split("/").filter(Boolean);
-      const epIdInUrl = parseInt(pathParts[pathParts.length - 1], 10);
-      if (epIdInUrl) {
-        const playerEl = document.querySelector("video-player");
+      const m = window.location.pathname.match(/\/anime\/[^/]+\/(\d+)/);
+      if (m && m[1]) {
+        const epId = parseInt(m[1], 10);
+        const playerEl = document.querySelector("video-player, layout-items");
         const rawEps = playerEl?.getAttribute("episodes");
         if (rawEps) {
           const list = JSON.parse(rawEps);
-          const matched = list.find((e) => e.id === epIdInUrl);
+          const matched = list.find((e) => e.id === epId);
           if (matched?.number) {
             const num = parseInt(matched.number, 10);
             if (!isNaN(num) && num > 0) return num;
@@ -47,20 +45,11 @@ if (window.self === window.top) {
         const num = parseInt(vue.episode_parsed.number, 10);
         if (!isNaN(num) && num > 0) return num;
       }
-      const pathParts = window.location.pathname.split("/").filter(Boolean);
-      const epIdInUrl = parseInt(pathParts[pathParts.length - 1], 10);
-      if (epIdInUrl && Array.isArray(vue?.episodes)) {
-        const matched = vue.episodes.find((e) => e.id === epIdInUrl);
-        if (matched?.number) {
-          const num = parseInt(matched.number, 10);
-          if (!isNaN(num) && num > 0) return num;
-        }
-      }
     } catch (_) {}
 
-    // 4. Fallback: static server-rendered HTML attribute on <video-player>
+    // 4. Fallback: static HTML attribute on <video-player, layout-items episode="...">
     try {
-      const player = document.querySelector("video-player");
+      const player = document.querySelector("video-player, layout-items");
       const epAttr = player?.getAttribute("episode");
       if (epAttr) {
         const parsed = JSON.parse(epAttr);
@@ -74,18 +63,26 @@ if (window.self === window.top) {
 
   function getAnimeData() {
     try {
-      const uWin = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
-      const playerEl = uWin.document.querySelector("video-player, layout-items");
-      const vue = playerEl?.__vue__ || uWin.document.querySelector(".episode-wrapper")?.__vue__;
+      const playerEl = document.querySelector("video-player, layout-items");
+      const vue = playerEl?.__vue__ || document.querySelector(".episode-wrapper")?.__vue__;
       if (vue?.anime_parsed?.mal_id) {
         return { malId: vue.anime_parsed.mal_id };
       }
     } catch (_) {}
 
     try {
-      const player = document.querySelector("video-player");
-      const anime = JSON.parse(player?.getAttribute("anime") || "{}");
-      if (anime.mal_id) return { malId: anime.mal_id };
+      const player = document.querySelector("video-player, layout-items");
+      const raw = player?.getAttribute("anime");
+      if (raw) {
+        const anime = JSON.parse(raw);
+        if (anime.mal_id) return { malId: anime.mal_id };
+      }
+    } catch (_) {}
+
+    // Fallback: match inline JSON in server-rendered page HTML
+    try {
+      const m = document.documentElement.innerHTML.match(/(?:&quot;|")mal_id(?:&quot;|")\s*:\s*(\d+)/);
+      if (m && m[1]) return { malId: parseInt(m[1], 10) };
     } catch (_) {}
 
     return { malId: null };
@@ -96,6 +93,8 @@ if (window.self === window.top) {
     const epNum = getCurrentEpisode(overrideEp);
     const roundedDur = Math.round(duration || 0);
 
+    console.log(`[AU SkipIntro] 🔍 checkEpisode called (dur: ${duration}s) -> malId: ${malId}, epNum: ${epNum}, activeEp: ${activeEp}, hasActiveOp: ${activeOp !== null}`);
+
     if (!malId || !epNum) return;
 
     const isNewEp = malId !== activeMalId || epNum !== activeEp;
@@ -104,7 +103,7 @@ if (window.self === window.top) {
     }
 
     if (isNewEp) {
-      console.log(`[AU SkipIntro] 🔄 Episode changed: Ep ${activeEp} -> Ep ${epNum}`);
+      console.log(`[AU SkipIntro] 🔄 Episode changed: Ep ${activeEp} -> Ep ${epNum} (MAL ${malId})`);
       activeMalId = malId;
       activeEp = epNum;
       activeDuration = roundedDur;
@@ -149,7 +148,8 @@ if (window.self === window.top) {
   }
 
   function broadcastOp() {
-    document.querySelectorAll("iframe").forEach((f) => {
+    const frames = document.querySelectorAll("iframe");
+    frames.forEach((f) => {
       try {
         f.contentWindow?.postMessage({ type: "AU_SKIP_OP", op: activeOp }, "*");
       } catch (_) {}
@@ -398,12 +398,13 @@ else {
       );
     });
 
-    const target = document.querySelector(".jw-wrapper, .jwplayer, #player") || document.body;
+    const target = document.querySelector(".jw-overlays, .jw-controls, .jw-wrapper, .jwplayer, #player, #wrapper") || document.body;
     if (!target) return;
     if (window.getComputedStyle(target).position === "static") {
       target.style.position = "relative";
     }
     target.appendChild(btn);
+    console.log("[AU SkipIntro] 🔘 Button element injected into", target.className || target.id || target.tagName);
   }
 
   function bindPlayerEvents() {
@@ -471,6 +472,7 @@ else {
   window.addEventListener("message", (e) => {
     if (e.data?.type === "AU_SKIP_OP") {
       rawOp = e.data.op || null;
+      console.log("[AU SkipIntro] 📩 Subframe received AU_SKIP_OP:", rawOp);
       computeAdjustedOp();
       checkTime();
     }

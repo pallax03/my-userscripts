@@ -63,12 +63,12 @@
 		function getCurrentEpisode(overrideEp) {
 			if (typeof overrideEp === "number" && overrideEp > 0) return overrideEp;
 			try {
-				const pathParts = window.location.pathname.split("/").filter(Boolean);
-				const epIdInUrl = parseInt(pathParts[pathParts.length - 1], 10);
-				if (epIdInUrl) {
-					const rawEps = document.querySelector("video-player")?.getAttribute("episodes");
+				const m = window.location.pathname.match(/\/anime\/[^/]+\/(\d+)/);
+				if (m && m[1]) {
+					const epId = parseInt(m[1], 10);
+					const rawEps = document.querySelector("video-player, layout-items")?.getAttribute("episodes");
 					if (rawEps) {
-						const matched = JSON.parse(rawEps).find((e) => e.id === epIdInUrl);
+						const matched = JSON.parse(rawEps).find((e) => e.id === epId);
 						if (matched?.number) {
 							const num = parseInt(matched.number, 10);
 							if (!isNaN(num) && num > 0) return num;
@@ -89,18 +89,9 @@
 					const num = parseInt(vue.episode_parsed.number, 10);
 					if (!isNaN(num) && num > 0) return num;
 				}
-				const pathParts = window.location.pathname.split("/").filter(Boolean);
-				const epIdInUrl = parseInt(pathParts[pathParts.length - 1], 10);
-				if (epIdInUrl && Array.isArray(vue?.episodes)) {
-					const matched = vue.episodes.find((e) => e.id === epIdInUrl);
-					if (matched?.number) {
-						const num = parseInt(matched.number, 10);
-						if (!isNaN(num) && num > 0) return num;
-					}
-				}
 			} catch (_) {}
 			try {
-				const epAttr = document.querySelector("video-player")?.getAttribute("episode");
+				const epAttr = document.querySelector("video-player, layout-items")?.getAttribute("episode");
 				if (epAttr) {
 					const parsed = JSON.parse(epAttr);
 					const num = parseInt(parsed?.number, 10);
@@ -111,14 +102,19 @@
 		}
 		function getAnimeData() {
 			try {
-				const uWin = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
-				const vue = uWin.document.querySelector("video-player, layout-items")?.__vue__ || uWin.document.querySelector(".episode-wrapper")?.__vue__;
+				const vue = document.querySelector("video-player, layout-items")?.__vue__ || document.querySelector(".episode-wrapper")?.__vue__;
 				if (vue?.anime_parsed?.mal_id) return { malId: vue.anime_parsed.mal_id };
 			} catch (_) {}
 			try {
-				const player = document.querySelector("video-player");
-				const anime = JSON.parse(player?.getAttribute("anime") || "{}");
-				if (anime.mal_id) return { malId: anime.mal_id };
+				const raw = document.querySelector("video-player, layout-items")?.getAttribute("anime");
+				if (raw) {
+					const anime = JSON.parse(raw);
+					if (anime.mal_id) return { malId: anime.mal_id };
+				}
+			} catch (_) {}
+			try {
+				const m = document.documentElement.innerHTML.match(/(?:&quot;|")mal_id(?:&quot;|")\s*:\s*(\d+)/);
+				if (m && m[1]) return { malId: parseInt(m[1], 10) };
 			} catch (_) {}
 			return { malId: null };
 		}
@@ -126,11 +122,12 @@
 			const { malId } = getAnimeData();
 			const epNum = getCurrentEpisode(overrideEp);
 			const roundedDur = Math.round(duration || 0);
+			console.log(`[AU SkipIntro] 🔍 checkEpisode called (dur: ${duration}s) -> malId: ${malId}, epNum: ${epNum}, activeEp: ${activeEp}, hasActiveOp: ${activeOp !== null}`);
 			if (!malId || !epNum) return;
 			const isNewEp = malId !== activeMalId || epNum !== activeEp;
 			if (!isNewEp && activeOp !== null) return;
 			if (isNewEp) {
-				console.log(`[AU SkipIntro] 🔄 Episode changed: Ep ${activeEp} -> Ep ${epNum}`);
+				console.log(`[AU SkipIntro] 🔄 Episode changed: Ep ${activeEp} -> Ep ${epNum} (MAL ${malId})`);
 				activeMalId = malId;
 				activeEp = epNum;
 				activeDuration = roundedDur;
@@ -379,10 +376,11 @@
 					}
 				}, true);
 			});
-			const target = document.querySelector(".jw-wrapper, .jwplayer, #player") || document.body;
+			const target = document.querySelector(".jw-overlays, .jw-controls, .jw-wrapper, .jwplayer, #player, #wrapper") || document.body;
 			if (!target) return;
 			if (window.getComputedStyle(target).position === "static") target.style.position = "relative";
 			target.appendChild(btn);
+			console.log("[AU SkipIntro] 🔘 Button element injected into", target.className || target.id || target.tagName);
 		}
 		function bindPlayerEvents() {
 			const video = document.querySelector("video");
@@ -438,6 +436,7 @@
 		window.addEventListener("message", (e) => {
 			if (e.data?.type === "AU_SKIP_OP") {
 				rawOp = e.data.op || null;
+				console.log("[AU SkipIntro] 📩 Subframe received AU_SKIP_OP:", rawOp);
 				computeAdjustedOp();
 				checkTime();
 			}
