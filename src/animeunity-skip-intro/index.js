@@ -24,7 +24,22 @@ if (window.self === window.top) {
       if (!isNaN(num) && num > 0) return num;
     }
 
-    // 3. Fallback: static server-rendered HTML attribute on <video-player>
+    // 3. Map episode ID in current URL to episode number via Vue's episode list
+    try {
+      const pathParts = window.location.pathname.split("/").filter(Boolean);
+      const epIdInUrl = parseInt(pathParts[pathParts.length - 1], 10);
+      const playerEl = document.querySelector("video-player, layout-items");
+      const vue = playerEl?.__vue__ || document.querySelector(".episode-wrapper")?.__vue__;
+      if (epIdInUrl && Array.isArray(vue?.episodes)) {
+        const matched = vue.episodes.find((e) => e.id === epIdInUrl);
+        if (matched?.number) {
+          const num = parseInt(matched.number, 10);
+          if (!isNaN(num) && num > 0) return num;
+        }
+      }
+    } catch (_) {}
+
+    // 4. Fallback: static server-rendered HTML attribute on <video-player>
     try {
       const player = document.querySelector("video-player");
       const epAttr = player?.getAttribute("episode");
@@ -64,21 +79,22 @@ if (window.self === window.top) {
     if (!malId || !epNum) return;
 
     const isNewEp = malId !== activeMalId || epNum !== activeEp;
-    if (!isNewEp && roundedDur === activeDuration && activeOp !== null) {
+    if (!isNewEp && activeOp !== null) {
       return;
     }
 
     if (isNewEp) {
+      console.log(`[AU SkipIntro] 🔄 Episode changed: Ep ${activeEp} -> Ep ${epNum}`);
       activeMalId = malId;
       activeEp = epNum;
       activeDuration = roundedDur;
       activeOp = null;
-      broadcastOp(); // Instantly clear previous episode's timestamps in subframe
+      broadcastOp(); // Instantly clear previous episode's timestamps in player subframe!
     } else if (roundedDur > 0) {
       activeDuration = roundedDur;
     }
 
-    console.log(`[AU SkipIntro] 🎬 Top page: Anime MAL ${malId}, Ep ${epNum} (dur: ${activeDuration}s)`);
+    console.log(`[AU SkipIntro] 🎬 Top page: Fetching AniSkip for MAL ${malId}, Ep ${epNum} (dur: ${activeDuration}s)...`);
     try {
       const res = await fetch(
         `https://api.aniskip.com/v2/skip-times/${malId}/${epNum}?types=op&episodeLength=${activeDuration}`
@@ -101,7 +117,7 @@ if (window.self === window.top) {
           }
         : null;
 
-      console.log(`[AU SkipIntro] 📡 AniSkip API result:`, activeOp || "No opening found");
+      console.log(`[AU SkipIntro] 📡 AniSkip API result for Ep ${epNum}:`, activeOp || "No opening found");
       broadcastOp();
     } catch (err) {
       console.error("[AU SkipIntro] Error checking episode:", err);
@@ -138,15 +154,15 @@ if (window.self === window.top) {
 
   window.addEventListener("message", (e) => {
     if (e.data?.type === "AU_FRAME_READY") {
-      if (e.data.duration && Math.round(e.data.duration) !== activeDuration) {
-        checkEpisode(e.data.duration);
-      } else {
+      const frameDur = e.data.duration ? Math.round(e.data.duration) : 0;
+      console.log(`[AU SkipIntro] 📩 Frame ready received from player (dur: ${frameDur}s)`);
+      checkEpisode(frameDur).then(() => {
         broadcastOp();
-      }
+      });
     }
   });
 
-  setInterval(() => checkEpisode(), 800);
+  setInterval(() => checkEpisode(), 600);
   setInterval(broadcastOp, 2000);
   checkEpisode();
 }

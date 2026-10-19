@@ -75,6 +75,18 @@
 				if (!isNaN(num) && num > 0) return num;
 			}
 			try {
+				const pathParts = window.location.pathname.split("/").filter(Boolean);
+				const epIdInUrl = parseInt(pathParts[pathParts.length - 1], 10);
+				const vue = document.querySelector("video-player, layout-items")?.__vue__ || document.querySelector(".episode-wrapper")?.__vue__;
+				if (epIdInUrl && Array.isArray(vue?.episodes)) {
+					const matched = vue.episodes.find((e) => e.id === epIdInUrl);
+					if (matched?.number) {
+						const num = parseInt(matched.number, 10);
+						if (!isNaN(num) && num > 0) return num;
+					}
+				}
+			} catch (_) {}
+			try {
 				const epAttr = document.querySelector("video-player")?.getAttribute("episode");
 				if (epAttr) {
 					const parsed = JSON.parse(epAttr);
@@ -102,15 +114,16 @@
 			const roundedDur = Math.round(duration || 0);
 			if (!malId || !epNum) return;
 			const isNewEp = malId !== activeMalId || epNum !== activeEp;
-			if (!isNewEp && roundedDur === activeDuration && activeOp !== null) return;
+			if (!isNewEp && activeOp !== null) return;
 			if (isNewEp) {
+				console.log(`[AU SkipIntro] 🔄 Episode changed: Ep ${activeEp} -> Ep ${epNum}`);
 				activeMalId = malId;
 				activeEp = epNum;
 				activeDuration = roundedDur;
 				activeOp = null;
 				broadcastOp();
 			} else if (roundedDur > 0) activeDuration = roundedDur;
-			console.log(`[AU SkipIntro] 🎬 Top page: Anime MAL ${malId}, Ep ${epNum} (dur: ${activeDuration}s)`);
+			console.log(`[AU SkipIntro] 🎬 Top page: Fetching AniSkip for MAL ${malId}, Ep ${epNum} (dur: ${activeDuration}s)...`);
 			try {
 				const res = await fetch(`https://api.aniskip.com/v2/skip-times/${malId}/${epNum}?types=op&episodeLength=${activeDuration}`);
 				if (!res.ok) {
@@ -126,7 +139,7 @@
 					episodeLength: opResult.episodeLength || 0,
 					skipType: opResult.skipType
 				} : null;
-				console.log(`[AU SkipIntro] 📡 AniSkip API result:`, activeOp || "No opening found");
+				console.log(`[AU SkipIntro] 📡 AniSkip API result for Ep ${epNum}:`, activeOp || "No opening found");
 				broadcastOp();
 			} catch (err) {
 				console.error("[AU SkipIntro] Error checking episode:", err);
@@ -158,11 +171,14 @@
 		});
 		window.addEventListener("message", (e) => {
 			if (e.data?.type === "AU_FRAME_READY") {
-				if (e.data.duration && Math.round(e.data.duration) !== activeDuration) checkEpisode(e.data.duration);
-				else broadcastOp();
+				const frameDur = e.data.duration ? Math.round(e.data.duration) : 0;
+				console.log(`[AU SkipIntro] 📩 Frame ready received from player (dur: ${frameDur}s)`);
+				checkEpisode(frameDur).then(() => {
+					broadcastOp();
+				});
 			}
 		});
-		setInterval(() => checkEpisode(), 800);
+		setInterval(() => checkEpisode(), 600);
 		setInterval(broadcastOp, 2e3);
 		checkEpisode();
 	} else {
