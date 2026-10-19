@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/pallax03/my-userscripts/compare/import-friend-anilist-v0.2.0...import-friend-anilist-v0.3.0) (2026-10-19)
+
+
+### Features
+
+* **import-friend-anilist:** use responsive slide-over drawer for preferences ([517c57c](https://github.com/pallax03/my-userscripts/commit/517c57c802d9b744a1bf70438039af196532972b))
+
 ## [0.2.0](https://github.com/pallax03/my-userscripts/compare/import-friend-anilist-v0.1.0...import-friend-anilist-v0.2.0) (2026-10-17)
 
 
