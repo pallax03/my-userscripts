@@ -30,6 +30,7 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
   const { modal, close } = createModal({
     id: "al-prefs-overlay",
     className: "al-prefs-modal",
+    variant: "drawer",
     icon: Sliders,
     title: "Preferences",
     subtitle: "Playback, homepage, and sync settings",
