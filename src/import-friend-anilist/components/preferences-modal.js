@@ -13,6 +13,7 @@ export function openFriendPreferencesModal({
   const { modal, close } = createModal({
     id: "al-friend-prefs-overlay",
     className: "al-prefs-modal",
+    variant: "drawer",
     icon: Sliders,
     title: "Friend List Preferences",
     subtitle: "Customize list browsing and quick-add actions",
