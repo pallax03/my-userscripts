@@ -1,57 +1,62 @@
-const LOG_ENDPOINT = "http://127.0.0.1:9876/log";
+/**
+ * Shared logger with postMessage subframe bridging.
+ * Logs originating in subframes (e.g. video player iframes) are forwarded
+ * to window.top so all messages appear together in the primary browser console.
+ */
 
-// In-memory buffer of recent logs
-if (!window.__AU_LOGS__) window.__AU_LOGS__ = [];
-
-function emit(level, message, data) {
-  const entry = {
-    time: new Date().toISOString(),
-    level,
-    message,
-    data
-  };
-
-  window.__AU_LOGS__.push(entry);
-  if (window.__AU_LOGS__.length > 100) window.__AU_LOGS__.shift();
-
-  // Console output
-  const prefix = `[AU-Sync]`;
-  if (level === "ERROR") {
-    console.error(prefix, message, data || "");
-  } else if (level === "WARN") {
-    console.warn(prefix, message, data || "");
-  } else {
-    console.log(prefix, message, data || "");
-  }
-
-  // Stream to local log bridge only if explicit debug flag is set in console
-  if (typeof window !== "undefined" && window.__AU_DEBUG__) {
-    try {
-      const payload = JSON.stringify({ level, message, data });
-      if (typeof GM_xmlhttpRequest === "function") {
-        GM_xmlhttpRequest({
-          method: "POST",
-          url: LOG_ENDPOINT,
-          headers: { "Content-Type": "application/json" },
-          data: payload,
-          timeout: 500,
-          onerror: () => {},
-          ontimeout: () => {}
-        });
+if (window.self === window.top && !window.__AU_LOGGER_INIT__) {
+  window.__AU_LOGGER_INIT__ = true;
+  window.addEventListener("message", (e) => {
+    if (e.data?.type === "AU_LOG_BRIDGE") {
+      const { prefix, level, msg, data } = e.data;
+      const tag = `%c${prefix}%c`;
+      const tagStyle = "color: #38bdf8; font-weight: bold;";
+      const resetStyle = "color: inherit;";
+      if (level === "error") {
+        console.error(tag, tagStyle, resetStyle, msg, data !== undefined ? data : "");
+      } else if (level === "warn") {
+        console.warn(tag, tagStyle, resetStyle, msg, data !== undefined ? data : "");
       } else {
-        fetch(LOG_ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: payload
-        }).catch(() => {});
+        console.log(tag, tagStyle, resetStyle, msg, data !== undefined ? data : "");
       }
-    } catch (_) {}
-  }
+    }
+  });
 }
 
-export const Logger = {
-  info: (msg, data) => emit("INFO", msg, data),
-  warn: (msg, data) => emit("WARN", msg, data),
-  error: (msg, data) => emit("ERROR", msg, data),
-  getLogs: () => [...window.__AU_LOGS__]
-};
+export function createLogger(prefix = "[AU]") {
+  const isTop = window.self === window.top;
+
+  function logMessage(level, msg, data) {
+    if (isTop) {
+      const tag = `%c${prefix}%c`;
+      const tagStyle = "color: #38bdf8; font-weight: bold;";
+      const resetStyle = "color: inherit;";
+      if (level === "error") {
+        console.error(tag, tagStyle, resetStyle, msg, data !== undefined ? data : "");
+      } else if (level === "warn") {
+        console.warn(tag, tagStyle, resetStyle, msg, data !== undefined ? data : "");
+      } else {
+        console.log(tag, tagStyle, resetStyle, msg, data !== undefined ? data : "");
+      }
+    } else {
+      try {
+        window.top.postMessage({
+          type: "AU_LOG_BRIDGE",
+          prefix,
+          level,
+          msg,
+          data: typeof data === "object" ? JSON.parse(JSON.stringify(data)) : data
+        }, "*");
+      } catch (_) {}
+    }
+  }
+
+  return {
+    info: (msg, data) => logMessage("info", msg, data),
+    warn: (msg, data) => logMessage("warn", msg, data),
+    error: (msg, data) => logMessage("error", msg, data)
+  };
+}
+
+export const Logger = createLogger("[AU-Sync]");
+
