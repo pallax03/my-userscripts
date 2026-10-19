@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AnimeUnity - Skip Intro
 // @namespace    https://github.com/pallax03/my-userscripts
-// @version      1.0.0
+// @version      1.1.0
 // @author       Alex Mazzoni
 // @description  Automatically skip or show a quick button to skip opening anime sequences on AnimeUnity using AniSkip
 // @license      MIT

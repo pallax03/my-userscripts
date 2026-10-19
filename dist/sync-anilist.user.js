@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AnimeUnity to AniList Sync
 // @namespace    https://github.com/pallax03/my-userscripts
-// @version      1.1.0
+// @version      1.2.0
 // @author       Alex Mazzoni
 // @description  Automatically sync watched AnimeUnity episodes and status to AniList
 // @license      MIT
