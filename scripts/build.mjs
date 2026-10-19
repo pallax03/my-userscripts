@@ -111,7 +111,7 @@ const SCRIPTS = [
       downloadURL: "https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/animeunity-skip-intro.user.js",
       grant: ["unsafeWindow"],
       connect: ["api.aniskip.com"],
-      "run-at": "document-idle"
+      "run-at": "document-start"
     }
   },
   {

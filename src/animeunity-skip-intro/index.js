@@ -172,6 +172,10 @@ if (window.self === window.top) {
     setTimeout(() => checkEpisode(), 50);
     setTimeout(() => checkEpisode(), 250);
   });
+  window.addEventListener("pageshow", () => {
+    setTimeout(() => checkEpisode(), 50);
+    setTimeout(() => checkEpisode(), 250);
+  });
 
   // Listen for clicks on episode selectors and pagination
   document.addEventListener(
@@ -395,6 +399,7 @@ else {
     });
 
     const target = document.querySelector(".jw-wrapper, .jwplayer, #player") || document.body;
+    if (!target) return;
     if (window.getComputedStyle(target).position === "static") {
       target.style.position = "relative";
     }

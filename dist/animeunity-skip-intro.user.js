@@ -50,7 +50,7 @@
 // @match        *://vixcloud2.net/*
 // @connect      api.aniskip.com
 // @grant        unsafeWindow
-// @run-at       document-idle
+// @run-at       document-start
 // ==/UserScript==
 
 (function() {
@@ -182,6 +182,10 @@
 			setTimeout(() => checkEpisode(), 50);
 		};
 		window.addEventListener("popstate", () => {
+			setTimeout(() => checkEpisode(), 50);
+			setTimeout(() => checkEpisode(), 250);
+		});
+		window.addEventListener("pageshow", () => {
 			setTimeout(() => checkEpisode(), 50);
 			setTimeout(() => checkEpisode(), 250);
 		});
@@ -376,6 +380,7 @@
 				}, true);
 			});
 			const target = document.querySelector(".jw-wrapper, .jwplayer, #player") || document.body;
+			if (!target) return;
 			if (window.getComputedStyle(target).position === "static") target.style.position = "relative";
 			target.appendChild(btn);
 		}
