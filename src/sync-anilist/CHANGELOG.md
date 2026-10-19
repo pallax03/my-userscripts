@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.0](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.2.0...sync-anilist-v1.3.0) (2026-10-19)
+
+
+### Features
+
+* **sync-anilist:** add configurable skip fallback on 'S' key and unified intro preferences section ([560d823](https://github.com/pallax03/my-userscripts/commit/560d82372c500812a99add0999eeb80f9716b428))
+* **sync-anilist:** convert preferences modal to responsive slide-over drawer ([c7c3b2a](https://github.com/pallax03/my-userscripts/commit/c7c3b2aa8430d1267d1f18c23dca69f842bf6242))
+* **sync-anilist:** merge skip intro with AniSkip integration and standalone auto-skip preference ([2b58094](https://github.com/pallax03/my-userscripts/commit/2b58094974d2fd4868491c763cb005c0361eb9a3))
+* **sync-anilist:** rename skip button label to English 'Skip Intro' ([12c1fca](https://github.com/pallax03/my-userscripts/commit/12c1fcac880c8cd07a8f01d5f8f9b9b81db7a624))
+
 ## [1.2.0](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.1.0...sync-anilist-v1.2.0) (2026-10-19)
 
 
