@@ -30,11 +30,17 @@
   - Interactive auto-sync countdown with quick-action icon buttons: Cancel (`✕`), Save (`✓`), or Synced (`refresh-ccw`).
   - Mobile & landscape layout optimized with edge anchoring for `Precedente` and `Successivo` episode buttons.
 
+- **⏩ AniSkip Opening Skip & Auto-Skip**:
+  - Automatically fetches opening interval timings via AniSkip API based on AniList MAL ID.
+  - Displays glassmorphic **"Salta Intro"** button (with shortcut `S`) during opening themes.
+  - Optional **"Auto-skip opening intro"** toggle in Preferences to seamlessly skip openings without touching the controls.
+  - Automatically compensates for video pre-roll bumpers between AnimeUnity and TV broadcast timings.
+
 - **⚙️ Unified Preferences Modal**:
-  - Compact, 3-section glassmorphic dialog:
-    1. **Playback & Auto-Track**: Continuous toggle card with grace delay (0s, 10s, 15s, 30s) and rewind protection.
-    2. **Preferred Audio**: Choose between **SUB-ITA** (default) and **ITA** (Italian dub) priority when both versions exist.
-    3. **Homepage Shelf**: Enable/disable shelf display and customize default filter behavior.
+  - Compact glassmorphic settings drawer:
+    1. **Playback & Auto-Track**: Grace delay (0s, 10s, 15s, 30s), rewind protection, and **Auto-skip opening intro**.
+    2. **Homepage Shelf**: Enable/disable Continue Watching shelf and customize default unwatched filters.
+    3. **Sync Together**: Select default AniList buddy for watch party sync.
 
 - **🎯 Smart Metadata Resolver**:
   - Automatically identifies anime by querying AnimeUnity's internal `/livesearch` API and matching exact AniList IDs.

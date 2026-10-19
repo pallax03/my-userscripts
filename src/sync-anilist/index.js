@@ -15,10 +15,11 @@ import { renderWatchingShelf } from "./components/watching-shelf.js";
 import { Buddy } from "./buddy.js";
 import { getAnimeUnityUrl } from "../shared/animeunity/utils.js";
 import { iconHtml, Play } from "../shared/icons.js";
+import { getAnimeMetadata } from "../shared/animeunity/metadata.js";
+import { checkSkipIntro, initSkipIntroTop } from "./components/skip-intro.js";
+import { initPlayer } from "./player.js";
 
-handleUrlToken();
-
-let currentUser = Buddy.getViewer();
+let currentUser = null;
 let currentMedia = null;
 let currentTitle = "";
 let trackedProgress = -1;
@@ -59,6 +60,13 @@ function handleActiveEpisodeChange(newActiveEp) {
   if (!newActiveEp || newActiveEp === lastActiveEp) return;
   lastActiveEp = newActiveEp;
   cancelAutoTrack();
+
+  const malId = currentMedia?.idMal || getAnimeMetadata(undefined, {
+    onResolved: (m) => { if (m?.malId) checkSkipIntro(m.malId, newActiveEp); }
+  }).malId;
+  if (malId) {
+    checkSkipIntro(malId, newActiveEp);
+  }
 
   const settings = Settings.get();
   autoTrackState.preventRewind = settings.preventRewind;
@@ -554,6 +562,16 @@ export const App = {
       } else {
         currentBuddyData = null;
       }
+
+      if (!isHome()) {
+        const ep = getActiveEpisode() || 1;
+        const malId = currentMedia?.idMal || getAnimeMetadata(undefined, {
+          onResolved: (m) => { if (m?.malId) checkSkipIntro(m.malId, ep); }
+        }).malId;
+        if (malId) {
+          checkSkipIntro(malId, ep);
+        }
+      }
     } catch (err) {
       Logger.warn("Error during AniList sync:", err);
     } finally {
@@ -563,6 +581,7 @@ export const App = {
   },
 
   init() {
+    initSkipIntroTop();
     App.loadUser();
 
     Settings.subscribe((settings) => {
@@ -637,4 +656,11 @@ export const App = {
   }
 };
 
-App.init();
+if (window.location.hostname.includes("vixcloud")) {
+  initPlayer();
+} else {
+  currentUser = Buddy.getViewer();
+  handleUrlToken();
+  App.init();
+}
+

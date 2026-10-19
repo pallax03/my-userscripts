@@ -1,5 +1,4 @@
 {
   "src/sync-anilist": "1.2.0",
-  "src/import-friend-anilist": "0.2.0",
-  "src/animeunity-skip-intro": "1.1.0"
+  "src/import-friend-anilist": "0.2.0"
 }

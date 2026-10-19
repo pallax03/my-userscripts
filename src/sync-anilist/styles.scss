@@ -2136,7 +2136,39 @@ video-player,
   }
 }
 
+// --- Video Player Skip Intro Button (VixCloud subframe) ---
+#au-skip-intro-btn {
+  position: absolute !important;
+  bottom: 56px !important;
+  right: 20px !important;
+  z-index: 2147483647 !important;
+  display: none;
+  align-items: center !important;
+  gap: 6px !important;
+  background: rgba(10, 16, 26, 0.92) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1.5px solid #3db4f2 !important;
+  color: #fff !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 12px rgba(61, 180, 242, 0.4) !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  pointer-events: auto !important;
+  transition: transform 0.15s, background 0.15s, color 0.15s !important;
 
+  &:hover {
+    background: #3db4f2 !important;
+    color: #06101e !important;
+    transform: scale(1.04) !important;
+  }
 
-
-
+  &:active {
+    transform: scale(0.98) !important;
+  }
+}

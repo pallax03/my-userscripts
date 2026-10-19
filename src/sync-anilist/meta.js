@@ -1,0 +1,71 @@
+export default (manifest = {}) => ({
+  name: "sync-anilist",
+  entry: "src/sync-anilist/index.js",
+  outFile: "sync-anilist.user.js",
+  meta: {
+    name: "AnimeUnity to AniList Sync",
+    namespace: "https://github.com/pallax03/my-userscripts",
+    version: manifest["src/sync-anilist"] || "0.0.0",
+    description: "Automatically sync watched AnimeUnity episodes to AniList and skip opening sequences with AniSkip",
+    author: "Alex Mazzoni",
+    match: [
+      "*://*.animeunity.to/*",
+      "*://animeunity.to/*",
+      "*://*.animeunity.so/*",
+      "*://animeunity.so/*",
+      "*://*.animeunity.tv/*",
+      "*://animeunity.tv/*",
+      "*://*.animeunity.it/*",
+      "*://animeunity.it/*",
+      "*://*.animeunity.cc/*",
+      "*://animeunity.cc/*",
+      "*://*.animeunity.fun/*",
+      "*://animeunity.fun/*",
+      "*://*.vixcloud.cc/*",
+      "*://vixcloud.cc/*",
+      "*://*.vixcloud.co/*",
+      "*://vixcloud.co/*",
+      "*://*.vixcloud.to/*",
+      "*://vixcloud.to/*",
+      "*://*.vixcloud.net/*",
+      "*://vixcloud.net/*",
+      "*://*.vixcloud.org/*",
+      "*://vixcloud.org/*",
+      "*://*.vixcloud.video/*",
+      "*://vixcloud.video/*",
+      "*://*.vixcloud2.cc/*",
+      "*://vixcloud2.cc/*",
+      "*://*.vixcloud2.co/*",
+      "*://vixcloud2.co/*",
+      "*://*.vixcloud2.to/*",
+      "*://vixcloud2.to/*",
+      "*://*.vixcloud2.net/*",
+      "*://vixcloud2.net/*"
+    ],
+    include: [
+      "*://*.animeunity.*/*",
+      "*://animeunity.*/*",
+      "*://*.vixcloud.*/*",
+      "*://vixcloud.*/*",
+      "*://*.vixcloud2.*/*",
+      "*://vixcloud2.*/*",
+      "/^https?:\\/\\/(?:[a-z0-9-]+\\.)?animeunity\\.[a-z]{2,}\\/.*$/",
+      "/^https?:\\/\\/(?:[a-z0-9-]+\\.)?vixcloud[0-9]?\\.[a-z]{2,}\\/.*$/"
+    ],
+    updateURL: "https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/sync-anilist.user.js",
+    downloadURL: "https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/sync-anilist.user.js",
+    grant: [
+      "GM_getValue",
+      "GM_setValue",
+      "GM_deleteValue",
+      "GM_xmlhttpRequest",
+      "unsafeWindow"
+    ],
+    connect: [
+      "graphql.anilist.co",
+      "anilist.co",
+      "api.aniskip.com"
+    ],
+    "run-at": "document-idle"
+  }
+});

@@ -75,7 +75,18 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
         </div>
       </div>
 
-      <!-- 2. Homepage Shelf -->
+      <!-- 2. Standalone Auto-Skip Opening Intro -->
+      <div class="al-pref-group ${settings.autoSkip ? "is-active" : ""}" style="margin-top: 10px;" id="al-pref-sec-autoskip">
+        <div class="al-pref-header">
+          <div class="al-pref-info">
+            <span class="al-pref-title">Auto-skip opening intro</span>
+            <span class="al-pref-desc">Automatically skip opening sequences with AniSkip</span>
+          </div>
+          <input type="checkbox" class="al-switch al-toggle-autoskip" ${settings.autoSkip ? "checked" : ""} />
+        </div>
+      </div>
+
+      <!-- 3. Homepage Shelf -->
       <div class="al-pref-group al-pref-collapsible ${settings.homeShelf ? "is-open is-active" : ""}" style="margin-top: 10px;" id="al-pref-sec-shelf">
         <div class="al-pref-header">
           <div class="al-pref-title-click">
@@ -183,6 +194,27 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
       Settings.set("preventRewind", e.target.checked);
     });
   }
+
+  // 2. Standalone Auto-skip boolean switch
+  const autoSkipToggle = modal.querySelector(".al-toggle-autoskip");
+  const autoSkipGroup = modal.querySelector("#al-pref-sec-autoskip");
+  const autoSkipHeader = autoSkipGroup?.querySelector(".al-pref-header");
+
+  const setAutoSkip = (active) => {
+    if (autoSkipToggle) autoSkipToggle.checked = active;
+    Settings.set("autoSkip", active);
+    autoSkipGroup?.classList.toggle("is-active", active);
+  };
+
+  autoSkipHeader?.addEventListener("click", (e) => {
+    if (e.target !== autoSkipToggle) {
+      setAutoSkip(!autoSkipToggle?.checked);
+    }
+  });
+
+  autoSkipToggle?.addEventListener("change", (e) => {
+    setAutoSkip(e.target.checked);
+  });
 
   // 2. Home Shelf boolean switch + expansion
   const homeShelfToggle = modal.querySelector(".al-toggle-homeshelf");
