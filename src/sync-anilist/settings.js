@@ -12,12 +12,16 @@ export const Settings = {
     const searchAutoSelectDelay = Storage.get("al_pref_search_autoselect");
     const defaultBuddy = Storage.get("al_pref_default_buddy");
     const autoSkip = Storage.get("al_opt_autoskip");
+    const skipFallback = Storage.get("al_opt_skip_fallback");
 
     return {
       autoTrack: autoTrack === true || autoTrack === "true",
       delay: delay !== null && delay !== undefined && !isNaN(parseInt(delay, 10)) ? parseInt(delay, 10) : 15,
       preventRewind: preventRewind !== false && preventRewind !== "false",
       autoSkip: autoSkip === true || autoSkip === "true",
+      skipFallbackDuration: skipFallback !== null && skipFallback !== undefined && !isNaN(parseInt(skipFallback, 10))
+        ? parseInt(skipFallback, 10)
+        : 85,
       language: Storage.get("al_pref_language") || "sub",
       homeShelf: homeShelf !== false && homeShelf !== "false",
       homeOnlyUnwatched: homeOnlyUnwatched === true || homeOnlyUnwatched === "true",
@@ -33,6 +37,7 @@ export const Settings = {
     else if (key === "delay") Storage.set("al_opt_autodelay", String(val));
     else if (key === "preventRewind") Storage.set("al_opt_prevent_rewind", String(val));
     else if (key === "autoSkip") Storage.set("al_opt_autoskip", String(val));
+    else if (key === "skipFallbackDuration") Storage.set("al_opt_skip_fallback", String(val));
     else if (key === "language") {
       Storage.set("al_pref_language", String(val));
       // Invalidate full URL mapping cache so all series re-resolve with new audio preference

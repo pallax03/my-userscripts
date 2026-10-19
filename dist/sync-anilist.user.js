@@ -325,6 +325,7 @@
 		cy: "12",
 		r: "3"
 	}]];
+	var FastForward = [["path", { d: "M12 6a2 2 0 0 1 3.414-1.414l6 6a2 2 0 0 1 0 2.828l-6 6A2 2 0 0 1 12 18z" }], ["path", { d: "M2 6a2 2 0 0 1 3.414-1.414l6 6a2 2 0 0 1 0 2.828l-6 6A2 2 0 0 1 2 18z" }]];
 	var KeyRound = [["path", { d: "M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" }], ["circle", {
 		cx: "16.5",
 		cy: "7.5",
@@ -352,6 +353,7 @@
 		cy: "11",
 		r: "8"
 	}]];
+	var SkipForward = [["path", { d: "M21 4v16" }], ["path", { d: "M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z" }]];
 	var SlidersVertical = [
 		["path", { d: "M10 8h4" }],
 		["path", { d: "M12 21v-9" }],
@@ -785,11 +787,13 @@
 			const searchAutoSelectDelay = Storage.get("al_pref_search_autoselect");
 			const defaultBuddy = Storage.get("al_pref_default_buddy");
 			const autoSkip = Storage.get("al_opt_autoskip");
+			const skipFallback = Storage.get("al_opt_skip_fallback");
 			return {
 				autoTrack: autoTrack === true || autoTrack === "true",
 				delay: delay !== null && delay !== void 0 && !isNaN(parseInt(delay, 10)) ? parseInt(delay, 10) : 15,
 				preventRewind: preventRewind !== false && preventRewind !== "false",
 				autoSkip: autoSkip === true || autoSkip === "true",
+				skipFallbackDuration: skipFallback !== null && skipFallback !== void 0 && !isNaN(parseInt(skipFallback, 10)) ? parseInt(skipFallback, 10) : 85,
 				language: Storage.get("al_pref_language") || "sub",
 				homeShelf: homeShelf !== false && homeShelf !== "false",
 				homeOnlyUnwatched: homeOnlyUnwatched === true || homeOnlyUnwatched === "true",
@@ -802,6 +806,7 @@
 			else if (key === "delay") Storage.set("al_opt_autodelay", String(val));
 			else if (key === "preventRewind") Storage.set("al_opt_prevent_rewind", String(val));
 			else if (key === "autoSkip") Storage.set("al_opt_autoskip", String(val));
+			else if (key === "skipFallbackDuration") Storage.set("al_opt_skip_fallback", String(val));
 			else if (key === "language") {
 				Storage.set("al_pref_language", String(val));
 				Storage.del("al_au_map");
@@ -1177,14 +1182,48 @@
         </div>
       </div>
 
-      <!-- 2. Standalone Auto-Skip Opening Intro -->
-      <div class="al-pref-group ${settings.autoSkip ? "is-active" : ""}" style="margin-top: 10px;" id="al-pref-sec-autoskip">
+      <!-- 2. Skip Intro (AniSkip) -->
+      <div class="al-pref-group al-pref-collapsible is-open is-active" style="margin-top: 10px;" id="al-pref-sec-skipintro">
         <div class="al-pref-header">
-          <div class="al-pref-info">
-            <span class="al-pref-title">Auto-skip opening intro</span>
-            <span class="al-pref-desc">Automatically skip opening sequences with AniSkip</span>
+          <div class="al-pref-title-click">
+            <span class="al-pref-chevron">${iconHtml(ChevronDown, {
+				width: 14,
+				height: 14
+			})}</span>
+            <div class="al-pref-info">
+              <span class="al-pref-title">Skip intro (AniSkip)</span>
+              <span class="al-pref-desc">Automatic opening skip & shortcut controls</span>
+            </div>
           </div>
-          <input type="checkbox" class="al-switch al-toggle-autoskip" ${settings.autoSkip ? "checked" : ""} />
+        </div>
+
+        <div class="al-pref-sub">
+          <label class="al-pref-row" style="cursor: pointer;">
+            <span class="al-pref-sub-label">
+              ${iconHtml(SkipForward, {
+				width: 13,
+				height: 13
+			})}
+              <span>Auto-skip opening intro</span>
+            </span>
+            <input type="checkbox" class="al-switch al-toggle-autoskip" ${settings.autoSkip ? "checked" : ""} />
+          </label>
+
+          <div class="al-pref-row">
+            <span class="al-pref-sub-label">
+              ${iconHtml(FastForward, {
+				width: 13,
+				height: 13
+			})}
+              <span>Fallback skip (Key 'S')</span>
+            </span>
+            <select class="al-select-xs al-sel-skip-fallback">
+              <option value="75" ${settings.skipFallbackDuration === 75 ? "selected" : ""}>75 seconds</option>
+              <option value="80" ${settings.skipFallbackDuration === 80 ? "selected" : ""}>80 seconds</option>
+              <option value="85" ${settings.skipFallbackDuration === 85 ? "selected" : ""}>85 seconds (Default)</option>
+              <option value="90" ${settings.skipFallbackDuration === 90 ? "selected" : ""}>90 seconds</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -1298,19 +1337,17 @@
 		if (rewindCheckbox) rewindCheckbox.addEventListener("change", (e) => {
 			Settings.set("preventRewind", e.target.checked);
 		});
-		const autoSkipToggle = modal.querySelector(".al-toggle-autoskip");
-		const autoSkipGroup = modal.querySelector("#al-pref-sec-autoskip");
-		const autoSkipHeader = autoSkipGroup?.querySelector(".al-pref-header");
-		const setAutoSkip = (active) => {
-			if (autoSkipToggle) autoSkipToggle.checked = active;
-			Settings.set("autoSkip", active);
-			autoSkipGroup?.classList.toggle("is-active", active);
-		};
-		autoSkipHeader?.addEventListener("click", (e) => {
-			if (e.target !== autoSkipToggle) setAutoSkip(!autoSkipToggle?.checked);
+		const skipGroup = modal.querySelector("#al-pref-sec-skipintro");
+		(skipGroup?.querySelector(".al-pref-title-click"))?.addEventListener("click", () => {
+			skipGroup?.classList.toggle("is-open");
 		});
-		autoSkipToggle?.addEventListener("change", (e) => {
-			setAutoSkip(e.target.checked);
+		const autoSkipToggle = modal.querySelector(".al-toggle-autoskip");
+		if (autoSkipToggle) autoSkipToggle.addEventListener("change", (e) => {
+			Settings.set("autoSkip", e.target.checked);
+		});
+		const skipFallbackSelect = modal.querySelector(".al-sel-skip-fallback");
+		if (skipFallbackSelect) skipFallbackSelect.addEventListener("change", (e) => {
+			Settings.set("skipFallbackDuration", parseInt(e.target.value, 10));
 		});
 		const homeShelfToggle = modal.querySelector(".al-toggle-homeshelf");
 		const shelfGroup = modal.querySelector("#al-pref-sec-shelf");
@@ -2531,10 +2568,12 @@
 	var activeDuration = 0;
 	var fetchToken = 0;
 	function broadcastOp() {
+		const settings = Settings.get();
 		const msg = {
 			type: "AU_SKIP_OP",
 			op: activeOp,
-			autoSkip: Settings.get().autoSkip
+			autoSkip: settings.autoSkip,
+			skipFallbackDuration: settings.skipFallbackDuration
 		};
 		document.querySelectorAll("iframe").forEach((frame) => {
 			try {
@@ -2590,6 +2629,17 @@
 				else broadcastOp();
 			}
 		});
+		window.addEventListener("keydown", (e) => {
+			if (e.key === "s" || e.key === "S") {
+				const tag = document.activeElement?.tagName?.toLowerCase();
+				if (tag === "input" || tag === "textarea" || tag === "select") return;
+				document.querySelectorAll("iframe").forEach((frame) => {
+					try {
+						frame.contentWindow?.postMessage({ type: "AU_TRIGGER_SKIP" }, "*");
+					} catch (_) {}
+				});
+			}
+		}, true);
 		Settings.subscribe(() => {
 			broadcastOp();
 		});
@@ -2598,10 +2648,12 @@
 		let rawOp = null;
 		let currentOp = null;
 		let autoSkip = false;
+		let skipFallbackDuration = 85;
 		let btn = null;
 		let isBtnVisible = false;
 		let lastReportedDur = 0;
 		let hasAutoSkipped = false;
+		let lastSkipTime = 0;
 		function getPlayer() {
 			const uWin = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
 			return typeof uWin.jwplayer === "function" ? uWin.jwplayer() : null;
@@ -2674,20 +2726,44 @@
 				end: Math.max(0, rawOp.end - offset)
 			};
 		}
-		function skipIntro(isAuto = false) {
-			if (!currentOp) return;
-			const target = Math.max(0, currentOp.end - 1);
-			Logger.info(`⏩ ${isAuto ? "Auto-skipped" : "User skipped"} intro to ${target.toFixed(2)}s`);
+		function seekTo(target) {
 			const jw = getPlayer();
 			if (jw && typeof jw.seek === "function") jw.seek(target);
 			else {
 				const v = document.querySelector("video");
 				if (v) v.currentTime = target;
 			}
+		}
+		function skipIntro(isAuto = false) {
+			if (!currentOp) return;
+			const target = Math.max(0, currentOp.end - 1);
+			Logger.info(`⏩ ${isAuto ? "Auto-skipped" : "User skipped"} intro to ${target.toFixed(2)}s`);
+			seekTo(target);
 			if (btn) {
 				btn.style.display = "none";
 				isBtnVisible = false;
 			}
+		}
+		function fallbackSkip() {
+			const pos = getPos();
+			const dur = getDuration();
+			const target = dur > 0 ? Math.min(dur - 1, pos + skipFallbackDuration) : pos + skipFallbackDuration;
+			Logger.info(`⏩ Fallback skip (+${skipFallbackDuration}s) to ${target.toFixed(2)}s`);
+			seekTo(target);
+			if (btn) {
+				btn.style.display = "none";
+				isBtnVisible = false;
+			}
+		}
+		function handleSkipAction() {
+			const now = Date.now();
+			if (now - lastSkipTime < 500) return;
+			lastSkipTime = now;
+			const pos = getPos();
+			const showStart = currentOp ? Math.max(0, currentOp.start - 1.5) : 0;
+			const showEnd = currentOp ? Math.max(showStart, currentOp.end - 2) : 0;
+			if (currentOp && pos >= showStart && pos <= showEnd) skipIntro(false);
+			else fallbackSkip();
 		}
 		function ensureButton() {
 			if (btn && btn.parentElement) return;
@@ -2695,7 +2771,7 @@
 			btn.id = "au-skip-intro-btn";
 			btn.innerHTML = `
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><polygon points="19 5 19 19"></polygon></svg>
-      <span>Salta Intro</span>
+      <span>Salta Intro (S)</span>
     `;
 			[
 				"mousedown",
@@ -2760,22 +2836,18 @@
 			if (e.data?.type === "AU_SKIP_OP") {
 				rawOp = e.data.op || null;
 				autoSkip = !!e.data.autoSkip;
+				if (typeof e.data.skipFallbackDuration === "number" && e.data.skipFallbackDuration > 0) skipFallbackDuration = e.data.skipFallbackDuration;
 				hasAutoSkipped = false;
 				computeAdjustedOp();
 				checkTime();
-			}
+			} else if (e.data?.type === "AU_TRIGGER_SKIP") handleSkipAction();
 		});
 		window.addEventListener("keydown", (e) => {
 			if (e.key === "s" || e.key === "S") {
 				const tag = document.activeElement?.tagName?.toLowerCase();
 				if (tag === "input" || tag === "textarea" || tag === "select") return;
-				const pos = getPos();
-				const showStart = currentOp ? Math.max(0, currentOp.start - 1.5) : 0;
-				const showEnd = currentOp ? Math.max(showStart, currentOp.end - 2) : 0;
-				if (currentOp && pos >= showStart && pos <= showEnd) {
-					e.preventDefault();
-					skipIntro(false);
-				}
+				e.preventDefault();
+				handleSkipAction();
 			}
 		}, true);
 		setInterval(checkTime, 250);

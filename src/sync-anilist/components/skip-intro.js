@@ -9,10 +9,12 @@ let activeDuration = 0;
 let fetchToken = 0;
 
 export function broadcastOp() {
+  const settings = Settings.get();
   const msg = {
     type: "AU_SKIP_OP",
     op: activeOp,
-    autoSkip: Settings.get().autoSkip
+    autoSkip: settings.autoSkip,
+    skipFallbackDuration: settings.skipFallbackDuration
   };
   document.querySelectorAll("iframe").forEach((frame) => {
     try {
@@ -89,6 +91,22 @@ export function initSkipIntroTop() {
       }
     }
   });
+
+  window.addEventListener(
+    "keydown",
+    (e) => {
+      if (e.key === "s" || e.key === "S") {
+        const tag = document.activeElement?.tagName?.toLowerCase();
+        if (tag === "input" || tag === "textarea" || tag === "select") return;
+        document.querySelectorAll("iframe").forEach((frame) => {
+          try {
+            frame.contentWindow?.postMessage({ type: "AU_TRIGGER_SKIP" }, "*");
+          } catch (_) {}
+        });
+      }
+    },
+    true
+  );
 
   Settings.subscribe(() => {
     broadcastOp();

@@ -9,7 +9,9 @@ import {
   ChevronDown,
   Users,
   Trash2,
-  Search
+  Search,
+  FastForward,
+  SkipForward
 } from "../../shared/icons.js";
 import { Settings } from "../settings.js";
 import { Buddy } from "../buddy.js";
@@ -75,14 +77,39 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
         </div>
       </div>
 
-      <!-- 2. Standalone Auto-Skip Opening Intro -->
-      <div class="al-pref-group ${settings.autoSkip ? "is-active" : ""}" style="margin-top: 10px;" id="al-pref-sec-autoskip">
+      <!-- 2. Skip Intro (AniSkip) -->
+      <div class="al-pref-group al-pref-collapsible is-open is-active" style="margin-top: 10px;" id="al-pref-sec-skipintro">
         <div class="al-pref-header">
-          <div class="al-pref-info">
-            <span class="al-pref-title">Auto-skip opening intro</span>
-            <span class="al-pref-desc">Automatically skip opening sequences with AniSkip</span>
+          <div class="al-pref-title-click">
+            <span class="al-pref-chevron">${iconHtml(ChevronDown, { width: 14, height: 14 })}</span>
+            <div class="al-pref-info">
+              <span class="al-pref-title">Skip intro (AniSkip)</span>
+              <span class="al-pref-desc">Automatic opening skip & shortcut controls</span>
+            </div>
           </div>
-          <input type="checkbox" class="al-switch al-toggle-autoskip" ${settings.autoSkip ? "checked" : ""} />
+        </div>
+
+        <div class="al-pref-sub">
+          <label class="al-pref-row" style="cursor: pointer;">
+            <span class="al-pref-sub-label">
+              ${iconHtml(SkipForward, { width: 13, height: 13 })}
+              <span>Auto-skip opening intro</span>
+            </span>
+            <input type="checkbox" class="al-switch al-toggle-autoskip" ${settings.autoSkip ? "checked" : ""} />
+          </label>
+
+          <div class="al-pref-row">
+            <span class="al-pref-sub-label">
+              ${iconHtml(FastForward, { width: 13, height: 13 })}
+              <span>Fallback skip (Key 'S')</span>
+            </span>
+            <select class="al-select-xs al-sel-skip-fallback">
+              <option value="75" ${settings.skipFallbackDuration === 75 ? "selected" : ""}>75 seconds</option>
+              <option value="80" ${settings.skipFallbackDuration === 80 ? "selected" : ""}>80 seconds</option>
+              <option value="85" ${settings.skipFallbackDuration === 85 ? "selected" : ""}>85 seconds (Default)</option>
+              <option value="90" ${settings.skipFallbackDuration === 90 ? "selected" : ""}>90 seconds</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -195,26 +222,26 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
     });
   }
 
-  // 2. Standalone Auto-skip boolean switch
+  // 2. Skip Intro (AniSkip) collapsible header & controls
+  const skipGroup = modal.querySelector("#al-pref-sec-skipintro");
+  const skipHeader = skipGroup?.querySelector(".al-pref-title-click");
+  skipHeader?.addEventListener("click", () => {
+    skipGroup?.classList.toggle("is-open");
+  });
+
   const autoSkipToggle = modal.querySelector(".al-toggle-autoskip");
-  const autoSkipGroup = modal.querySelector("#al-pref-sec-autoskip");
-  const autoSkipHeader = autoSkipGroup?.querySelector(".al-pref-header");
+  if (autoSkipToggle) {
+    autoSkipToggle.addEventListener("change", (e) => {
+      Settings.set("autoSkip", e.target.checked);
+    });
+  }
 
-  const setAutoSkip = (active) => {
-    if (autoSkipToggle) autoSkipToggle.checked = active;
-    Settings.set("autoSkip", active);
-    autoSkipGroup?.classList.toggle("is-active", active);
-  };
-
-  autoSkipHeader?.addEventListener("click", (e) => {
-    if (e.target !== autoSkipToggle) {
-      setAutoSkip(!autoSkipToggle?.checked);
-    }
-  });
-
-  autoSkipToggle?.addEventListener("change", (e) => {
-    setAutoSkip(e.target.checked);
-  });
+  const skipFallbackSelect = modal.querySelector(".al-sel-skip-fallback");
+  if (skipFallbackSelect) {
+    skipFallbackSelect.addEventListener("change", (e) => {
+      Settings.set("skipFallbackDuration", parseInt(e.target.value, 10));
+    });
+  }
 
   // 2. Home Shelf boolean switch + expansion
   const homeShelfToggle = modal.querySelector(".al-toggle-homeshelf");

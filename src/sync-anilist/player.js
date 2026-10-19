@@ -4,10 +4,12 @@ export function initPlayer() {
   let rawOp = null;
   let currentOp = null;
   let autoSkip = false;
+  let skipFallbackDuration = 85;
   let btn = null;
   let isBtnVisible = false;
   let lastReportedDur = 0;
   let hasAutoSkipped = false;
+  let lastSkipTime = 0;
 
   function getPlayer() {
     const uWin = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
@@ -90,10 +92,7 @@ export function initPlayer() {
     };
   }
 
-  function skipIntro(isAuto = false) {
-    if (!currentOp) return;
-    const target = Math.max(0, currentOp.end - 1);
-    Logger.info(`⏩ ${isAuto ? "Auto-skipped" : "User skipped"} intro to ${target.toFixed(2)}s`);
+  function seekTo(target) {
     const jw = getPlayer();
     if (jw && typeof jw.seek === "function") {
       jw.seek(target);
@@ -101,9 +100,43 @@ export function initPlayer() {
       const v = document.querySelector("video");
       if (v) v.currentTime = target;
     }
+  }
+
+  function skipIntro(isAuto = false) {
+    if (!currentOp) return;
+    const target = Math.max(0, currentOp.end - 1);
+    Logger.info(`⏩ ${isAuto ? "Auto-skipped" : "User skipped"} intro to ${target.toFixed(2)}s`);
+    seekTo(target);
     if (btn) {
       btn.style.display = "none";
       isBtnVisible = false;
+    }
+  }
+
+  function fallbackSkip() {
+    const pos = getPos();
+    const dur = getDuration();
+    const target = dur > 0 ? Math.min(dur - 1, pos + skipFallbackDuration) : pos + skipFallbackDuration;
+    Logger.info(`⏩ Fallback skip (+${skipFallbackDuration}s) to ${target.toFixed(2)}s`);
+    seekTo(target);
+    if (btn) {
+      btn.style.display = "none";
+      isBtnVisible = false;
+    }
+  }
+
+  function handleSkipAction() {
+    const now = Date.now();
+    if (now - lastSkipTime < 500) return;
+    lastSkipTime = now;
+
+    const pos = getPos();
+    const showStart = currentOp ? Math.max(0, currentOp.start - 1.5) : 0;
+    const showEnd = currentOp ? Math.max(showStart, currentOp.end - 2) : 0;
+    if (currentOp && pos >= showStart && pos <= showEnd) {
+      skipIntro(false);
+    } else {
+      fallbackSkip();
     }
   }
 
@@ -114,7 +147,7 @@ export function initPlayer() {
     btn.id = "au-skip-intro-btn";
     btn.innerHTML = `
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><polygon points="19 5 19 19"></polygon></svg>
-      <span>Salta Intro</span>
+      <span>Salta Intro (S)</span>
     `;
 
     ["mousedown", "mouseup", "pointerdown", "touchstart", "click"].forEach((evt) => {
@@ -198,9 +231,14 @@ export function initPlayer() {
     if (e.data?.type === "AU_SKIP_OP") {
       rawOp = e.data.op || null;
       autoSkip = !!e.data.autoSkip;
+      if (typeof e.data.skipFallbackDuration === "number" && e.data.skipFallbackDuration > 0) {
+        skipFallbackDuration = e.data.skipFallbackDuration;
+      }
       hasAutoSkipped = false;
       computeAdjustedOp();
       checkTime();
+    } else if (e.data?.type === "AU_TRIGGER_SKIP") {
+      handleSkipAction();
     }
   });
 
@@ -210,13 +248,8 @@ export function initPlayer() {
       if (e.key === "s" || e.key === "S") {
         const tag = document.activeElement?.tagName?.toLowerCase();
         if (tag === "input" || tag === "textarea" || tag === "select") return;
-        const pos = getPos();
-        const showStart = currentOp ? Math.max(0, currentOp.start - 1.5) : 0;
-        const showEnd = currentOp ? Math.max(showStart, currentOp.end - 2) : 0;
-        if (currentOp && pos >= showStart && pos <= showEnd) {
-          e.preventDefault();
-          skipIntro(false);
-        }
+        e.preventDefault();
+        handleSkipAction();
       }
     },
     true
