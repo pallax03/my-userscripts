@@ -49,5 +49,7 @@ export const Storage = {
   del: (k) => {
     try { if (typeof GM_deleteValue === "function") GM_deleteValue(k); } catch (_) {}
     try { localStorage.removeItem(k); } catch (_) {}
-  }
+  },
+
+  remove: (k) => Storage.del(k)
 };

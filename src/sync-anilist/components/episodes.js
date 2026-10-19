@@ -56,8 +56,6 @@ export function autoSelectTargetEpisode(media, trackedProgress) {
   let targetEp = 0;
   if (targetStr) {
     targetEp = parseInt(targetStr, 10);
-  } else if (trackedProgress && trackedProgress > 0) {
-    targetEp = trackedProgress;
   }
 
   if (!targetEp || isNaN(targetEp) || targetEp <= 0) return;

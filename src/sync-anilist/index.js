@@ -12,11 +12,13 @@ import { renderActions } from "./components/actions.js";
 import { renderVideoBottom } from "./components/video-bottom.js";
 import { highlightEpisodes, getActiveEpisode, autoSelectTargetEpisode } from "./components/episodes.js";
 import { renderWatchingShelf } from "./components/watching-shelf.js";
+import { Buddy } from "./buddy.js";
+import { getAnimeUnityUrl } from "../shared/animeunity/utils.js";
 import { iconHtml, Play } from "../shared/icons.js";
 
 handleUrlToken();
 
-let currentUser = null;
+let currentUser = Buddy.getViewer();
 let currentMedia = null;
 let currentTitle = "";
 let trackedProgress = -1;
@@ -25,6 +27,8 @@ let isMediaLoading = false;
 
 let homeEntries = null;
 let homeFetching = false;
+let homeSyncNotifs = [];
+let currentBuddyData = null;
 
 let autoTrackTimer = null;
 let countdownInterval = null;
@@ -134,12 +138,64 @@ function injectHomeShelf(shelfElement) {
   }
 }
 
+async function computeHomeSyncNotifs() {
+  if (!homeEntries || !homeEntries.length) {
+    homeSyncNotifs = [];
+    return;
+  }
+
+  const buddyMap = new Map();
+  homeEntries.forEach((entry) => {
+    const buddy = Buddy.extract(entry.notes);
+    if (buddy) {
+      if (!buddyMap.has(buddy)) buddyMap.set(buddy, []);
+      buddyMap.get(buddy).push(entry);
+    }
+  });
+
+  if (!buddyMap.size) {
+    homeSyncNotifs = [];
+    return;
+  }
+
+  const notifs = [];
+  for (const [buddyName, entries] of buddyMap.entries()) {
+    const buddyCol = await Buddy.getBuddyCollection(buddyName);
+    for (const entry of entries) {
+      const buddyEntry = buddyCol.get(entry.mediaId);
+      const myProgress = entry.progress || 0;
+      const buddyProgress = buddyEntry?.progress || 0;
+      const isBuddyCompleted = buddyEntry?.status === "COMPLETED" || (buddyEntry?.media?.episodes && buddyProgress >= buddyEntry.media.episodes);
+      const isAhead = buddyProgress > myProgress;
+      const media = entry.media || {};
+      const title = media.title?.english || media.title?.romaji || "Untitled";
+      const auUrl = getAnimeUnityUrl(media, { targetEp: buddyProgress || myProgress || 1 });
+
+      notifs.push({
+        mediaId: entry.mediaId,
+        buddy: buddyName,
+        avatar: Buddy.getAvatar(buddyName) || "https://anilist.co/img/icons/icon.svg",
+        buddyEp: buddyProgress,
+        myEp: myProgress,
+        isAhead,
+        isBuddyCompleted: !!isBuddyCompleted,
+        canSync: isAhead || (isBuddyCompleted && entry.status !== "COMPLETED"),
+        title,
+        auUrl
+      });
+    }
+  }
+
+  homeSyncNotifs = notifs;
+}
+
 async function loadHomeWatching() {
   if (homeFetching) return;
   homeFetching = true;
 
   if (!currentUser?.id) {
     homeEntries = [];
+    homeSyncNotifs = [];
     homeFetching = false;
     renderHome();
     return;
@@ -150,14 +206,22 @@ async function loadHomeWatching() {
     const lists = data?.MediaListCollection?.lists || [];
     homeEntries = lists.flatMap((l) => l.entries || []);
     homeEntries.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    await computeHomeSyncNotifs();
   } catch (err) {
     Logger.warn("Error loading watching collection:", err);
     homeEntries = [];
+    homeSyncNotifs = [];
   } finally {
     homeFetching = false;
     renderHome();
   }
 }
+
+const openAuth = () => openTokenModal(async () => {
+  await App.loadUser();
+  if (isHome()) await loadHomeWatching();
+  else App.sync();
+});
 
 function renderHome() {
   if (!isHome()) {
@@ -205,7 +269,13 @@ function renderHome() {
   const shelf = renderWatchingShelf({
     entries: homeEntries || [],
     viewer: currentUser,
-    onRefresh: () => loadHomeWatching()
+    syncNotifs: homeSyncNotifs,
+    onLogin: openAuth,
+    onRefresh: () => loadHomeWatching(),
+    onSyncEntry: async (mediaId, ep, isCompleted = false) => {
+      await App.setProgress(ep, mediaId, isCompleted ? "COMPLETED" : null);
+      await loadHomeWatching();
+    }
   });
   injectHomeShelf(shelf);
 }
@@ -220,6 +290,8 @@ export const App = {
     const data = await AniListAPI.getViewer(() => App.logout());
     if (data?.Viewer) {
       currentUser = data.Viewer;
+      Buddy.setViewer(currentUser);
+      if (currentUser.id) Buddy.getFollowingCached(currentUser.id);
       if (isHome()) loadHomeWatching();
       App.render();
     }
@@ -228,9 +300,12 @@ export const App = {
   logout() {
     cancelAutoTrack();
     Storage.del("anilist_token");
+    Buddy.setViewer(null);
     currentUser = null;
     currentMedia = null;
     homeEntries = null;
+    homeSyncNotifs = [];
+    currentBuddyData = null;
     trackedProgress = -1;
     lastActiveEp = 0;
     cancelledEps.clear();
@@ -238,31 +313,80 @@ export const App = {
     showToast("Disconnected from AniList");
   },
 
-  async setProgress(newProgress) {
-    if (!currentMedia) return;
-    const entry = currentMedia.mediaListEntry;
-    const isCompleted = currentMedia.episodes ? newProgress >= currentMedia.episodes : false;
-    const isStarting = !entry || entry.progress === 0;
+  async setProgress(newProgress, targetMediaId = null, overrideStatus = null) {
+    const id = targetMediaId || currentMedia?.id;
+    if (!id) return;
+    const isSinglePage = !targetMediaId && currentMedia;
+    const homeEntry = targetMediaId ? homeEntries?.find((e) => e.mediaId === targetMediaId || e.media?.id === targetMediaId) : null;
+    const entry = isSinglePage ? currentMedia.mediaListEntry : (homeEntry || null);
+    const totalEp = isSinglePage ? currentMedia.episodes : (homeEntry?.media?.episodes || 0);
+
+    const isReset = newProgress === 0;
+    const isCompleted = overrideStatus === "COMPLETED" || (totalEp > 0 && newProgress >= totalEp);
+    const prevStatus = entry?.status;
+    const isRewatching = prevStatus === "REPEATING";
+
+    let targetStatus;
+    if (isCompleted) {
+      targetStatus = "COMPLETED";
+    } else if (isReset) {
+      if (prevStatus === "COMPLETED" || isRewatching) {
+        targetStatus = "REPEATING";
+      } else {
+        targetStatus = "CURRENT";
+      }
+    } else {
+      if (prevStatus === "COMPLETED" || isRewatching) {
+        targetStatus = "REPEATING";
+      } else {
+        targetStatus = "CURRENT";
+      }
+    }
 
     const params = {
-      mediaId: currentMedia.id,
+      mediaId: id,
       progress: newProgress,
-      status: isCompleted ? "COMPLETED" : (entry?.status || "CURRENT")
+      status: targetStatus
     };
 
-    if (isStarting && !entry?.startedAt?.year) params.startedAt = getTodayDate();
-    if (isCompleted) params.completedAt = getTodayDate();
+    // Auto-fill dates: preserve if already present, set today if missing
+    if (!entry?.startedAt?.year) {
+      params.startedAt = getTodayDate();
+    }
+
+    if (isCompleted) {
+      if (!entry?.completedAt?.year) {
+        params.completedAt = getTodayDate();
+      }
+      // If user was rewatching and reached completion, increment repeat count
+      if (isRewatching) {
+        params.repeat = (entry?.repeat || 0) + 1;
+      }
+    }
 
     const res = await AniListAPI.saveEntry(params);
     if (res?.SaveMediaListEntry) {
       cancelledEps.delete(newProgress);
-      showToast(isCompleted ? "🎉 Completed on AniList!" : `Episode ${newProgress} saved`);
-      App.sync();
+      const toastMsg = isReset
+        ? `Progress reset to Ep. 0 (${AniListAPI.statuses[targetStatus] || targetStatus})`
+        : isCompleted
+          ? (isRewatching ? `🎉 Rewatch completed (${(entry?.repeat || 0) + 1}×)!` : "🎉 Completed on AniList!")
+          : `Episode ${newProgress} saved`;
+      showToast(toastMsg);
+      if (isSinglePage) {
+        App.sync();
+      } else {
+        await loadHomeWatching();
+      }
     }
   },
 
   render() {
-    const openAuth = () => openTokenModal(async () => { await App.loadUser(); App.sync(); });
+    const openAuth = () => openTokenModal(async () => {
+      await App.loadUser();
+      if (isHome()) await loadHomeWatching();
+      else App.sync();
+    });
     const hasToken = !!Storage.get("anilist_token");
     const activeEp = getActiveEpisode();
 
@@ -280,8 +404,25 @@ export const App = {
     renderActions(currentMedia, hasToken, {
       onConnect: openAuth,
       onAdd: () => App.setProgress(activeEp || 1),
+      onResetProgress: () => App.setProgress(0),
+      onBuddySync: (ep, isCompleted) => App.setProgress(ep, null, isCompleted ? "COMPLETED" : null),
       onStatusChange: async (status) => {
-        if (await AniListAPI.saveEntry({ mediaId: currentMedia.id, status })) {
+        const entry = currentMedia?.mediaListEntry;
+        const params = { mediaId: currentMedia.id, status };
+        if (status === "COMPLETED") {
+          if (!entry?.completedAt?.year) {
+            params.completedAt = getTodayDate();
+          }
+          if (!entry?.startedAt?.year) {
+            params.startedAt = getTodayDate();
+          }
+          if (entry?.status === "REPEATING") {
+            params.repeat = (entry.repeat || 0) + 1;
+          }
+        } else if ((status === "CURRENT" || status === "REPEATING") && !entry?.startedAt?.year) {
+          params.startedAt = getTodayDate();
+        }
+        if (await AniListAPI.saveEntry(params)) {
           showToast(`Status: ${AniListAPI.statuses[status]}`);
           App.sync();
         }
@@ -289,6 +430,20 @@ export const App = {
       onScoreChange: async (score) => {
         if (await AniListAPI.saveEntry({ mediaId: currentMedia.id, score })) {
           showToast(score ? `Score: ${score}/10` : "Score removed");
+        }
+      },
+      onBuddyChange: async (newBuddy) => {
+        const curNotes = currentMedia?.mediaListEntry?.notes || "";
+        const updatedNotes = Buddy.apply(curNotes, newBuddy);
+        const res = await AniListAPI.saveEntry({
+          mediaId: currentMedia.id,
+          notes: updatedNotes
+        });
+        if (res?.SaveMediaListEntry) {
+          if (currentMedia.mediaListEntry) currentMedia.mediaListEntry.notes = updatedNotes;
+          if (newBuddy) Settings.set("defaultBuddy", newBuddy);
+          showToast(newBuddy ? `Sync Together set: ${newBuddy}` : "Sync Together removed");
+          App.sync();
         }
       },
       onDelete: async () => {
@@ -300,7 +455,12 @@ export const App = {
           App.sync();
         }
       }
-    }, { isLoading: isMediaLoading });
+    }, {
+      isLoading: isMediaLoading,
+      viewer: currentUser,
+      defaultBuddy: Settings.get().defaultBuddy,
+      buddyData: currentBuddyData
+    });
 
     renderVideoBottom({
       activeEp,
@@ -322,6 +482,10 @@ export const App = {
         onForce: (ep) => {
           cancelAutoTrack();
           App.setProgress(ep);
+        },
+        onReset: () => {
+          cancelAutoTrack();
+          App.setProgress(0);
         }
       }
     });
@@ -373,12 +537,28 @@ export const App = {
       }
 
       trackedProgress = currentMedia?.mediaListEntry ? currentMedia.mediaListEntry.progress : -1;
+
+      // Extract and fetch buddy progress for this media
+      const buddyName = Buddy.extract(currentMedia?.mediaListEntry?.notes);
+      if (buddyName && currentMedia?.id) {
+        const buddyEntry = await Buddy.getBuddyMediaEntry(buddyName, currentMedia.id);
+        const buddyEp = buddyEntry?.progress || 0;
+        const isBuddyCompleted = buddyEntry?.status === "COMPLETED" || (buddyEntry?.media?.episodes && buddyEp >= buddyEntry.media.episodes);
+        currentBuddyData = {
+          name: buddyName,
+          avatar: Buddy.getAvatar(buddyName) || buddyEntry?.user?.avatar?.medium || "https://anilist.co/img/icons/icon.svg",
+          progress: buddyEp,
+          status: buddyEntry?.status,
+          isCompleted: !!isBuddyCompleted
+        };
+      } else {
+        currentBuddyData = null;
+      }
     } catch (err) {
       Logger.warn("Error during AniList sync:", err);
     } finally {
       isMediaLoading = false;
       App.render();
-      autoSelectTargetEpisode(currentMedia, trackedProgress);
     }
   },
 
@@ -440,7 +620,6 @@ export const App = {
           handleActiveEpisodeChange(ep);
         }
 
-        autoSelectTargetEpisode(currentMedia, trackedProgress);
         highlightEpisodes(trackedProgress);
       }
 

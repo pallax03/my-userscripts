@@ -54,37 +54,79 @@ export const AniListAPI = {
 
   getMedia: (search) =>
     AniListAPI.call(
-      `query($s:String){Media(search:$s,type:ANIME){id episodes title{romaji english}mediaListEntry{id status score progress startedAt{year month day}completedAt{year month day}}}}`,
+      `query($s:String){Media(search:$s,type:ANIME){id episodes title{romaji english}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}`,
       { s: search },
       { silent: true }
     ),
 
   getMediaById: (id) =>
     AniListAPI.call(
-      `query($id:Int){Media(id:$id,type:ANIME){id episodes title{romaji english}mediaListEntry{id status score progress startedAt{year month day}completedAt{year month day}}}}`,
+      `query($id:Int){Media(id:$id,type:ANIME){id episodes title{romaji english}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}`,
       { id: Number(id) },
       { silent: true }
     ),
 
   getUserCollection: (userId) =>
     AniListAPI.call(
-      `query($u:Int){MediaListCollection(userId:$u,type:ANIME){lists{entries{id mediaId status score progress media{id episodes title{romaji english}}}}}}`,
+      `query($u:Int){MediaListCollection(userId:$u,type:ANIME){lists{entries{id mediaId status score progress notes repeat startedAt{year month day}completedAt{year month day} media{id episodes title{romaji english}}}}}}`,
       { u: userId },
       { silent: true }
     ),
 
   getUserWatching: (userId) =>
     AniListAPI.call(
-      `query($u:Int){MediaListCollection(userId:$u,type:ANIME,status_in:[CURRENT,REPEATING],sort:UPDATED_TIME_DESC){lists{entries{id mediaId status score progress updatedAt media{id episodes status siteUrl bannerImage coverImage{extraLarge large medium}title{romaji english}nextAiringEpisode{episode airingAt timeUntilAiring}}}}}}`,
+      `query($u:Int){MediaListCollection(userId:$u,type:ANIME,status_in:[CURRENT,REPEATING],sort:UPDATED_TIME_DESC){lists{entries{id mediaId status score progress notes repeat startedAt{year month day}completedAt{year month day}updatedAt media{id episodes status siteUrl bannerImage coverImage{extraLarge large medium}title{romaji english}nextAiringEpisode{episode airingAt timeUntilAiring}}}}}}`,
       { u: userId },
+      { silent: true }
+    ),
+
+  getUserFollowing: (userId, page = 1) =>
+    AniListAPI.call(
+      `query($u:Int!,$p:Int){Page(page:$p,perPage:50){pageInfo{hasNextPage} following(userId:$u){id name avatar{medium}}}}`,
+      { u: Number(userId), p: Number(page) },
+      { silent: true }
+    ),
+
+  getUserFollowers: (userId, page = 1) =>
+    AniListAPI.call(
+      `query($u:Int!,$p:Int){Page(page:$p,perPage:50){pageInfo{hasNextPage} followers(userId:$u){id name avatar{medium}}}}`,
+      { u: Number(userId), p: Number(page) },
+      { silent: true }
+    ),
+
+  searchUsers: (search) =>
+    AniListAPI.call(
+      `query($s:String){Page(page:1,perPage:15){users(search:$s){id name avatar{medium}}}}`,
+      { s: String(search) },
+      { silent: true }
+    ),
+
+  getUserByName: (userName) =>
+    AniListAPI.call(
+      `query($n:String){User(name:$n){id name avatar{medium}}}`,
+      { n: String(userName) },
+      { silent: true }
+    ),
+
+  getFriendWatching: (userName) =>
+    AniListAPI.call(
+      `query($u:String){MediaListCollection(userName:$u,type:ANIME,status_in:[CURRENT,REPEATING,COMPLETED],sort:UPDATED_TIME_DESC){lists{entries{mediaId status progress notes media{id episodes title{romaji english}}}}}}`,
+      { u: String(userName) },
+      { silent: true }
+    ),
+
+  getFriendMediaEntry: (userName, mediaId) =>
+    AniListAPI.call(
+      `query($u:String,$m:Int){MediaList(userName:$u,mediaId:$m,type:ANIME){id status progress user{name avatar{medium}}}}`,
+      { u: String(userName), m: Number(mediaId) },
       { silent: true }
     ),
 
   saveEntry: (args) =>
     AniListAPI.call(
-      `mutation($mediaId:Int,$status:MediaListStatus,$score:Float,$progress:Int,$startedAt:FuzzyDateInput,$completedAt:FuzzyDateInput){
-        SaveMediaListEntry(mediaId:$mediaId,status:$status,score:$score,progress:$progress,startedAt:$startedAt,completedAt:$completedAt){
-          id mediaId status score progress startedAt{year month day} completedAt{year month day}
+      `mutation($mediaId:Int,$status:MediaListStatus,$score:Float,$progress:Int,$notes:String,$startedAt:FuzzyDateInput,$completedAt:FuzzyDateInput,$repeat:Int){
+        SaveMediaListEntry(mediaId:$mediaId,status:$status,score:$score,progress:$progress,notes:$notes,startedAt:$startedAt,completedAt:$completedAt,repeat:$repeat){
+          id mediaId status score progress notes repeat startedAt{year month day} completedAt{year month day}
         }
       }`,
       args

@@ -23,12 +23,33 @@ const SCRIPTS = [
       description: "Automatically sync watched AnimeUnity episodes and status to AniList",
       author: "Alex Mazzoni",
       match: [
+        "*://*.animeunity.to/*",
+        "*://animeunity.to/*",
         "*://*.animeunity.so/*",
+        "*://animeunity.so/*",
+        "*://*.animeunity.tv/*",
+        "*://animeunity.tv/*",
+        "*://*.animeunity.it/*",
+        "*://animeunity.it/*",
+        "*://*.animeunity.cc/*",
+        "*://animeunity.cc/*",
+        "*://*.animeunity.fun/*",
+        "*://animeunity.fun/*"
+      ],
+      include: [
+        "*://*.animeunity.*/*",
+        "*://animeunity.*/*",
+        "/^https?:\\/\\/(?:[a-z0-9-]+\\.)?animeunity\\.[a-z]{2,}\\/.*$/"
       ],
       updateURL: "https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/sync-anilist.user.js",
       downloadURL: "https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/sync-anilist.user.js",
       grant: ["GM_getValue", "GM_setValue", "GM_deleteValue", "GM_xmlhttpRequest"],
-      connect: ["127.0.0.1", "localhost"],
+      connect: [
+        "graphql.anilist.co",
+        "anilist.co",
+        "127.0.0.1",
+        "localhost"
+      ],
       "run-at": "document-idle"
     }
   },

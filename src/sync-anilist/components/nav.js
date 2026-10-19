@@ -54,11 +54,11 @@ const dropdownTpl = (user) => `
   </div>
 `;
 
-function bindDropdown(menu, { onChangeToken, onLogout }) {
+function bindDropdown(menu, { onChangeToken, onLogout }, currentUser) {
   menu.querySelector(".al-btn-prefs")?.addEventListener("click", (e) => {
     e.stopPropagation();
     menu.classList.remove("show");
-    openPreferencesModal();
+    openPreferencesModal({ viewer: currentUser });
   });
 
   menu.querySelector(".al-btn-token")?.addEventListener("click", (e) => {
@@ -95,7 +95,11 @@ export function renderNav(currentUser, callbacks) {
           ${iconHtml(KeyRound, { width: 18, height: 18, style: "color:var(--al-blue);" })}<br>
           <span style="color:var(--al-blue);font-weight:600;font-size:11px;">AniList</span>
         </a>`;
-      container.querySelector("a").onclick = (e) => { e.preventDefault(); callbacks.onLogin(); };
+      container.querySelector("a").onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        callbacks.onLogin?.();
+      };
     } else {
       container.innerHTML = `
         <a class="nav-link d-flex align-items-center p-2" href="#" role="button" style="gap:8px;">
@@ -141,7 +145,7 @@ export function renderNav(currentUser, callbacks) {
         if (!container.contains(e.target)) menu.classList.remove("show");
       });
 
-      bindDropdown(menu, callbacks);
+      bindDropdown(menu, callbacks, currentUser);
     }
   }
 
@@ -162,7 +166,11 @@ export function renderNav(currentUser, callbacks) {
           ${iconHtml(KeyRound, { width: 12, height: 12 })}
           <span>AniList</span>
         </button>`;
-      mWidget.querySelector("button").onclick = callbacks.onLogin;
+      mWidget.querySelector("button").onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        callbacks.onLogin?.();
+      };
     } else {
       mWidget.innerHTML = `
         <img src="${avatar}" class="al-avatar-mobile" />
@@ -175,7 +183,7 @@ export function renderNav(currentUser, callbacks) {
         e.stopPropagation();
         mMenu.classList.toggle("show");
       };
-      bindDropdown(mMenu, callbacks);
+      bindDropdown(mMenu, callbacks, currentUser);
     }
   }
 }

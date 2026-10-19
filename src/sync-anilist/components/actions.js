@@ -1,7 +1,9 @@
 import { AniListAPI } from "../../shared/anilist/api.js";
-import { iconHtml, ExternalLink, Trash2, Plus, KeyRound } from "../../shared/icons.js";
+import { iconHtml, ExternalLink, Trash2, Plus, KeyRound, RotateCcw, Link, Calendar, MoreHorizontal } from "../../shared/icons.js";
+import { Buddy } from "../buddy.js";
+import { initBuddyPicker } from "./buddy-picker.js";
 
-export function renderActions(media, hasToken, actions, { isLoading = false } = {}) {
+export function renderActions(media, hasToken, actions, { isLoading = false, viewer = null, defaultBuddy = "", buddyData = null } = {}) {
   // Purge AnimeUnity personal account elements from DOM
   document.querySelectorAll(".cover-wrap .actions, .list-btn-mobile, #add-to-fav").forEach((el) => el.remove());
 
@@ -32,7 +34,11 @@ export function renderActions(media, hasToken, actions, { isLoading = false } = 
           <span>Connect AniList</span>
         </button>
       </div>`;
-    bar.querySelector("#al-bar-login").onclick = actions.onConnect;
+    bar.querySelector("#al-bar-login").onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      actions.onConnect?.();
+    };
     return;
   }
 
@@ -62,19 +68,50 @@ export function renderActions(media, hasToken, actions, { isLoading = false } = 
     return;
   }
 
-  const title = media.title?.romaji || media.title?.english || media.title?.userPreferred || `AniList #${media.id}`;
+  const title = media.title?.english || media.title?.romaji || media.title?.userPreferred || `AniList #${media.id}`;
   const entry = media.mediaListEntry;
   const total = media.episodes || 0;
   const progress = entry?.progress || 0;
   const percent = total > 0 && progress > 0 ? Math.min(100, Math.round((progress / total) * 100)) : 0;
+  const currentBuddy = Buddy.extract(entry?.notes);
+
+  const formatDate = (dateObj) => {
+    if (!dateObj?.year) return null;
+    const d = String(dateObj.day || 1).padStart(2, "0");
+    const m = String(dateObj.month || 1).padStart(2, "0");
+    return `${d}/${m}/${dateObj.year}`;
+  };
+
+  const startDate = formatDate(entry?.startedAt);
+  const completedDate = formatDate(entry?.completedAt);
+  const rewatches = entry?.repeat || 0;
+
+  const isBuddyCompleted = !!buddyData?.isCompleted;
+  const isBuddyAhead = !!(buddyData?.name && (buddyData.progress || 0) > progress);
+  const canSyncBuddy = isBuddyAhead || (isBuddyCompleted && entry?.status !== "COMPLETED");
 
   bar.innerHTML = `
     <div class="al-card-row">
       <div class="al-left">
-        <a href="https://anilist.co/anime/${media.id}" target="_blank" rel="noopener noreferrer" class="al-badge" title="Open on AniList: ${title}">
-          <span class="al-title-text">${title}</span>
-          ${iconHtml(ExternalLink, { width: 12, height: 12, class: "al-badge-icon" })}
-        </a>
+        <div class="al-title-meta-wrap">
+          <a href="https://anilist.co/anime/${media.id}" target="_blank" rel="noopener noreferrer" class="al-badge" title="Open on AniList: ${title}">
+            <span class="al-title-text">${title}</span>
+            ${iconHtml(ExternalLink, { width: 12, height: 12, class: "al-badge-icon" })}
+          </a>
+          ${entry ? `
+            <div class="al-more-wrap">
+              <button type="button" class="al-icon-btn al-more-btn" id="al-bar-more" title="More options">
+                ${iconHtml(MoreHorizontal, { width: 14, height: 14 })}
+              </button>
+              <div class="al-more-menu" id="al-more-menu" style="display: none;">
+                <button type="button" class="al-more-menu-item" id="al-menu-reset" title="Reset progress to Ep. 0 (Haven't watched yet)">
+                  ${iconHtml(RotateCcw, { width: 13, height: 13 })}
+                  <span>Reset to Ep. 0</span>
+                </button>
+              </div>
+            </div>
+          ` : ""}
+        </div>
       </div>
 
       <div class="al-right">
@@ -85,6 +122,22 @@ export function renderActions(media, hasToken, actions, { isLoading = false } = 
           </button>
         ` : `
           <div class="al-controls-group">
+            <div class="al-buddy-cluster ${isBuddyCompleted ? "has-completed" : ""}" title="Sync Watching with friend">
+              <div class="al-buddy-box" id="al-bar-buddy-box"></div>
+              ${currentBuddy && buddyData ? `
+                ${canSyncBuddy ? `
+                  <button type="button" class="al-buddy-sync-btn ${isBuddyCompleted ? "is-completed" : ""}" id="al-bar-buddy-sync" title="${isBuddyCompleted ? `${buddyData.name} completed this anime • Click to sync & mark as Completed` : `Sync with ${buddyData.name} to Ep. ${buddyData.progress}`}">
+                    ${iconHtml(Link, { width: 12, height: 12 })}
+                    <span>${isBuddyCompleted ? `${buddyData.name} Completed` : `Ep. ${buddyData.progress}`}</span>
+                  </button>
+                ` : `
+                  <span class="al-buddy-tag ${isBuddyCompleted ? "is-completed" : ""}" title="${buddyData.name}: ${isBuddyCompleted ? "Completed" : `Ep. ${buddyData.progress || 0}`}">
+                    ${isBuddyCompleted ? `<span class="al-dot"></span><span>${buddyData.name} Completed</span>` : `<span>Ep. ${buddyData.progress || 0}</span>`}
+                  </span>
+                `}
+              ` : ""}
+            </div>
+
             <select class="al-select" id="al-bar-status" title="Anime status">
               ${Object.entries(AniListAPI.statuses).map(([k, v]) => `<option value="${k}" ${entry.status === k ? "selected" : ""}>${v}</option>`).join("")}
             </select>
@@ -101,6 +154,34 @@ export function renderActions(media, hasToken, actions, { isLoading = false } = 
         `}
       </div>
     </div>
+
+    ${entry && (startDate || completedDate || rewatches > 0) ? `
+      <div class="al-card-dates-row">
+        <div class="al-date-col al-date-start">
+          ${startDate ? `
+            <span class="al-meta-date" title="Started watching on ${startDate}">
+              ${iconHtml(Calendar, { width: 11, height: 11 })}
+              <span>Started: ${startDate}</span>
+            </span>
+          ` : ""}
+          ${rewatches > 0 ? `
+            <span class="al-meta-date al-meta-repeat" title="Completed rewatches: ${rewatches}">
+              ${iconHtml(RotateCcw, { width: 10, height: 10 })}
+              <span>Rewatched: ${rewatches}×</span>
+            </span>
+          ` : ""}
+        </div>
+        <div class="al-date-col al-date-end">
+          ${completedDate ? `
+            <span class="al-meta-date" title="Completed on ${completedDate}">
+              ${iconHtml(Calendar, { width: 11, height: 11 })}
+              <span>Completed: ${completedDate}</span>
+            </span>
+          ` : ""}
+        </div>
+      </div>
+    ` : ""}
+
     ${entry && total > 0 ? `
       <div class="al-card-progress-bar" title="Completion: ${progress}/${total} (${percent}%)">
         <div class="al-card-progress-fill" style="width: ${percent}%;"></div>
@@ -111,4 +192,63 @@ export function renderActions(media, hasToken, actions, { isLoading = false } = 
   bar.querySelector("#al-bar-del")?.addEventListener("click", actions.onDelete);
   bar.querySelector("#al-bar-status")?.addEventListener("change", (e) => actions.onStatusChange(e.target.value));
   bar.querySelector("#al-bar-score")?.addEventListener("change", (e) => actions.onScoreChange(parseFloat(e.target.value)));
+  bar.querySelector("#al-bar-buddy-sync")?.addEventListener("click", () => {
+    if (typeof actions.onBuddySync === "function" && buddyData) {
+      actions.onBuddySync(buddyData.progress, isBuddyCompleted);
+    }
+  });
+
+  const moreBtn = bar.querySelector("#al-bar-more");
+  const moreMenu = bar.querySelector("#al-more-menu");
+  if (moreBtn && moreMenu) {
+    moreBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = moreMenu.style.display !== "none";
+      moreMenu.style.display = isOpen ? "none" : "block";
+    });
+
+    bar.querySelector("#al-menu-reset")?.addEventListener("click", () => {
+      moreMenu.style.display = "none";
+      if (typeof actions.onResetProgress === "function") actions.onResetProgress();
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!moreBtn.contains(e.target) && !moreMenu.contains(e.target)) {
+        moreMenu.style.display = "none";
+      }
+    });
+  }
+
+  // Setup Shared Buddy Picker
+  const buddyBox = bar.querySelector("#al-bar-buddy-box");
+  if (buddyBox && entry) {
+    const getElevatedAncestors = () => {
+      const list = [];
+      let el = bar;
+      while (el && el !== document.body) {
+        if (el.classList && (el.classList.contains("overview") || el.tagName === "MAIN")) break;
+        list.push(el);
+        el = el.parentElement;
+      }
+      return list;
+    };
+
+    initBuddyPicker(buddyBox, {
+      selectedBuddy: currentBuddy,
+      defaultBuddy,
+      viewer,
+      emptyLabel: "Sync",
+      placeholder: "Search followed friend...",
+      onSelect: actions.onBuddyChange,
+      onClear: () => actions.onBuddyChange(""),
+      onOpen: () => {
+        bar.classList.add("has-open-popover");
+        getElevatedAncestors().forEach((el) => el.classList.add("al-elevated-stack"));
+      },
+      onClose: () => {
+        bar.classList.remove("has-open-popover");
+        getElevatedAncestors().forEach((el) => el.classList.remove("al-elevated-stack"));
+      }
+    });
+  }
 }

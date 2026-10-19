@@ -20,6 +20,10 @@ export function renderVideoBottom({
   const container = document.getElementById("video-bottom");
   if (!container) return;
 
+  // Clean up obsolete widgets
+  document.getElementById("al-video-top-widget")?.remove();
+  document.getElementById("al-vb-buddy-widget")?.remove();
+
   let widget = document.getElementById("al-video-bottom-widget");
   if (!widget) {
     widget = document.createElement("div");
@@ -29,19 +33,29 @@ export function renderVideoBottom({
     else container.appendChild(widget);
   }
 
+  // Remove obsolete buddy slot if existing
+  widget.querySelector(".al-vb-buddy-slot")?.remove();
+
+  let statusSlot = widget.querySelector(".al-vb-status-slot");
+  if (!statusSlot) {
+    statusSlot = document.createElement("div");
+    statusSlot.className = "al-vb-status-slot";
+    widget.appendChild(statusSlot);
+  }
+
   if (!hasToken || !activeEp) {
-    widget.innerHTML = "";
+    statusSlot.innerHTML = "";
     return;
   }
 
   if (isLoading) {
-    widget.innerHTML = `<div class="al-skeleton-pill" style="width: 105px; height: 26px; border-radius: 6px; opacity: 0.85;"></div>`;
+    statusSlot.innerHTML = `<div class="al-skeleton-pill" style="width: 105px; height: 26px; border-radius: 6px; opacity: 0.85;"></div>`;
     return;
   }
 
   // 1. Auto-track countdown: X icon on left, countdown in center, Check icon on right
   if (autoTrackState?.isActive && autoTrackState.targetEp === activeEp) {
-    widget.innerHTML = `
+    statusSlot.innerHTML = `
       <div class="al-vb-countdown">
         <button type="button" class="al-vb-btn ghost al-vb-cancel" id="al-vb-cancel" title="Cancel auto-save">
           ${iconHtml(X, { width: 13, height: 13 })}
@@ -55,12 +69,12 @@ export function renderVideoBottom({
         </button>
       </div>`;
 
-    widget.querySelector("#al-vb-cancel")?.addEventListener("click", (e) => {
+    statusSlot.querySelector("#al-vb-cancel")?.addEventListener("click", (e) => {
       e.stopPropagation();
       callbacks.onCancel();
     });
 
-    widget.querySelector("#al-vb-savenow")?.addEventListener("click", (e) => {
+    statusSlot.querySelector("#al-vb-savenow")?.addEventListener("click", (e) => {
       e.stopPropagation();
       callbacks.onSave(activeEp);
     });
@@ -69,7 +83,7 @@ export function renderVideoBottom({
 
   // 2. Rewatch state (selected older episode, preventRewind active)
   if (trackedProgress > 0 && activeEp < trackedProgress && autoTrackState?.preventRewind) {
-    widget.innerHTML = `
+    statusSlot.innerHTML = `
       <div class="al-vb-recap">
         <span class="al-vb-recap-text">
           ${iconHtml(Eye, { width: 12, height: 12 })}
@@ -80,7 +94,7 @@ export function renderVideoBottom({
         </button>
       </div>`;
 
-    widget.querySelector("#al-vb-force")?.addEventListener("click", (e) => {
+    statusSlot.querySelector("#al-vb-force")?.addEventListener("click", (e) => {
       e.stopPropagation();
       callbacks.onForce(activeEp);
     });
@@ -89,7 +103,7 @@ export function renderVideoBottom({
 
   // 3. Current active episode is already tracked on AniList
   if (trackedProgress > 0 && activeEp === trackedProgress) {
-    widget.innerHTML = `
+    statusSlot.innerHTML = `
       <div class="al-vb-synced">
         ${iconHtml(CheckCheck, { width: 13, height: 13, class: "al-text-green" })}
         <span>Ep. ${activeEp} Synced</span>
@@ -99,7 +113,7 @@ export function renderVideoBottom({
 
   // 4. Current active episode was already watched (trackedProgress > activeEp)
   if (trackedProgress > 0 && activeEp < trackedProgress) {
-    widget.innerHTML = `
+    statusSlot.innerHTML = `
       <div class="al-vb-synced">
         ${iconHtml(Check, { width: 13, height: 13, class: "al-text-green" })}
         <span>Ep. ${activeEp} Watched</span>
@@ -108,13 +122,13 @@ export function renderVideoBottom({
   }
 
   // 5. Episode ahead of tracked progress: compact primary action button
-  widget.innerHTML = `
+  statusSlot.innerHTML = `
     <button type="button" class="al-vb-mark-btn" id="al-vb-mark" title="Mark episode ${activeEp} as watched on AniList">
       ${iconHtml(Zap, { width: 12, height: 12 })}
       <span>Mark Ep. ${activeEp}</span>
     </button>`;
 
-  widget.querySelector("#al-vb-mark")?.addEventListener("click", (e) => {
+  statusSlot.querySelector("#al-vb-mark")?.addEventListener("click", (e) => {
     e.stopPropagation();
     callbacks.onSave(activeEp);
   });

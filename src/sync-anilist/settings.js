@@ -10,6 +10,7 @@ export const Settings = {
     const homeShelf = Storage.get("al_home_shelf_enabled");
     const homeOnlyUnwatched = Storage.get("al_pref_default_unwatched");
     const searchAutoSelectDelay = Storage.get("al_pref_search_autoselect");
+    const defaultBuddy = Storage.get("al_pref_default_buddy");
 
     return {
       autoTrack: autoTrack === true || autoTrack === "true",
@@ -20,7 +21,8 @@ export const Settings = {
       homeOnlyUnwatched: homeOnlyUnwatched === true || homeOnlyUnwatched === "true",
       searchAutoSelectDelay: searchAutoSelectDelay !== null && searchAutoSelectDelay !== undefined
         ? parseInt(searchAutoSelectDelay, 10)
-        : 5
+        : 5,
+      defaultBuddy: defaultBuddy ? String(defaultBuddy).trim() : ""
     };
   },
 
@@ -36,6 +38,7 @@ export const Settings = {
     else if (key === "homeShelf") Storage.set("al_home_shelf_enabled", String(val));
     else if (key === "homeOnlyUnwatched") Storage.set("al_pref_default_unwatched", String(val));
     else if (key === "searchAutoSelectDelay") Storage.set("al_pref_search_autoselect", String(val));
+    else if (key === "defaultBuddy") Storage.set("al_pref_default_buddy", String(val || "").trim());
 
     const current = Settings.get();
     listeners.forEach((fn) => {

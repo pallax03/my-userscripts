@@ -1,36 +1,56 @@
 import { createModal } from "../../shared/modal.js";
-import { iconHtml, Sliders, Clock, RotateCcw, Check, Zap, Play } from "../../shared/icons.js";
+import {
+  iconHtml,
+  Sliders,
+  Clock,
+  RotateCcw,
+  Check,
+  Zap,
+  ChevronDown,
+  Users,
+  Trash2,
+  Search
+} from "../../shared/icons.js";
 import { Settings } from "../settings.js";
+import { Buddy } from "../buddy.js";
+import { initBuddyPicker } from "./buddy-picker.js";
 
 /**
- * Opens unified preferences modal for playback, language, and homepage shelf
+ * Opens unified preferences modal for playback, homepage shelf, and sync buddy
  * @param {Object} [options]
  * @param {Function} [options.onSave]
+ * @param {Object} [options.viewer]
  */
-export function openPreferencesModal({ onSave } = {}) {
+export function openPreferencesModal({ onSave, viewer } = {}) {
+  const currentViewer = viewer || Buddy.getViewer();
   const settings = Settings.get();
+  const currentBuddy = settings.defaultBuddy;
+  const buddyAvatar = currentBuddy ? Buddy.getAvatar(currentBuddy) : null;
 
   const { modal, close } = createModal({
     id: "al-prefs-overlay",
     className: "al-prefs-modal",
     icon: Sliders,
     title: "Preferences",
-    subtitle: "Playback and homepage settings",
+    subtitle: "Playback, homepage, and sync settings",
     onClose: () => {
       if (typeof onSave === "function") onSave();
     },
     body: `
       <!-- 1. Playback & Auto-Track -->
-      <div class="al-pref-group ${settings.autoTrack ? "is-active" : ""}">
-        <div class="al-pref-header" style="cursor: pointer;">
-          <div class="al-pref-info">
-            <span class="al-pref-title">Auto-track episodes</span>
-            <span class="al-pref-desc">Sync episode progress to AniList automatically when playing</span>
+      <div class="al-pref-group al-pref-collapsible ${settings.autoTrack ? "is-open is-active" : ""}" id="al-pref-sec-autotrack">
+        <div class="al-pref-header">
+          <div class="al-pref-title-click">
+            <span class="al-pref-chevron">${iconHtml(ChevronDown, { width: 14, height: 14 })}</span>
+            <div class="al-pref-info">
+              <span class="al-pref-title">Auto-track episodes</span>
+              <span class="al-pref-desc">Sync episode progress to AniList automatically</span>
+            </div>
           </div>
           <input type="checkbox" class="al-switch al-toggle-autotrack" ${settings.autoTrack ? "checked" : ""} />
         </div>
 
-        <div class="al-pref-sub ${settings.autoTrack ? "" : "is-hidden"}">
+        <div class="al-pref-sub">
           <div class="al-pref-row">
             <span class="al-pref-sub-label">
               ${iconHtml(Clock, { width: 13, height: 13 })}
@@ -55,16 +75,19 @@ export function openPreferencesModal({ onSave } = {}) {
       </div>
 
       <!-- 2. Homepage Shelf -->
-      <div class="al-pref-group ${settings.homeShelf ? "is-active" : ""}" style="margin-top: 10px;">
-        <div class="al-pref-header" style="cursor: pointer;">
-          <div class="al-pref-info">
-            <span class="al-pref-title">Continue Watching shelf</span>
-            <span class="al-pref-desc">Show AniList Continue Watching shelf on homepage</span>
+      <div class="al-pref-group al-pref-collapsible ${settings.homeShelf ? "is-open is-active" : ""}" style="margin-top: 10px;" id="al-pref-sec-shelf">
+        <div class="al-pref-header">
+          <div class="al-pref-title-click">
+            <span class="al-pref-chevron">${iconHtml(ChevronDown, { width: 14, height: 14 })}</span>
+            <div class="al-pref-info">
+              <span class="al-pref-title">Continue Watching shelf</span>
+              <span class="al-pref-desc">Show Continue Watching shelf on homepage</span>
+            </div>
           </div>
           <input type="checkbox" class="al-switch al-toggle-homeshelf" ${settings.homeShelf ? "checked" : ""} />
         </div>
 
-        <div id="al-shelf-sub-opts" class="al-pref-sub ${settings.homeShelf ? "" : "is-hidden"}">
+        <div class="al-pref-sub">
           <label class="al-pref-row" style="cursor: pointer;">
             <span class="al-pref-sub-label">
               ${iconHtml(Zap, { width: 13, height: 13 })}
@@ -86,6 +109,32 @@ export function openPreferencesModal({ onSave } = {}) {
           </div>
         </div>
       </div>
+
+      <!-- 3. Sync Together (Watch Buddy) -->
+      <div class="al-pref-group al-pref-collapsible is-open is-active" style="margin-top: 10px;" id="al-pref-sec-buddy">
+        <div class="al-pref-header">
+          <div class="al-pref-title-click">
+            <span class="al-pref-chevron">${iconHtml(ChevronDown, { width: 14, height: 14 })}</span>
+            <div class="al-pref-info">
+              <span class="al-pref-title">Sync Together</span>
+              <span class="al-pref-desc">Watch with your AniList friend</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="al-pref-sub">
+          <div class="al-pref-row" style="align-items: center; justify-content: space-between;">
+            <div class="al-pref-sub-label">
+              ${iconHtml(Users, { width: 13, height: 13 })}
+              <div>
+                <span>Default Sync Buddy</span>
+                <div style="font-size: 11px; color: #64748b; font-weight: normal; margin-top: 1px;">Preselected for new anime</div>
+              </div>
+            </div>
+            <div class="al-buddy-box" id="al-pref-buddy-box"></div>
+          </div>
+        </div>
+      </div>
     `,
     actions: [
       {
@@ -100,69 +149,61 @@ export function openPreferencesModal({ onSave } = {}) {
     ]
   });
 
-  // Bind Auto-track
+  // 1. Auto-track boolean switch + expansion
   const autoTrackToggle = modal.querySelector(".al-toggle-autotrack");
+  const autoTrackGroup = modal.querySelector("#al-pref-sec-autotrack");
+  const autoTrackHeader = autoTrackGroup?.querySelector(".al-pref-title-click");
+
+  const setAutoTrack = (active) => {
+    if (autoTrackToggle) autoTrackToggle.checked = active;
+    Settings.set("autoTrack", active);
+    autoTrackGroup?.classList.toggle("is-open", active);
+    autoTrackGroup?.classList.toggle("is-active", active);
+  };
+
+  autoTrackHeader?.addEventListener("click", () => {
+    setAutoTrack(!autoTrackToggle?.checked);
+  });
+
+  autoTrackToggle?.addEventListener("change", (e) => {
+    setAutoTrack(e.target.checked);
+  });
+
   const delaySelect = modal.querySelector(".al-sel-delay");
-  const rewindCheckbox = modal.querySelector(".al-chk-rewind");
-  const prefGroup = autoTrackToggle?.closest(".al-pref-group");
-  const prefSub = prefGroup?.querySelector(".al-pref-sub");
-  const prefHeader = prefGroup?.querySelector(".al-pref-header");
-
-  if (autoTrackToggle) {
-    const setAutoTrack = (active) => {
-      autoTrackToggle.checked = active;
-      Settings.set("autoTrack", active);
-      prefGroup?.classList.toggle("is-active", active);
-      if (prefSub) prefSub.classList.toggle("is-hidden", !active);
-    };
-
-    autoTrackToggle.addEventListener("change", (e) => {
-      setAutoTrack(e.target.checked);
-    });
-
-    prefHeader?.addEventListener("click", (e) => {
-      if (e.target === autoTrackToggle) return;
-      setAutoTrack(!autoTrackToggle.checked);
-    });
-  }
-
   if (delaySelect) {
     delaySelect.addEventListener("change", (e) => {
       Settings.set("delay", parseInt(e.target.value, 10));
     });
   }
 
+  const rewindCheckbox = modal.querySelector(".al-chk-rewind");
   if (rewindCheckbox) {
     rewindCheckbox.addEventListener("change", (e) => {
       Settings.set("preventRewind", e.target.checked);
     });
   }
 
-  // Bind Home Shelf
+  // 2. Home Shelf boolean switch + expansion
   const homeShelfToggle = modal.querySelector(".al-toggle-homeshelf");
+  const shelfGroup = modal.querySelector("#al-pref-sec-shelf");
+  const shelfHeader = shelfGroup?.querySelector(".al-pref-title-click");
+
+  const setHomeShelf = (active) => {
+    if (homeShelfToggle) homeShelfToggle.checked = active;
+    Settings.set("homeShelf", active);
+    shelfGroup?.classList.toggle("is-open", active);
+    shelfGroup?.classList.toggle("is-active", active);
+  };
+
+  shelfHeader?.addEventListener("click", () => {
+    setHomeShelf(!homeShelfToggle?.checked);
+  });
+
+  homeShelfToggle?.addEventListener("change", (e) => {
+    setHomeShelf(e.target.checked);
+  });
+
   const unwatchedCheckbox = modal.querySelector(".al-chk-unwatched");
-  const shelfGroup = homeShelfToggle?.closest(".al-pref-group");
-  const shelfSub = modal.querySelector("#al-shelf-sub-opts");
-  const shelfHeader = shelfGroup?.querySelector(".al-pref-header");
-
-  if (homeShelfToggle) {
-    const setHomeShelf = (active) => {
-      homeShelfToggle.checked = active;
-      Settings.set("homeShelf", active);
-      shelfGroup?.classList.toggle("is-active", active);
-      if (shelfSub) shelfSub.classList.toggle("is-hidden", !active);
-    };
-
-    homeShelfToggle.addEventListener("change", (e) => {
-      setHomeShelf(e.target.checked);
-    });
-
-    shelfHeader?.addEventListener("click", (e) => {
-      if (e.target === homeShelfToggle) return;
-      setHomeShelf(!homeShelfToggle.checked);
-    });
-  }
-
   if (unwatchedCheckbox) {
     unwatchedCheckbox.addEventListener("change", (e) => {
       Settings.set("homeOnlyUnwatched", e.target.checked);
@@ -175,4 +216,27 @@ export function openPreferencesModal({ onSave } = {}) {
       Settings.set("searchAutoSelectDelay", parseInt(e.target.value, 10));
     });
   }
+
+  // 3. Sync Together collapsible header
+  const buddyGroup = modal.querySelector("#al-pref-sec-buddy");
+  const buddyHeader = buddyGroup?.querySelector(".al-pref-title-click");
+  buddyHeader?.addEventListener("click", () => {
+    buddyGroup?.classList.toggle("is-open");
+  });
+
+  // 4. Bind Sync Together Default Buddy Picker using shared component
+  const buddyBox = modal.querySelector("#al-pref-buddy-box");
+  initBuddyPicker(buddyBox, {
+    selectedBuddy: Settings.get().defaultBuddy,
+    defaultBuddy: "",
+    viewer: currentViewer,
+    emptyLabel: "Select Friend",
+    placeholder: "Search followed friend...",
+    onSelect: (name) => {
+      Settings.set("defaultBuddy", name);
+    },
+    onClear: () => {
+      Settings.set("defaultBuddy", "");
+    }
+  });
 }

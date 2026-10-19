@@ -30,9 +30,11 @@ export function createModal({
   const overlay = document.createElement("div");
   overlay.id = id;
   overlay.className = "al-overlay";
+  overlay.style.cssText = "position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100vh!important;z-index:2147483647!important;display:flex!important;align-items:center!important;justify-content:center!important;margin:0!important;padding:16px!important;box-sizing:border-box!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;";
 
   const modal = document.createElement("div");
   modal.className = `al-modal ${className}`.trim();
+  modal.style.cssText = "position:relative!important;z-index:2147483647!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;";
 
   // Header
   const header = document.createElement("div");
@@ -68,7 +70,9 @@ export function createModal({
   };
   document.addEventListener("keydown", keyHandler);
 
+  const openedAt = Date.now();
   overlay.onclick = (e) => {
+    if (Date.now() - openedAt < 200) return;
     if (e.target === overlay) close();
   };
 
@@ -99,7 +103,8 @@ export function createModal({
 
   modal.appendChild(actionsEl);
   overlay.appendChild(modal);
-  document.body.appendChild(overlay);
+  const mountPoint = document.body || document.documentElement;
+  mountPoint.appendChild(overlay);
 
   return { overlay, modal, body: bodyEl, close };
 }

@@ -61,7 +61,7 @@ export const openTokenModal = (onTokenSaved) => {
   });
 
   const input = modal.querySelector("#al-tok-in");
-  input?.focus();
+  setTimeout(() => input?.focus(), 60);
   input?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") modal.querySelector("#al-m-ok")?.click();
   });
