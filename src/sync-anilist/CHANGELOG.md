@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.1.0...sync-anilist-v1.2.0) (2026-10-19)
+
+
+### Features
+
+* **sync-anilist:** sync together ([ba31e46](https://github.com/pallax03/my-userscripts/commit/ba31e461173fa731e0a59bffb6ab0caa9633e76d))
+
 ## [1.1.0](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.0.0...sync-anilist-v1.1.0) (2026-10-17)
 
 
