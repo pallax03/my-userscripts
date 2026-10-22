@@ -1483,7 +1483,7 @@
 			}
 			if (!currentUser) {
 				container.innerHTML = `
-        <a class="nav-link text-center pt-3" href="#" role="button">
+        <a class="nav-link text-center pt-3" href="javascript:void(0)" role="button" id="al-nav-login-btn">
           ${iconHtml(KeyRound, {
 					width: 18,
 					height: 18,
@@ -1491,11 +1491,14 @@
 				})}<br>
           <span style="color:var(--al-blue);font-weight:600;font-size:11px;">AniList</span>
         </a>`;
-				container.querySelector("a").onclick = (e) => {
+				const btn = container.querySelector("#al-nav-login-btn") || container.querySelector("a");
+				const handleLogin = (e) => {
 					e.preventDefault();
 					e.stopPropagation();
 					callbacks.onLogin?.();
 				};
+				btn.onclick = handleLogin;
+				btn.addEventListener("click", handleLogin, true);
 			} else {
 				container.innerHTML = `
         <a class="nav-link d-flex align-items-center p-2" href="#" role="button" style="gap:8px;">
@@ -1548,18 +1551,21 @@
 			}
 			if (!currentUser) {
 				mWidget.innerHTML = `
-        <button type="button" class="btn btn-sm al-bg-blue py-1 px-2 rounded-pill small d-inline-flex align-items-center" style="gap:4px;">
+        <button type="button" class="btn btn-sm al-bg-blue py-1 px-2 rounded-pill small d-inline-flex align-items-center" id="al-nav-m-login-btn" style="gap:4px;">
           ${iconHtml(KeyRound, {
 					width: 12,
 					height: 12
 				})}
           <span>AniList</span>
         </button>`;
-				mWidget.querySelector("button").onclick = (e) => {
+				const mBtn = mWidget.querySelector("#al-nav-m-login-btn") || mWidget.querySelector("button");
+				const handleMLogin = (e) => {
 					e.preventDefault();
 					e.stopPropagation();
 					callbacks.onLogin?.();
 				};
+				mBtn.onclick = handleMLogin;
+				mBtn.addEventListener("click", handleMLogin, true);
 			} else {
 				mWidget.innerHTML = `
         <img src="${avatar}" class="al-avatar-mobile" />
@@ -2511,12 +2517,17 @@
         <div class="al-shelf-empty-desc">Sign in with AniList to access your Continue Watching list, release countdowns, and quick episode progress directly on AnimeUnity.</div>
         <button type="button" class="al-btn primary al-home-auth-btn" style="margin-top: 6px;">Connect AniList</button>
       `;
-				empty.querySelector(".al-home-auth-btn")?.addEventListener("click", (e) => {
+				const authBtn = empty.querySelector(".al-home-auth-btn");
+				const handleShelfLogin = (e) => {
 					e.preventDefault();
 					e.stopPropagation();
 					if (typeof onLogin === "function") onLogin();
 					else openTokenModal();
-				});
+				};
+				if (authBtn) {
+					authBtn.onclick = handleShelfLogin;
+					authBtn.addEventListener("click", handleShelfLogin, true);
+				}
 				track.appendChild(empty);
 				return;
 			}

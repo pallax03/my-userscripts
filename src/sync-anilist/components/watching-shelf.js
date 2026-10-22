@@ -481,12 +481,17 @@ export function renderWatchingShelf({
         <div class="al-shelf-empty-desc">Sign in with AniList to access your Continue Watching list, release countdowns, and quick episode progress directly on AnimeUnity.</div>
         <button type="button" class="al-btn primary al-home-auth-btn" style="margin-top: 6px;">Connect AniList</button>
       `;
-      empty.querySelector(".al-home-auth-btn")?.addEventListener("click", (e) => {
+      const authBtn = empty.querySelector(".al-home-auth-btn");
+      const handleShelfLogin = (e) => {
         e.preventDefault();
         e.stopPropagation();
         if (typeof onLogin === "function") onLogin();
         else openTokenModal();
-      });
+      };
+      if (authBtn) {
+        authBtn.onclick = handleShelfLogin;
+        authBtn.addEventListener("click", handleShelfLogin, true);
+      }
       track.appendChild(empty);
       return;
     }
