@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AniList Friend List - Quick Add & Sync
 // @namespace    https://github.com/pallax03/my-userscripts
-// @version      0.2.0
+// @version      0.3.0
 // @author       Alex Mazzoni
 // @description  Add and sync anime directly from a friend's AniList list into your collection with color-coded split buttons
 // @license      MIT
