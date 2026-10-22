@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.3.0...sync-anilist-v1.3.1) (2026-10-22)
+
+
+### Bug Fixes
+
+* **sync-anilist:** domain ([5a540b4](https://github.com/pallax03/my-userscripts/commit/5a540b417756729ac45950ad4243c62a71e91c53))
+
 ## [1.3.0](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.2.0...sync-anilist-v1.3.0) (2026-10-19)
 
 
