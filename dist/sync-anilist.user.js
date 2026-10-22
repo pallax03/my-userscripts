@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AnimeUnity to AniList Sync
 // @namespace    https://github.com/pallax03/my-userscripts
-// @version      1.3.0
+// @version      1.3.1
 // @author       Alex Mazzoni
 // @description  Automatically sync watched AnimeUnity episodes to AniList and skip opening sequences with AniSkip
 // @license      MIT
