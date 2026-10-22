@@ -22,8 +22,8 @@
 // @match        *://animeunity.so/*
 // @match        *://*.animeunity.tv/*
 // @match        *://animeunity.tv/*
-// @match        *://*.animeunity.it/*
-// @match        *://animeunity.it/*
+// @match        *://*.animeunity.co/*
+// @match        *://animeunity.co/*
 // @match        *://*.animeunity.cc/*
 // @match        *://animeunity.cc/*
 // @match        *://*.animeunity.fun/*
