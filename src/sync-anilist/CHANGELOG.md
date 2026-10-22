@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.3.1...sync-anilist-v1.3.2) (2026-10-22)
+
+
+### Bug Fixes
+
+* **sync-anilist:** fix connect anilist modal opening from header and home shelf ([3128f02](https://github.com/pallax03/my-userscripts/commit/3128f024b4d960e3109721bf9c5756a9eca92019))
+
 ## [1.3.1](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.3.0...sync-anilist-v1.3.1) (2026-10-22)
 
 
