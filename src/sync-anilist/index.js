@@ -14,7 +14,7 @@ import { autoSelectTargetEpisode } from "./components/episodes.js";
 import { renderWatchingShelf } from "./components/watching-shelf.js";
 import { Buddy } from "./buddy.js";
 import { iconHtml, Play } from "../shared/icons.js";
-import { checkSkipIntro, initSkipIntroTop } from "./components/skip-intro.js";
+import { checkSkipIntro, initSkipIntroTop, renderAutoSkipButton } from "./components/skip-intro.js";
 import { initPlayer } from "./player.js";
 import { renderCrossSwitch } from "./components/cross-switch.js";
 
@@ -214,6 +214,7 @@ function handleActiveEpisodeChange(newActiveEp) {
   if (malId) {
     checkSkipIntro(malId, newActiveEp);
   }
+  renderAutoSkipButton(provider);
 
   prepareResumeTarget(true);
   if (pendingResumeTarget) {
@@ -657,6 +658,7 @@ export const App = {
 
     provider?.highlightEpisodes(trackedProgress);
     renderCrossSwitch({ media: currentMedia, activeEp, provider });
+    renderAutoSkipButton(provider);
   },
 
   async sync() {
@@ -879,6 +881,7 @@ export const App = {
         }
 
         provider?.highlightEpisodes(trackedProgress);
+        renderAutoSkipButton(provider);
       }
 
       const hasNav = document.getElementById("al-nav-desktop");
