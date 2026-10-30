@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AniList Streaming Sync
 // @namespace    https://github.com/pallax03/my-userscripts
-// @version      1.3.2
+// @version      1.4.0
 // @author       Alex Mazzoni
 // @description  Automatically sync watched AnimeUnity and AnimeSaturn episodes to AniList and skip opening sequences with AniSkip
 // @license      MIT
