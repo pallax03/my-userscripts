@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.4.0](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.3.2...sync-anilist-v1.4.0) (2026-10-30)
+
+
+### Features
+
+* **sync-anilist:** add AnimeSaturn provider, smart continue watching resume, and centered cross-switch ([ca12bae](https://github.com/pallax03/my-userscripts/commit/ca12baecd67c26e02202da5153d400564a717730))
+
+
+### Bug Fixes
+
+* **sync-anilist:** fix episode start resume seek handshake and programmatic seek guard ([499b43a](https://github.com/pallax03/my-userscripts/commit/499b43a8ffd2c5cd755860f879dbd91ef46e15a3))
+* **sync-anilist:** prevent seek resume loop and fix Steel Ball Run candidate priority ([2114d10](https://github.com/pallax03/my-userscripts/commit/2114d103ef3c6f552d628896a1960dfe46ae38f0))
+
 ## [1.3.2](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.3.1...sync-anilist-v1.3.2) (2026-10-22)
 
 
