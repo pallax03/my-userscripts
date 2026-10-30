@@ -17,6 +17,10 @@ function sanitizeSaturnCache() {
     delete rawMap["190327"];
     changed = true;
   }
+  if (rawMap["210482"]?.slug?.includes("stone-ocean")) {
+    delete rawMap["210482"];
+    changed = true;
+  }
 
   if (changed) {
     Storage.set("al_as_map", rawMap);
@@ -246,14 +250,22 @@ export class AnimeSaturnProvider extends BaseProvider {
     const map = (rawMap && typeof rawMap === "object" && !Array.isArray(rawMap)) ? rawMap : {};
     const cached = map[media.id];
 
-    // Validate cached entry: ensure season matches if title was cached
+    // Validate cached entry: ensure season and franchise subtitles match
     if (cached?.slug) {
       const mediaSeason = extractSeason(media.title?.romaji || media.title?.english || media.title?.userPreferred || "");
       const cachedSeason = cached.title ? extractSeason(cached.title) : null;
       const seasonMatches = cachedSeason === null || cachedSeason === mediaSeason;
 
-      if (seasonMatches && (cached.dub === undefined || (cached.dub === 1) === isDubPref || cached.hasAlternativeDub === false)) {
+      // Invalidation guard: if media is Steel Ball Run, cached slug CANNOT be stone-ocean!
+      const lowMedia = (media.title?.romaji || media.title?.english || "").toLowerCase();
+      const lowSlug = (cached.slug || "").toLowerCase();
+      const isSbrConflict = lowMedia.includes("steel ball run") && lowSlug.includes("stone-ocean");
+
+      if (!isSbrConflict && seasonMatches && (cached.dub === undefined || (cached.dub === 1) === isDubPref || cached.hasAlternativeDub === false)) {
         return `/anime/${cached.slug}/ep-${targetEp}`;
+      } else if (isSbrConflict) {
+        delete map[media.id];
+        Storage.set("al_as_map", map);
       }
     }
 

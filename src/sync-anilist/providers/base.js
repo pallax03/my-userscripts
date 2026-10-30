@@ -174,6 +174,7 @@ export function scoreSearchResult(result, media, isDubPref = false) {
 export function generateSearchCandidates(media) {
   if (!media) return [];
   const candidates = [];
+  const priorityCandidates = [];
   const rom = media.title?.romaji;
   const eng = media.title?.english;
   const pref = media.title?.userPreferred;
@@ -182,6 +183,32 @@ export function generateSearchCandidates(media) {
   for (const raw of [rom, eng, pref]) {
     if (!raw) continue;
     const clean = cleanTitle(raw);
+
+    // 1. Extract distinctive subtitle/title components separated by ":" or "-"
+    if (raw.includes(":") || raw.includes(" - ") || raw.includes(" – ")) {
+      const parts = raw
+        .split(/[:–\-]+/)
+        .map((p) => cleanTitle(p.trim()))
+        .filter((p) => p && p.length >= 3);
+
+      for (const part of parts) {
+        // Skip pure stage/part/season labels (e.g. "2nd & 3rd STAGE", "Part 2", "1st STAGE")
+        if (/^(?:\d+(?:st|nd|rd|th)?|[ivx]+)?\s*(?:&|and)?\s*(?:\d+(?:st|nd|rd|th)?|[ivx]+)?\s*(?:stage|part|cour|season)$/i.test(part)) {
+          continue;
+        }
+        if (/^(?:stage|part|cour|season)\s*\d+$/i.test(part)) {
+          continue;
+        }
+
+        // Distinctive franchise subtitles (e.g. "Steel Ball Run", "Stone Ocean") get top priority
+        if (/^(?:jojo no kimyou na bouken|jojo's bizarre adventure)$/i.test(part)) {
+          candidates.push(part);
+        } else {
+          priorityCandidates.push(part);
+        }
+      }
+    }
+
     if (clean && clean.length >= 3) candidates.push(clean);
 
     // If season is denoted in words (e.g. "Second Season"), also add numeric variant ("Haikyuu!! 2")
@@ -196,9 +223,6 @@ export function generateSearchCandidates(media) {
       }
     }
 
-    const parts = raw.split(/[:\-\(\)]+/).map((p) => cleanTitle(p.trim())).filter((p) => p.length >= 3);
-    candidates.push(...parts);
-
     const noSeason = clean.split(/\b(?:\d+th|1st|2nd|3rd|\d+)\s+season\b/i)[0].trim();
     if (noSeason && noSeason.length >= 3) candidates.push(noSeason);
 
@@ -206,7 +230,8 @@ export function generateSearchCandidates(media) {
     if (words.length >= 3) candidates.push(words);
   }
 
-  return [...new Set(candidates.filter((c) => c && c.length >= 3))];
+  const all = [...priorityCandidates, ...candidates];
+  return [...new Set(all.filter((c) => c && c.length >= 3))];
 }
 
 /**

@@ -671,6 +671,7 @@
 	function generateSearchCandidates$1(media) {
 		if (!media) return [];
 		const candidates = [];
+		const priorityCandidates = [];
 		const rom = media.title?.romaji;
 		const eng = media.title?.english;
 		const pref = media.title?.userPreferred;
@@ -681,20 +682,28 @@
 		]) {
 			if (!raw) continue;
 			const clean = cleanTitle$1(raw);
+			if (raw.includes(":") || raw.includes(" - ") || raw.includes(" – ")) {
+				const parts = raw.split(/[:–\-]+/).map((p) => cleanTitle$1(p.trim())).filter((p) => p && p.length >= 3);
+				for (const part of parts) {
+					if (/^(?:\d+(?:st|nd|rd|th)?|[ivx]+)?\s*(?:&|and)?\s*(?:\d+(?:st|nd|rd|th)?|[ivx]+)?\s*(?:stage|part|cour|season)$/i.test(part)) continue;
+					if (/^(?:stage|part|cour|season)\s*\d+$/i.test(part)) continue;
+					if (/^(?:jojo no kimyou na bouken|jojo's bizarre adventure)$/i.test(part)) candidates.push(part);
+					else priorityCandidates.push(part);
+				}
+			}
 			if (clean && clean.length >= 3) candidates.push(clean);
 			const season = extractSeason(raw);
 			if (season > 1) {
 				const baseName = clean.replace(/\b(?:second|third|fourth|\d+(?:st|nd|rd|th)?)\s+season\b/gi, "").replace(/\s+part\s+\d+/gi, "").trim();
 				if (baseName && baseName.length >= 3) candidates.push(`${baseName} ${season}`);
 			}
-			const parts = raw.split(/[:\-\(\)]+/).map((p) => cleanTitle$1(p.trim())).filter((p) => p.length >= 3);
-			candidates.push(...parts);
 			const noSeason = clean.split(/\b(?:\d+th|1st|2nd|3rd|\d+)\s+season\b/i)[0].trim();
 			if (noSeason && noSeason.length >= 3) candidates.push(noSeason);
 			const words = clean.split(/\s+/).slice(0, 3).join(" ").trim();
 			if (words.length >= 3) candidates.push(words);
 		}
-		return [...new Set(candidates.filter((c) => c && c.length >= 3))];
+		const all = [...priorityCandidates, ...candidates];
+		return [...new Set(all.filter((c) => c && c.length >= 3))];
 	}
 	var BaseProvider = class {
 		constructor(name) {
@@ -1059,6 +1068,10 @@
 			delete rawMap["190327"];
 			changed = true;
 		}
+		if (rawMap["210482"]?.slug?.includes("stone-ocean")) {
+			delete rawMap["210482"];
+			changed = true;
+		}
 		if (changed) Storage.set("al_as_map", rawMap);
 	}
 	var AnimeSaturnProvider = class extends BaseProvider {
@@ -1245,7 +1258,15 @@
 			if (cached?.slug) {
 				const mediaSeason = extractSeason(media.title?.romaji || media.title?.english || media.title?.userPreferred || "");
 				const cachedSeason = cached.title ? extractSeason(cached.title) : null;
-				if ((cachedSeason === null || cachedSeason === mediaSeason) && (cached.dub === void 0 || cached.dub === 1 === isDubPref || cached.hasAlternativeDub === false)) return `/anime/${cached.slug}/ep-${targetEp}`;
+				const seasonMatches = cachedSeason === null || cachedSeason === mediaSeason;
+				const lowMedia = (media.title?.romaji || media.title?.english || "").toLowerCase();
+				const lowSlug = (cached.slug || "").toLowerCase();
+				const isSbrConflict = lowMedia.includes("steel ball run") && lowSlug.includes("stone-ocean");
+				if (!isSbrConflict && seasonMatches && (cached.dub === void 0 || cached.dub === 1 === isDubPref || cached.hasAlternativeDub === false)) return `/anime/${cached.slug}/ep-${targetEp}`;
+				else if (isSbrConflict) {
+					delete map[media.id];
+					Storage.set("al_as_map", map);
+				}
 			}
 			const candidates = generateSearchCandidates$1(media);
 			for (const query of candidates) try {
@@ -3395,8 +3416,17 @@
 		let pendingResumeSeek = null;
 		let activeResumeTarget = null;
 		let hasConfirmedResume = false;
+		let activeGuardInterval = null;
+		let hasReportedPlayerReady = false;
 		let lastBroadcastTime = 0;
-		let lastReadyNotice = 0;
+		function cancelActiveResume() {
+			activeResumeTarget = null;
+			pendingResumeSeek = null;
+			if (activeGuardInterval) {
+				clearInterval(activeGuardInterval);
+				activeGuardInterval = null;
+			}
+		}
 		function broadcastPlaybackState(force = false) {
 			const now = Date.now();
 			if (!force && now - lastBroadcastTime < 750) return;
@@ -3447,13 +3477,15 @@
 			if (dur > 0 && target < dur - 5) {
 				seekTo(target);
 				Logger.info(`↺ Applying seekTo ${target}s`);
+				if (activeGuardInterval) clearInterval(activeGuardInterval);
 				let checks = 0;
-				const guardInterval = setInterval(() => {
+				activeGuardInterval = setInterval(() => {
 					checks++;
 					const currentPos = getPos();
 					if (currentPos < 3 && checks <= 6) seekTo(target);
 					else if (currentPos >= target - 5 || checks > 8) {
-						clearInterval(guardInterval);
+						clearInterval(activeGuardInterval);
+						activeGuardInterval = null;
 						if (!hasConfirmedResume) {
 							hasConfirmedResume = true;
 							try {
@@ -3498,7 +3530,6 @@
 		function notifyReady() {
 			const dur = getDuration();
 			if (dur > 0) {
-				const now = Date.now();
 				if (Math.round(dur) !== Math.round(lastReportedDur)) {
 					lastReportedDur = dur;
 					try {
@@ -3508,8 +3539,8 @@
 						}, "*");
 					} catch (_) {}
 				}
-				if (now - lastReadyNotice > 1e3) {
-					lastReadyNotice = now;
+				if (!hasReportedPlayerReady) {
+					hasReportedPlayerReady = true;
 					try {
 						window.top.postMessage({
 							type: "AL_PLAYER_READY",
@@ -3532,6 +3563,7 @@
 					handlePlayResumeGuard();
 					broadcastPlaybackState(true);
 				});
+				video.addEventListener("seeking", cancelActiveResume);
 				video.addEventListener("pause", () => broadcastPlaybackState(true));
 				video.addEventListener("ended", () => broadcastPlaybackState(true));
 				video.addEventListener("canplay", () => notifyReady());
@@ -3559,6 +3591,7 @@
 					notifyReady();
 					broadcastPlaybackState(true);
 				});
+				jw.on("seek", cancelActiveResume);
 				jw.on("pause", () => broadcastPlaybackState(true));
 				jw.on("complete", () => broadcastPlaybackState(true));
 				jw.on("ready", () => notifyReady());
@@ -3577,6 +3610,7 @@
 					handlePlayResumeGuard();
 					broadcastPlaybackState(true);
 				});
+				vds.addEventListener("seeking", cancelActiveResume);
 				vds.addEventListener("pause", () => broadcastPlaybackState(true));
 				vds.addEventListener("ended", () => broadcastPlaybackState(true));
 			}
@@ -3634,6 +3668,7 @@
 			}
 		}
 		function handleSkipAction() {
+			cancelActiveResume();
 			const now = Date.now();
 			if (now - lastSkipTime < 500) return;
 			lastSkipTime = now;
@@ -3954,7 +3989,9 @@
 	var hasTriggeredPlayTrack = false;
 	var pendingResumeTarget = null;
 	var pendingResumeEp = null;
+	var hasDispatchedResumeThisEp = false;
 	function prepareResumeTarget(force = false) {
+		if (hasDispatchedResumeThisEp && !force) return;
 		if (!Settings.get().autoResume) {
 			pendingResumeTarget = null;
 			pendingResumeEp = null;
@@ -4051,11 +4088,15 @@
 		lastActiveEp = newActiveEp;
 		cancelAutoTrack();
 		hasTriggeredPlayTrack = false;
+		hasDispatchedResumeThisEp = false;
 		const info = provider?.getAnimeInfo() || {};
 		const malId = currentMedia?.idMal || info.malId;
 		if (malId) checkSkipIntro(malId, newActiveEp);
 		prepareResumeTarget(true);
-		dispatchResumeSeek();
+		if (pendingResumeTarget) {
+			hasDispatchedResumeThisEp = true;
+			dispatchResumeSeek();
+		}
 		const settings = Settings.get();
 		if (settings.autoTrack && settings.trackTrigger === "delay" && currentMedia && newActiveEp > trackedProgress && !cancelledEps.has(newActiveEp)) {
 			if (settings.delay === 0) {
@@ -4479,8 +4520,13 @@
 					const ep = provider?.getActiveEpisode?.() || 1;
 					const malId = currentMedia?.idMal || info.malId;
 					if (malId) checkSkipIntro(malId, ep);
-					prepareResumeTarget();
-					dispatchResumeSeek();
+					if (!hasDispatchedResumeThisEp) {
+						prepareResumeTarget();
+						if (pendingResumeTarget) {
+							hasDispatchedResumeThisEp = true;
+							dispatchResumeSeek();
+						}
+					}
 				}
 			} catch (err) {
 				Logger.warn("Error during AniList sync:", err);
@@ -4496,9 +4542,15 @@
 			window.addEventListener("message", (e) => {
 				if (e.data?.type === "AL_PLAYBACK_STATE") handlePlaybackState(e.data);
 				else if (e.data?.type === "AL_PLAYER_READY" || e.data?.type === "AU_FRAME_READY") {
-					if (!pendingResumeTarget) prepareResumeTarget();
-					if (pendingResumeTarget) dispatchResumeSeek(e.source);
+					if (!hasDispatchedResumeThisEp) {
+						if (!pendingResumeTarget) prepareResumeTarget();
+						if (pendingResumeTarget) {
+							hasDispatchedResumeThisEp = true;
+							dispatchResumeSeek(e.source);
+						}
+					}
 				} else if (e.data?.type === "AL_RESUME_CONFIRMED") {
+					hasDispatchedResumeThisEp = true;
 					const activeEp = pendingResumeEp || provider?.getActiveEpisode?.() || 1;
 					const resumeTime = e.data.time || pendingResumeTarget;
 					pendingResumeTarget = null;

@@ -60,8 +60,10 @@ let lastSyncedResumeTime = 0;
 let hasTriggeredPlayTrack = false;
 let pendingResumeTarget = null;
 let pendingResumeEp = null;
+let hasDispatchedResumeThisEp = false;
 
 function prepareResumeTarget(force = false) {
+  if (hasDispatchedResumeThisEp && !force) return;
   const settings = Settings.get();
   if (!settings.autoResume) {
     pendingResumeTarget = null;
@@ -197,6 +199,7 @@ function handleActiveEpisodeChange(newActiveEp) {
   lastActiveEp = newActiveEp;
   cancelAutoTrack();
   hasTriggeredPlayTrack = false;
+  hasDispatchedResumeThisEp = false;
 
   const info = provider?.getAnimeInfo() || {};
   const malId = currentMedia?.idMal || info.malId;
@@ -205,7 +208,10 @@ function handleActiveEpisodeChange(newActiveEp) {
   }
 
   prepareResumeTarget(true);
-  dispatchResumeSeek();
+  if (pendingResumeTarget) {
+    hasDispatchedResumeThisEp = true;
+    dispatchResumeSeek();
+  }
 
   const settings = Settings.get();
 
@@ -743,8 +749,13 @@ export const App = {
         if (malId) {
           checkSkipIntro(malId, ep);
         }
-        prepareResumeTarget();
-        dispatchResumeSeek();
+        if (!hasDispatchedResumeThisEp) {
+          prepareResumeTarget();
+          if (pendingResumeTarget) {
+            hasDispatchedResumeThisEp = true;
+            dispatchResumeSeek();
+          }
+        }
       }
     } catch (err) {
       Logger.warn("Error during AniList sync:", err);
@@ -763,13 +774,17 @@ export const App = {
       if (e.data?.type === "AL_PLAYBACK_STATE") {
         handlePlaybackState(e.data);
       } else if (e.data?.type === "AL_PLAYER_READY" || e.data?.type === "AU_FRAME_READY") {
-        if (!pendingResumeTarget) {
-          prepareResumeTarget();
-        }
-        if (pendingResumeTarget) {
-          dispatchResumeSeek(e.source);
+        if (!hasDispatchedResumeThisEp) {
+          if (!pendingResumeTarget) {
+            prepareResumeTarget();
+          }
+          if (pendingResumeTarget) {
+            hasDispatchedResumeThisEp = true;
+            dispatchResumeSeek(e.source);
+          }
         }
       } else if (e.data?.type === "AL_RESUME_CONFIRMED") {
+        hasDispatchedResumeThisEp = true;
         const activeEp = pendingResumeEp || provider?.getActiveEpisode?.() || 1;
         const resumeTime = e.data.time || pendingResumeTarget;
         pendingResumeTarget = null;

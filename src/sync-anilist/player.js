@@ -13,8 +13,18 @@ export function initPlayer() {
   let pendingResumeSeek = null;
   let activeResumeTarget = null;
   let hasConfirmedResume = false;
+  let activeGuardInterval = null;
+  let hasReportedPlayerReady = false;
   let lastBroadcastTime = 0;
-  let lastReadyNotice = 0;
+
+  function cancelActiveResume() {
+    activeResumeTarget = null;
+    pendingResumeSeek = null;
+    if (activeGuardInterval) {
+      clearInterval(activeGuardInterval);
+      activeGuardInterval = null;
+    }
+  }
 
   function broadcastPlaybackState(force = false) {
     const now = Date.now();
@@ -79,14 +89,16 @@ export function initPlayer() {
       Logger.info(`↺ Applying seekTo ${target}s`);
 
       // Anti-reset guard: HLS players often reset time to 0 upon first user play
+      if (activeGuardInterval) clearInterval(activeGuardInterval);
       let checks = 0;
-      const guardInterval = setInterval(() => {
+      activeGuardInterval = setInterval(() => {
         checks++;
         const currentPos = getPos();
         if (currentPos < 3 && checks <= 6) {
           seekTo(target);
         } else if (currentPos >= target - 5 || checks > 8) {
-          clearInterval(guardInterval);
+          clearInterval(activeGuardInterval);
+          activeGuardInterval = null;
           if (!hasConfirmedResume) {
             hasConfirmedResume = true;
             try {
@@ -140,15 +152,14 @@ export function initPlayer() {
   function notifyReady() {
     const dur = getDuration();
     if (dur > 0) {
-      const now = Date.now();
       if (Math.round(dur) !== Math.round(lastReportedDur)) {
         lastReportedDur = dur;
         try {
           window.top.postMessage({ type: "AU_FRAME_READY", duration: dur }, "*");
         } catch (_) {}
       }
-      if (now - lastReadyNotice > 1000) {
-        lastReadyNotice = now;
+      if (!hasReportedPlayerReady) {
+        hasReportedPlayerReady = true;
         try {
           window.top.postMessage({ type: "AL_PLAYER_READY", duration: dur }, "*");
         } catch (_) {}
@@ -172,6 +183,7 @@ export function initPlayer() {
         handlePlayResumeGuard();
         broadcastPlaybackState(true);
       });
+      video.addEventListener("seeking", cancelActiveResume);
       video.addEventListener("pause", () => broadcastPlaybackState(true));
       video.addEventListener("ended", () => broadcastPlaybackState(true));
       video.addEventListener("canplay", () => notifyReady());
@@ -200,6 +212,7 @@ export function initPlayer() {
         notifyReady();
         broadcastPlaybackState(true);
       });
+      jw.on("seek", cancelActiveResume);
       jw.on("pause", () => broadcastPlaybackState(true));
       jw.on("complete", () => broadcastPlaybackState(true));
       jw.on("ready", () => notifyReady());
@@ -219,6 +232,7 @@ export function initPlayer() {
         handlePlayResumeGuard();
         broadcastPlaybackState(true);
       });
+      vds.addEventListener("seeking", cancelActiveResume);
       vds.addEventListener("pause", () => broadcastPlaybackState(true));
       vds.addEventListener("ended", () => broadcastPlaybackState(true));
     }
@@ -292,6 +306,7 @@ export function initPlayer() {
   }
 
   function handleSkipAction() {
+    cancelActiveResume();
     const now = Date.now();
     if (now - lastSkipTime < 500) return;
     lastSkipTime = now;
