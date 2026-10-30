@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.4.0...sync-anilist-v1.5.0) (2026-10-30)
+
+
+### Features
+
+* **sync-anilist:** add illuminated Skip Intro toggle button for AnimeUnity and AnimeSaturn ([4aed488](https://github.com/pallax03/my-userscripts/commit/4aed488179cf11d3263f93fc3ebd0b8ece4df55a))
+
 ## [1.4.0](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.3.2...sync-anilist-v1.4.0) (2026-10-30)
 
 
