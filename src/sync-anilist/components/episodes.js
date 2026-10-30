@@ -46,10 +46,12 @@ let lastAutoSelectedKey = "";
 /**
  * Automatically activates target episode from URL param (?ep=X), sessionStorage,
  * or defaults to current AniList progress.
+ * Safe for AnimeUnity Vue hydration without premature URL stripping.
  * @param {Object} [media]
  * @param {number} [trackedProgress]
+ * @param {number} [retryCount]
  */
-export function autoSelectTargetEpisode(media, trackedProgress) {
+export function autoSelectTargetEpisode(media, trackedProgress, retryCount = 0) {
   const urlParams = new URLSearchParams(window.location.search);
   const targetStr = urlParams.get("ep") || sessionStorage.getItem("al_target_ep");
 
@@ -61,25 +63,19 @@ export function autoSelectTargetEpisode(media, trackedProgress) {
   if (!targetEp || isNaN(targetEp) || targetEp <= 0) return;
 
   const currentKey = `${window.location.pathname}_ep${targetEp}`;
-  if (lastAutoSelectedKey === currentKey) return;
-  lastAutoSelectedKey = currentKey;
+  if (lastAutoSelectedKey === currentKey && retryCount === 0) return;
 
   sessionStorage.removeItem("al_target_ep");
-  if (urlParams.has("ep")) {
-    const cleanUrl = new URL(window.location.href);
-    cleanUrl.searchParams.delete("ep");
-    window.history.replaceState({}, document.title, cleanUrl.pathname + (cleanUrl.search ? cleanUrl.search : ""));
-  }
 
-  let switched = false;
-
-  // 1. Try native Vue component switch on <video-player>
+  // 1. Check if Vue component on <video-player> is mounted and hydrated
   const player = document.querySelector("video-player");
   const playerVue = player?.__vue__ || document.querySelector(".episode-wrapper")?.__vue__;
 
   if (playerVue && Array.isArray(playerVue.episodes) && playerVue.episodes.length > 0) {
     const epObj = playerVue.episodes.find((e) => parseInt(e.number, 10) === targetEp);
     if (epObj) {
+      lastAutoSelectedKey = currentKey;
+
       if (Array.isArray(playerVue.episodes_tabs) && playerVue.episodes_tabs.length > 0) {
         const targetTab = playerVue.episodes_tabs.find((tab) =>
           tab.episodes?.some((e) => e.id === epObj.id)
@@ -90,23 +86,47 @@ export function autoSelectTargetEpisode(media, trackedProgress) {
       }
 
       if (typeof playerVue.switchEpisode === "function") {
-        playerVue.switchEpisode(epObj);
-        switched = true;
+        const curEpNum = parseInt(playerVue.episode?.number, 10);
+        if (curEpNum !== targetEp) {
+          playerVue.switchEpisode(epObj);
+        }
       }
+
+      // Smooth scroll wrapper to center active item
+      setTimeout(() => {
+        const activeItem = document.querySelector(".episode-wrapper .episode-item.active");
+        const wrapper = activeItem?.closest(".episode-wrapper");
+        if (activeItem && wrapper && wrapper.scrollWidth > wrapper.clientWidth) {
+          wrapper.scrollTo({
+            left: activeItem.offsetLeft - wrapper.clientWidth / 2 + activeItem.clientWidth / 2,
+            behavior: "smooth"
+          });
+        }
+      }, 100);
+
+      return;
     }
   }
 
-  // 2. DOM fallback: sync active state & horizontally center within .episode-wrapper only
+  // If Vue is still bootstrapping, retry up to 10 times (1.5s total) without clicking
+  if (retryCount < 10) {
+    setTimeout(() => {
+      autoSelectTargetEpisode(media, trackedProgress, retryCount + 1);
+    }, 150);
+    return;
+  }
+
+  // 2. DOM fallback only if Vue is completely unavailable after all retries
+  lastAutoSelectedKey = currentKey;
   const items = document.querySelectorAll(".episode-wrapper .episode-item");
   if (items.length > 0) {
     for (const item of items) {
       const num = parseInt(item.innerText.trim(), 10);
       if (num === targetEp) {
-        if (!switched && !item.classList.contains("active")) {
+        if (!item.classList.contains("active")) {
           const clickEl = item.querySelector("a") || item;
           clickEl.click();
         }
-        // Only scroll the horizontal wrapper container, never scroll the vertical page window
         const wrapper = item.closest(".episode-wrapper");
         if (wrapper && wrapper.scrollWidth > wrapper.clientWidth) {
           wrapper.scrollTo({

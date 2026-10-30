@@ -10,10 +10,105 @@ export function initPlayer() {
   let lastReportedDur = 0;
   let hasAutoSkipped = false;
   let lastSkipTime = 0;
+  let pendingResumeSeek = null;
+  let activeResumeTarget = null;
+  let hasConfirmedResume = false;
+  let lastBroadcastTime = 0;
+  let lastReadyNotice = 0;
+
+  function broadcastPlaybackState(force = false) {
+    const now = Date.now();
+    if (!force && now - lastBroadcastTime < 750) return;
+    lastBroadcastTime = now;
+
+    const pos = getPos();
+    const dur = getDuration();
+    const video = document.querySelector("video");
+    const jw = getPlayer();
+    const vds = getVidstack();
+
+    let isPaused = true;
+    let isEnded = false;
+
+    if (jw && typeof jw.getState === "function") {
+      isPaused = jw.getState() === "paused" || jw.getState() === "idle";
+      isEnded = jw.getState() === "complete";
+    } else if (vds && typeof vds.paused !== "undefined") {
+      isPaused = vds.paused;
+      isEnded = vds.ended;
+    } else if (video) {
+      isPaused = video.paused;
+      isEnded = video.ended;
+    }
+
+    try {
+      window.top.postMessage(
+        {
+          type: "AL_PLAYBACK_STATE",
+          currentTime: pos,
+          duration: dur,
+          isPaused,
+          isEnded
+        },
+        "*"
+      );
+    } catch (_) {}
+  }
+
+  function handlePlayResumeGuard() {
+    if (activeResumeTarget !== null && activeResumeTarget > 10) {
+      const target = activeResumeTarget;
+      setTimeout(() => {
+        const currentPos = getPos();
+        if (currentPos < 5) {
+          Logger.info(`↺ Anti-reset guard: restoring playhead to ${target}s`);
+          seekTo(target);
+        }
+      }, 350);
+    }
+  }
+
+  function applyResumeSeek(target) {
+    if (typeof target !== "number" || target <= 0) return;
+    hasConfirmedResume = false;
+    activeResumeTarget = target;
+    const dur = getDuration();
+
+    if (dur > 0 && target < dur - 5) {
+      seekTo(target);
+      Logger.info(`↺ Applying seekTo ${target}s`);
+
+      // Anti-reset guard: HLS players often reset time to 0 upon first user play
+      let checks = 0;
+      const guardInterval = setInterval(() => {
+        checks++;
+        const currentPos = getPos();
+        if (currentPos < 3 && checks <= 6) {
+          seekTo(target);
+        } else if (currentPos >= target - 5 || checks > 8) {
+          clearInterval(guardInterval);
+          if (!hasConfirmedResume) {
+            hasConfirmedResume = true;
+            try {
+              window.top.postMessage({ type: "AL_RESUME_CONFIRMED", time: target }, "*");
+            } catch (_) {}
+          }
+        }
+      }, 400);
+
+      pendingResumeSeek = null;
+    } else {
+      pendingResumeSeek = target;
+    }
+  }
 
   function getPlayer() {
     const uWin = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
     return typeof uWin.jwplayer === "function" ? uWin.jwplayer() : null;
+  }
+
+  function getVidstack() {
+    return document.querySelector("media-player");
   }
 
   function getPos() {
@@ -21,6 +116,10 @@ export function initPlayer() {
     if (jw && typeof jw.getPosition === "function") {
       const p = jw.getPosition();
       if (typeof p === "number" && !isNaN(p)) return p;
+    }
+    const vds = getVidstack();
+    if (vds && typeof vds.currentTime === "number" && !isNaN(vds.currentTime)) {
+      return vds.currentTime;
     }
     return document.querySelector("video")?.currentTime || 0;
   }
@@ -31,16 +130,33 @@ export function initPlayer() {
       const d = jw.getDuration();
       if (typeof d === "number" && !isNaN(d) && d > 0) return d;
     }
+    const vds = getVidstack();
+    if (vds && typeof vds.duration === "number" && !isNaN(vds.duration) && vds.duration > 0) {
+      return vds.duration;
+    }
     return document.querySelector("video")?.duration || 0;
   }
 
   function notifyReady() {
     const dur = getDuration();
-    if (dur > 0 && Math.round(dur) !== Math.round(lastReportedDur)) {
-      lastReportedDur = dur;
-      try {
-        window.top.postMessage({ type: "AU_FRAME_READY", duration: dur }, "*");
-      } catch (_) {}
+    if (dur > 0) {
+      const now = Date.now();
+      if (Math.round(dur) !== Math.round(lastReportedDur)) {
+        lastReportedDur = dur;
+        try {
+          window.top.postMessage({ type: "AU_FRAME_READY", duration: dur }, "*");
+        } catch (_) {}
+      }
+      if (now - lastReadyNotice > 1000) {
+        lastReadyNotice = now;
+        try {
+          window.top.postMessage({ type: "AL_PLAYER_READY", duration: dur }, "*");
+        } catch (_) {}
+      }
+
+      if (pendingResumeSeek !== null) {
+        applyResumeSeek(pendingResumeSeek);
+      }
     }
   }
 
@@ -48,25 +164,63 @@ export function initPlayer() {
     const video = document.querySelector("video");
     if (video && !video.__au_skip_bound) {
       video.__au_skip_bound = true;
-      video.addEventListener("timeupdate", checkTime);
+      video.addEventListener("timeupdate", () => {
+        checkTime();
+        broadcastPlaybackState();
+      });
+      video.addEventListener("play", () => {
+        handlePlayResumeGuard();
+        broadcastPlaybackState(true);
+      });
+      video.addEventListener("pause", () => broadcastPlaybackState(true));
+      video.addEventListener("ended", () => broadcastPlaybackState(true));
+      video.addEventListener("canplay", () => notifyReady());
+      video.addEventListener("playing", () => notifyReady());
       video.addEventListener("loadedmetadata", () => {
         notifyReady();
         computeAdjustedOp();
+        broadcastPlaybackState(true);
       });
       video.addEventListener("durationchange", () => {
         notifyReady();
         computeAdjustedOp();
+        broadcastPlaybackState(true);
       });
     }
 
     const jw = getPlayer();
     if (jw && typeof jw.on === "function" && !jw.__au_skip_bound) {
       jw.__au_skip_bound = true;
-      jw.on("time", checkTime);
+      jw.on("time", () => {
+        checkTime();
+        broadcastPlaybackState();
+      });
+      jw.on("play", () => {
+        handlePlayResumeGuard();
+        notifyReady();
+        broadcastPlaybackState(true);
+      });
+      jw.on("pause", () => broadcastPlaybackState(true));
+      jw.on("complete", () => broadcastPlaybackState(true));
+      jw.on("ready", () => notifyReady());
+      jw.on("firstFrame", () => notifyReady());
       jw.on("meta", () => {
         notifyReady();
         computeAdjustedOp();
+        broadcastPlaybackState(true);
       });
+    }
+
+    const vds = getVidstack();
+    if (vds && !vds.__au_skip_bound) {
+      vds.__au_skip_bound = true;
+      vds.addEventListener("can-play", () => notifyReady());
+      vds.addEventListener("play", () => {
+        handlePlayResumeGuard();
+        broadcastPlaybackState(true);
+      });
+      vds.addEventListener("pause", () => broadcastPlaybackState(true));
+      vds.addEventListener("ended", () => broadcastPlaybackState(true));
     }
   }
 
@@ -93,12 +247,24 @@ export function initPlayer() {
   }
 
   function seekTo(target) {
+    if (typeof target !== "number" || isNaN(target) || target <= 0) return;
     const jw = getPlayer();
     if (jw && typeof jw.seek === "function") {
-      jw.seek(target);
-    } else {
-      const v = document.querySelector("video");
-      if (v) v.currentTime = target;
+      try {
+        jw.seek(target);
+      } catch (_) {}
+    }
+    const vds = getVidstack();
+    if (vds && typeof vds.currentTime !== "undefined") {
+      try {
+        vds.currentTime = target;
+      } catch (_) {}
+    }
+    const v = document.querySelector("video");
+    if (v) {
+      try {
+        v.currentTime = target;
+      } catch (_) {}
     }
   }
 
@@ -165,7 +331,7 @@ export function initPlayer() {
       );
     });
 
-    const target = document.querySelector(".jw-wrapper, .jwplayer, #player") || document.body;
+    const target = document.querySelector(".jw-wrapper, .jwplayer, #player, .player, .video-container, video")?.parentElement || document.body;
     if (window.getComputedStyle(target).position === "static") {
       target.style.position = "relative";
     }
@@ -174,6 +340,10 @@ export function initPlayer() {
 
   function checkTime() {
     bindMediaEvents();
+
+    if (activeResumeTarget !== null && getPos() >= activeResumeTarget - 3) {
+      activeResumeTarget = null;
+    }
 
     if (getDuration() > 0 && Math.round(getDuration()) !== Math.round(lastReportedDur)) {
       notifyReady();
@@ -239,6 +409,8 @@ export function initPlayer() {
       checkTime();
     } else if (e.data?.type === "AU_TRIGGER_SKIP") {
       handleSkipAction();
+    } else if (e.data?.type === "AL_RESUME_SEEK") {
+      applyResumeSeek(e.data.target);
     }
   });
 

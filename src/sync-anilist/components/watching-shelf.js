@@ -3,11 +3,13 @@ import { showToast } from "../../shared/toast.js";
 import { Logger } from "../../shared/logger.js";
 import { iconHtml, ANILIST_ICON_SVG, Play, Clock, Check, Zap, Sliders, Loader2, Link, Users } from "../../shared/icons.js";
 import { openTokenModal } from "../../shared/anilist/auth.js";
-import { getAnimeUnityUrl, scanAnimeUnityPageMap } from "../../shared/animeunity/utils.js";
 import { openPreferencesModal } from "./preferences-modal.js";
 import { simulateAgenticSearch } from "./agent-search.js";
 import { Settings } from "../settings.js";
 import { Buddy } from "../buddy.js";
+import { getCurrentProvider } from "../providers/index.js";
+import { cleanTitle } from "../providers/base.js";
+import { Resume } from "../resume.js";
 
 /**
  * Formats seconds into human-readable countdown
@@ -67,7 +69,72 @@ export function calculateEntryState(entry) {
 }
 
 /**
- * Creates a single Continue Watching anime card
+ * Calculates priority tier for Continue Watching shelf:
+ * 1. Resume active (intra-episode playback midway)
+ * 2. Simulcast ongoing with new episode(s) already aired
+ * 3. Other series with unwatched episodes available (backlog / finished / rewatching)
+ * 4. Waiting for next episode (not yet aired) or fully caught up
+ *
+ * @param {Object} entry
+ * @returns {number} 1 to 4
+ */
+export function getEntrySortTier(entry) {
+  const media = entry.media || {};
+  const state = calculateEntryState(entry);
+  const resume = Resume.extract(entry.notes) || Resume.getLocal(media.id);
+  const isResumeActive = Boolean(
+    resume &&
+    resume.percent > 0 &&
+    resume.percent < 88 &&
+    (resume.ep === state.nextToWatch || resume.ep > state.progress)
+  );
+
+  // 1. First priority: Intra-episode resume pending
+  if (isResumeActive) return 1;
+
+  const isSimulcast = media.status === "RELEASING" || Boolean(media.nextAiringEpisode);
+
+  // 2. Second priority: Simulcast anime with newly aired episode(s) ready to watch
+  if (isSimulcast && state.hasUnwatchedAired) return 2;
+
+  // 3. Third priority: Other anime with unwatched episodes (finished backlog / rewatching)
+  if (state.hasUnwatchedAired || state.isRepeating) return 3;
+
+  // 4. Last priority: Anime where no new episode has aired yet (waiting for next air / caught up)
+  return 4;
+}
+
+/**
+ * Comparator for Continue Watching shelf items
+ * Tier 1 -> Tier 2 -> Tier 3 -> Tier 4
+ * Tier 4 tie-breaker: next air time ascending (airing soonest comes first)
+ * Other tiers: last update time descending (most recent first)
+ */
+export function compareShelfEntries(a, b) {
+  const tierA = getEntrySortTier(a);
+  const tierB = getEntrySortTier(b);
+
+  if (tierA !== tierB) {
+    return tierA - tierB;
+  }
+
+  // Tier 4 sub-sorting: anime airing sooner comes first among waiting series
+  if (tierA === 4) {
+    const timeA = a.media?.nextAiringEpisode?.timeUntilAiring;
+    const timeB = b.media?.nextAiringEpisode?.timeUntilAiring;
+    if (timeA && timeB) return timeA - timeB;
+    if (timeA && !timeB) return -1;
+    if (!timeA && timeB) return 1;
+  }
+
+  // Sub-sorting for other tiers: most recently updated first
+  const updatedA = a.updatedAt || 0;
+  const updatedB = b.updatedAt || 0;
+  return updatedB - updatedA;
+}
+
+/**
+ * Creates a single Continue Watching anime card matching original styles.scss
  * @param {Object} entry
  * @param {Object|null} buddySync
  * @param {Function|null} onSyncEntry
@@ -76,8 +143,9 @@ export function calculateEntryState(entry) {
 function createCard(entry, buddySync = null, onSyncEntry = null) {
   const media = entry.media || {};
   const state = calculateEntryState(entry);
-  const epTarget = state.hasUnwatchedAired ? state.nextToWatch : (state.progress || 1);
-  const auUrl = getAnimeUnityUrl(media, { targetEp: epTarget });
+  const resume = Resume.extract(entry.notes) || Resume.getLocal(media.id);
+  const isResumeActive = resume && resume.percent > 0 && resume.percent < 88 && (resume.ep === state.nextToWatch || resume.ep > state.progress);
+  const epTarget = isResumeActive ? resume.ep : (state.hasUnwatchedAired ? state.nextToWatch : (state.progress || 1));
   const title = media.title?.english || media.title?.romaji || media.title?.userPreferred || "Untitled";
   const coverUrl = media.coverImage?.large || media.coverImage?.medium || "";
   const alUrl = media.siteUrl || `https://anilist.co/anime/${media.id}`;
@@ -139,7 +207,7 @@ function createCard(entry, buddySync = null, onSyncEntry = null) {
     txt.textContent = state.unwatchedCount > 1 ? `+${state.unwatchedCount} eps` : `Caught up`;
     badge.appendChild(txt);
     badgeWrap.appendChild(badge);
-  } else if (state.nextAir) {
+  } else if (state.nextAir && state.nextAir.timeUntilAiring > 0) {
     const badge = document.createElement("span");
     badge.className = "al-badge al-badge-PAUSED";
     const dot = document.createElement("span");
@@ -182,10 +250,20 @@ function createCard(entry, buddySync = null, onSyncEntry = null) {
   const progressText = document.createElement("div");
   progressText.className = "al-card-progress-text";
   const progressLabel = document.createElement("span");
-  progressLabel.textContent = `Ep. ${state.progress} / ${state.totalEp || state.latestAired || "?"}`;
+
+  if (isResumeActive) {
+    progressLabel.textContent = `Ep. ${resume.ep} • ${Resume.formatTime(resume.time)} / ${Resume.formatTime(resume.duration)}`;
+  } else {
+    progressLabel.textContent = `Ep. ${state.progress} / ${state.totalEp || state.latestAired || "?"}`;
+  }
   progressText.appendChild(progressLabel);
 
-  if (state.hasUnwatchedAired || state.isRepeating) {
+  if (isResumeActive) {
+    const resumeTag = document.createElement("span");
+    resumeTag.style.color = "#c084fc";
+    resumeTag.textContent = `${resume.percent}%`;
+    progressText.appendChild(resumeTag);
+  } else if (state.hasUnwatchedAired || state.isRepeating) {
     const readyTag = document.createElement("span");
     readyTag.style.color = state.isRepeating ? "#06b6d4" : "#3db4f2";
     readyTag.textContent = state.isRepeating ? "Rewatching" : "Ready";
@@ -197,9 +275,15 @@ function createCard(entry, buddySync = null, onSyncEntry = null) {
   progressBar.className = "al-card-progress-bar";
   const progressFill = document.createElement("div");
   progressFill.className = "al-card-progress-fill";
-  const totalForBar = state.totalEp || state.latestAired || state.progress || 1;
-  const percent = Math.min(100, Math.max(0, Math.round((state.progress / totalForBar) * 100)));
-  progressFill.style.width = `${percent}%`;
+
+  if (isResumeActive) {
+    progressFill.style.width = `${resume.percent}%`;
+    progressFill.style.background = "linear-gradient(90deg, #3db4f2, #a855f7)";
+  } else {
+    const totalForBar = state.totalEp || state.latestAired || state.progress || 1;
+    const percent = Math.min(100, Math.max(0, Math.round((state.progress / totalForBar) * 100)));
+    progressFill.style.width = `${percent}%`;
+  }
   progressBar.appendChild(progressFill);
   overlay.appendChild(progressBar);
 
@@ -211,7 +295,7 @@ function createCard(entry, buddySync = null, onSyncEntry = null) {
   cardBody.className = "al-card-body";
 
   const titleLink = document.createElement("a");
-  titleLink.href = auUrl || "#";
+  titleLink.href = "#";
   titleLink.className = "al-card-title";
   titleLink.title = title;
   titleLink.textContent = title;
@@ -220,7 +304,7 @@ function createCard(entry, buddySync = null, onSyncEntry = null) {
   const actions = document.createElement("div");
   actions.className = "al-card-actions";
 
-  // If buddy is ahead or completed, place sync button directly above the watch button
+  // If buddy is ahead or completed, place sync button directly above watch button
   if (buddySync) {
     const isCompleted = !!buddySync.isBuddyCompleted;
     const canSync = !!buddySync.isAhead || (isCompleted && entry.status !== "COMPLETED");
@@ -245,14 +329,20 @@ function createCard(entry, buddySync = null, onSyncEntry = null) {
   }
 
   const btn = document.createElement("a");
-  btn.href = auUrl || "#";
+  btn.href = "#";
   btn.className = "al-card-btn";
 
-  if (state.hasUnwatchedAired || state.isRepeating) {
+  if (isResumeActive) {
+    btn.classList.add("al-btn-play");
+    btn.style.background = "linear-gradient(135deg, #0284c7, #9333ea)";
+    btn.title = `Resume Ep. ${resume.ep} (${Resume.formatTime(resume.time)})`;
+    btn.innerHTML = `${iconHtml(Play, { width: 12, height: 12 })} Resume`;
+  } else if (state.hasUnwatchedAired || state.isRepeating) {
     btn.classList.add("al-btn-play");
     if (state.isRepeating) btn.style.background = "#06b6d4";
-    btn.innerHTML = `${iconHtml(Play, { width: 12, height: 12 })} Ep. ${state.nextToWatch}`;
-  } else if (state.nextAir) {
+    btn.title = `Watch Ep. ${state.nextToWatch}`;
+    btn.innerHTML = `${iconHtml(Play, { width: 12, height: 12 })} Play`;
+  } else if (state.nextAir && state.nextAir.timeUntilAiring > 0) {
     btn.classList.add("al-btn-secondary");
     btn.innerHTML = `${iconHtml(Clock, { width: 12, height: 12 })} Ep. ${state.progress}`;
   } else {
@@ -261,51 +351,56 @@ function createCard(entry, buddySync = null, onSyncEntry = null) {
   }
   actions.appendChild(btn);
   cardBody.appendChild(actions);
-
   card.appendChild(cardBody);
 
-  // Entire card is clickable (Level 1: direct cache, Level 3: search modal)
+  // Unified Card Navigation
   async function handleCardNavigate(e) {
     if (e.target.closest(".al-card-al-link, .al-btn-buddy-sync")) return;
     e.preventDefault();
 
-    Logger.info(`Card clicked: "${title}" (AniList ID: ${media.id})`);
+    const provider = getCurrentProvider();
+    const siteName = provider?.name || "Site";
+
+    Logger.info(`Card clicked: "${title}" (AniList ID: ${media.id}) on ${siteName}`);
 
     if (epTarget) {
       sessionStorage.setItem("al_target_ep", String(epTarget));
     }
-
-    // Level 1: In local cache (direct anime page)
-    const directUrl = getAnimeUnityUrl(media, { targetEp: epTarget });
-    if (directUrl && directUrl.startsWith("/anime/")) {
-      Logger.info(`Level 1 direct cache HIT -> opening ${directUrl}`);
-      showToast(`⚡ Opening ${title}...`);
-      window.location.href = directUrl;
-      return;
+    if (isResumeActive && resume?.time > 0) {
+      sessionStorage.setItem("al_resume_time", String(resume.time));
     }
 
-    Logger.info(`Level 1 direct cache MISS for ID ${media.id}. Opening search modal...`);
-    showToast(`🔍 Searching "${title}" on AnimeUnity...`, false, 2000);
-
-    // Level 3: Uncached -> Search Modal
     card.classList.add("al-card-loading");
     const originalBtnHtml = btn.innerHTML;
     btn.innerHTML = `${iconHtml(Loader2, { width: 12, height: 12, class: "al-spin" })} Loading...`;
     btn.style.opacity = "0.75";
     btn.style.pointerEvents = "none";
 
-    const settings = Settings.get();
     try {
-      const ok = await simulateAgenticSearch(media, {
-        epTarget,
-        autoSelectDelay: settings.searchAutoSelectDelay
-      });
-      if (!ok) {
-        showToast(`⚠️ Could not find or open search for "${title}"`, true);
+      const targetUrl = await provider?.resolveTargetUrl(media, epTarget);
+      if (targetUrl) {
+        showToast(`⚡ Opening ${title}...`);
+        window.location.href = targetUrl;
+        return;
+      }
+
+      if (provider?.name === "AnimeUnity") {
+        showToast(`🔍 Searching "${title}" on AnimeUnity...`, false, 2000);
+        const settings = Settings.get();
+        const ok = await simulateAgenticSearch(media, {
+          epTarget,
+          autoSelectDelay: settings.searchAutoSelectDelay
+        });
+        if (!ok) {
+          showToast(`⚠️ Could not find "${title}" on AnimeUnity`, true);
+        }
+      } else {
+        showToast(`🔍 Searching "${title}" on AnimeSaturn...`);
+        window.location.href = `/filter?key=${encodeURIComponent(cleanTitle(title))}`;
       }
     } catch (err) {
       Logger.error("Search error in handleCardNavigate:", err);
-      showToast(`⚠️ Search error: ${err.message}`, true);
+      showToast(`⚠️ Error: ${err.message}`, true);
     } finally {
       card.classList.remove("al-card-loading");
       btn.innerHTML = originalBtnHtml;
@@ -315,7 +410,6 @@ function createCard(entry, buddySync = null, onSyncEntry = null) {
   }
 
   card.addEventListener("click", handleCardNavigate);
-
   return card;
 }
 
@@ -325,6 +419,9 @@ function createCard(entry, buddySync = null, onSyncEntry = null) {
  * @param {Array} options.entries - List of watching media list entries
  * @param {Object|null} options.viewer - Current logged-in AniList viewer
  * @param {Function} [options.onRefresh] - Callback to refresh data
+ * @param {Function} [options.onLogin] - Callback to trigger login
+ * @param {Array} [options.syncNotifs] - Buddy sync notifications
+ * @param {Function} [options.onSyncEntry] - Callback to sync buddy progress
  * @returns {HTMLElement} Shelf container element
  */
 export function renderWatchingShelf({
@@ -335,10 +432,8 @@ export function renderWatchingShelf({
   syncNotifs = [],
   onSyncEntry = null
 } = {}) {
-  // Harvest any page anime data
-  scanAnimeUnityPageMap();
-
-  let unwatchedOnly = Settings.get().homeOnlyUnwatched;
+  let unwatchedOnly = Settings.get().shelfFilterUnwatched;
+  let syncOnly = Settings.get().shelfFilterSync;
 
   const shelfContainer = document.createElement("div");
   shelfContainer.id = "al-home-continue-watching";
@@ -376,86 +471,70 @@ export function renderWatchingShelf({
   const prefBtn = document.createElement("button");
   prefBtn.type = "button";
   prefBtn.className = "al-shelf-pref-btn";
-  prefBtn.title = "Preferences (Audio & Shelf)";
+  prefBtn.title = "Preferences";
   prefBtn.innerHTML = iconHtml(Sliders, { width: 14, height: 14 });
+  controls.appendChild(prefBtn);
+
+  // Filter Chip ("Only unwatched")
+  const unwatchedEntries = entries.filter((e) => calculateEntryState(e).hasUnwatchedAired);
+
+  const unwatchedBtn = document.createElement("button");
+  unwatchedBtn.type = "button";
+  unwatchedBtn.className = `al-shelf-chip-btn ${unwatchedOnly ? "is-active" : ""}`;
+  unwatchedBtn.title = "Show only anime with unwatched aired episodes";
+  unwatchedBtn.innerHTML = `
+    ${iconHtml(Zap, { width: 12, height: 12 })}
+    <span>Unwatched</span>
+    ${unwatchedEntries.length > 0 ? `<span class="al-chip-count">${unwatchedEntries.length}</span>` : ""}
+  `;
+
+  unwatchedBtn.addEventListener("click", () => {
+    unwatchedOnly = !unwatchedOnly;
+    Settings.set("shelfFilterUnwatched", unwatchedOnly);
+    unwatchedBtn.classList.toggle("is-active", unwatchedOnly);
+    updateTrack();
+  });
+  controls.appendChild(unwatchedBtn);
+
+  // Filter Chip ("Sync Together")
+  const syncMap = new Map((syncNotifs || []).map((n) => [n.mediaId, n]));
+  const syncEntries = entries.filter((e) => syncMap.has(e.mediaId) || !!Buddy.extract(e.notes));
+
+  let syncBtn = null;
+  if (syncEntries.length > 0) {
+    syncBtn = document.createElement("button");
+    syncBtn.type = "button";
+    syncBtn.className = `al-shelf-chip-btn is-sync ${syncOnly ? "is-active" : ""}`;
+    syncBtn.title = "Show only anime with Sync Together friend";
+    syncBtn.innerHTML = `
+      ${iconHtml(Users, { width: 12, height: 12 })}
+      <span>Sync</span>
+      <span class="al-chip-count sync-badge">${syncEntries.length}</span>
+    `;
+
+    syncBtn.addEventListener("click", () => {
+      syncOnly = !syncOnly;
+      Settings.set("shelfFilterSync", syncOnly);
+      syncBtn.classList.toggle("is-active", syncOnly);
+      updateTrack();
+    });
+    controls.appendChild(syncBtn);
+  }
+
   prefBtn.addEventListener("click", () => {
     openPreferencesModal({
       viewer,
       onSave: () => {
-        unwatchedOnly = Settings.get().homeOnlyUnwatched;
-        toggleBox.classList.toggle("active", unwatchedOnly);
-        toggleKnob.classList.toggle("active", unwatchedOnly);
+        unwatchedOnly = Settings.get().shelfFilterUnwatched;
+        syncOnly = Settings.get().shelfFilterSync;
+        unwatchedBtn.classList.toggle("is-active", unwatchedOnly);
+        if (syncBtn) {
+          syncBtn.classList.toggle("is-active", syncOnly);
+        }
         updateTrack();
       }
     });
   });
-  controls.appendChild(prefBtn);
-
-  // Filter Toggle ("Only unwatched")
-  const unwatchedEntries = entries.filter((e) => calculateEntryState(e).hasUnwatchedAired);
-
-  const filterWrap = document.createElement("div");
-  filterWrap.className = "al-shelf-filter";
-  filterWrap.title = "Toggle: Show only series with unwatched aired episodes";
-
-  const toggleBox = document.createElement("div");
-  toggleBox.className = `al-shelf-toggle-box ${unwatchedOnly ? "active" : ""}`;
-  const toggleKnob = document.createElement("div");
-  toggleKnob.className = `al-shelf-toggle-knob ${unwatchedOnly ? "active" : ""}`;
-  toggleBox.appendChild(toggleKnob);
-  filterWrap.appendChild(toggleBox);
-
-  const filterLabel = document.createElement("span");
-  filterLabel.className = "al-shelf-filter-label";
-  filterLabel.innerHTML = `${iconHtml(Zap, { width: 12, height: 12 })} Only unwatched`;
-  filterWrap.appendChild(filterLabel);
-
-  if (unwatchedEntries.length > 0) {
-    const pill = document.createElement("span");
-    pill.className = "al-shelf-unwatched-pill";
-    pill.textContent = String(unwatchedEntries.length);
-    filterWrap.appendChild(pill);
-  }
-  controls.appendChild(filterWrap);
-
-  // Filter Toggle ("Sync Together")
-  const syncMap = new Map((syncNotifs || []).map((n) => [n.mediaId, n]));
-  const syncEntries = entries.filter((e) => syncMap.has(e.mediaId) || !!Buddy.extract(e.notes));
-  let syncOnly = false;
-
-  if (syncEntries.length > 0) {
-    const syncFilterWrap = document.createElement("div");
-    syncFilterWrap.className = "al-shelf-filter";
-    syncFilterWrap.title = "Toggle: Show only series with Sync Together friend";
-
-    const syncToggleBox = document.createElement("div");
-    syncToggleBox.className = `al-shelf-toggle-box ${syncOnly ? "active" : ""}`;
-    const syncToggleKnob = document.createElement("div");
-    syncToggleKnob.className = `al-shelf-toggle-knob ${syncOnly ? "active" : ""}`;
-    syncToggleBox.appendChild(syncToggleKnob);
-    syncFilterWrap.appendChild(syncToggleBox);
-
-    const syncFilterLabel = document.createElement("span");
-    syncFilterLabel.className = "al-shelf-filter-label";
-    syncFilterLabel.innerHTML = `${iconHtml(Users, { width: 12, height: 12 })} Sync Together`;
-    syncFilterWrap.appendChild(syncFilterLabel);
-
-    const syncPill = document.createElement("span");
-    syncPill.className = "al-shelf-unwatched-pill";
-    syncPill.style.background = "rgba(56, 189, 248, 0.2)";
-    syncPill.style.color = "#38bdf8";
-    syncPill.textContent = String(syncEntries.length);
-    syncFilterWrap.appendChild(syncPill);
-
-    syncFilterWrap.addEventListener("click", () => {
-      syncOnly = !syncOnly;
-      syncToggleBox.classList.toggle("active", syncOnly);
-      syncToggleKnob.classList.toggle("active", syncOnly);
-      updateTrack();
-    });
-
-    controls.appendChild(syncFilterWrap);
-  }
 
   header.appendChild(controls);
   shelfContainer.appendChild(header);
@@ -467,7 +546,6 @@ export function renderWatchingShelf({
   const track = document.createElement("div");
   track.className = "al-shelf-track";
 
-  // Re-populates track cards
   function updateTrack() {
     track.innerHTML = "";
 
@@ -478,7 +556,7 @@ export function renderWatchingShelf({
       empty.innerHTML = `
         <div class="al-shelf-empty-icon">${iconHtml(Play, { width: 32, height: 32 })}</div>
         <div class="al-shelf-empty-title">Connect your AniList Account</div>
-        <div class="al-shelf-empty-desc">Sign in with AniList to access your Continue Watching list, release countdowns, and quick episode progress directly on AnimeUnity.</div>
+        <div class="al-shelf-empty-desc">Sign in with AniList to access your Continue Watching list, release countdowns, and quick episode progress.</div>
         <button type="button" class="al-btn primary al-home-auth-btn" style="margin-top: 6px;">Connect AniList</button>
       `;
       const authBtn = empty.querySelector(".al-home-auth-btn");
@@ -508,7 +586,7 @@ export function renderWatchingShelf({
       return;
     }
 
-    let visibleEntries = entries;
+    let visibleEntries = [...entries];
 
     if (unwatchedOnly) {
       visibleEntries = visibleEntries.filter((e) => calculateEntryState(e).hasUnwatchedAired);
@@ -518,31 +596,31 @@ export function renderWatchingShelf({
       visibleEntries = visibleEntries.filter((e) => syncMap.has(e.mediaId) || !!Buddy.extract(e.notes));
     }
 
+    visibleEntries.sort(compareShelfEntries);
+
     if (!visibleEntries.length) {
       const empty = document.createElement("div");
       empty.className = "al-shelf-empty";
       empty.style.width = "100%";
+      const reason = unwatchedOnly && syncOnly
+        ? "No series with unwatched aired episodes and Sync Together friend."
+        : unwatchedOnly
+          ? "You are caught up on all airing anime! No unwatched episodes available."
+          : "No series with a Sync Together friend found in your watching list.";
       empty.innerHTML = `
-        <div class="al-shelf-empty-title">${unwatchedOnly ? "All Caught Up! 🎉" : "No Matching Anime"}</div>
-        <div class="al-shelf-empty-desc">${unwatchedOnly ? "You have no unwatched aired episodes in your Watching list." : "No anime in your Watching list match the active filters."}</div>
+        <div class="al-shelf-empty-title">All Caught Up</div>
+        <div class="al-shelf-empty-desc">${reason}</div>
       `;
       track.appendChild(empty);
       return;
     }
 
     visibleEntries.forEach((entry) => {
-      const buddySync = syncMap.get(entry.mediaId);
-      track.appendChild(createCard(entry, buddySync, onSyncEntry));
+      const buddySync = syncMap.get(entry.mediaId) || null;
+      const card = createCard(entry, buddySync, onSyncEntry);
+      track.appendChild(card);
     });
   }
-
-  // Filter click handler
-  filterWrap.addEventListener("click", () => {
-    unwatchedOnly = !unwatchedOnly;
-    toggleBox.classList.toggle("active", unwatchedOnly);
-    toggleKnob.classList.toggle("active", unwatchedOnly);
-    updateTrack();
-  });
 
   updateTrack();
   carouselWrap.appendChild(track);

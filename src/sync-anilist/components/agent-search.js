@@ -73,7 +73,7 @@ export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay =
     searchBtn.click();
   } else {
     Logger.warn("Search button/component not found in DOM");
-    showToast(`⚠️ Impossibile aprire la barra di ricerca`, true);
+    showToast(`⚠️ Could not open search bar`, true);
     return false;
   }
 
@@ -88,7 +88,7 @@ export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay =
 
   if (!input) {
     Logger.warn("Search input did not mount within timeout");
-    showToast(`⚠️ Impossibile aprire la casella di ricerca`, true);
+    showToast(`⚠️ Could not open search input`, true);
     return false;
   }
 
@@ -124,7 +124,7 @@ export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay =
 
   if (!items.length) {
     Logger.info(`No search results returned for "${query}"`);
-    showToast(`⚠️ Nessun risultato immediato per "${query}"`, true);
+    showToast(`⚠️ No immediate results for "${query}"`, true);
     return true; // Modal is open with query ready for user to edit or browse
   }
 

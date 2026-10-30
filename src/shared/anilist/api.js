@@ -26,7 +26,8 @@ export const AniListAPI = {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ query, variables })
+        body: JSON.stringify({ query, variables }),
+        keepalive: true
       });
 
       const { data, errors } = await res.json();
@@ -54,15 +55,29 @@ export const AniListAPI = {
 
   getMedia: (search) =>
     AniListAPI.call(
-      `query($s:String){Media(search:$s,type:ANIME){id idMal episodes title{romaji english}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}`,
+      `query($s:String){Media(search:$s,type:ANIME){id idMal episodes format status title{romaji english userPreferred}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}`,
+      { s: search },
+      { silent: true }
+    ),
+
+  searchMedia: (search) =>
+    AniListAPI.call(
+      `query($s:String){Page(page:1,perPage:5){media(search:$s,type:ANIME,sort:SEARCH_MATCH){id idMal episodes format status title{romaji english userPreferred}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}}`,
       { s: search },
       { silent: true }
     ),
 
   getMediaById: (id) =>
     AniListAPI.call(
-      `query($id:Int){Media(id:$id,type:ANIME){id idMal episodes title{romaji english}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}`,
+      `query($id:Int){Media(id:$id,type:ANIME){id idMal episodes format status title{romaji english userPreferred}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}`,
       { id: Number(id) },
+      { silent: true }
+    ),
+
+  getMediaByMalId: (idMal) =>
+    AniListAPI.call(
+      `query($id:Int){Media(idMal:$id,type:ANIME){id idMal episodes format status title{romaji english userPreferred}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}`,
+      { id: Number(idMal) },
       { silent: true }
     ),
 

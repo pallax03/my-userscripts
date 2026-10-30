@@ -4,7 +4,7 @@
  * to window.top so all messages appear together in the primary browser console.
  */
 
-if (window.self === window.top && !window.__AU_LOGGER_INIT__) {
+if (typeof window !== "undefined" && window.self === window.top && !window.__AU_LOGGER_INIT__) {
   window.__AU_LOGGER_INIT__ = true;
   window.addEventListener("message", (e) => {
     if (e.data?.type === "AU_LOG_BRIDGE") {
@@ -24,7 +24,7 @@ if (window.self === window.top && !window.__AU_LOGGER_INIT__) {
 }
 
 export function createLogger(prefix = "[AU]") {
-  const isTop = window.self === window.top;
+  const isTop = typeof window !== "undefined" ? window.self === window.top : true;
 
   function logMessage(level, msg, data) {
     if (isTop) {

@@ -1,15 +1,75 @@
 import { AniListAPI } from "../../shared/anilist/api.js";
-import { iconHtml, ExternalLink, Trash2, Plus, KeyRound, RotateCcw, Link, Calendar, MoreHorizontal } from "../../shared/icons.js";
+import {
+  iconHtml,
+  ExternalLink,
+  Trash2,
+  Plus,
+  KeyRound,
+  RotateCcw,
+  Link,
+  Calendar,
+  Check,
+  CheckCheck,
+  Clock,
+  X,
+  Zap,
+  Play
+} from "../../shared/icons.js";
 import { Buddy } from "../buddy.js";
 import { initBuddyPicker } from "./buddy-picker.js";
+import { Resume } from "../resume.js";
 
-export function renderActions(media, hasToken, actions, { isLoading = false, viewer = null, defaultBuddy = "", buddyData = null } = {}) {
-  // Purge AnimeUnity personal account elements from DOM
+/**
+ * Renders the streamlined anime control card above the episode selector
+ * @param {Object} media - AniList media object
+ * @param {boolean} hasToken - Whether user is logged into AniList
+ * @param {Object} actions - Action callbacks
+ * @param {Object} options - State options
+ */
+export function renderActions(
+  media,
+  hasToken,
+  actions,
+  {
+    isLoading = false,
+    viewer = null,
+    defaultBuddy = "",
+    buddyData = null,
+    provider = null,
+    activeEp = 0,
+    trackedProgress = -1,
+    autoTrackState = null
+  } = {}
+) {
+  // Purge AnimeUnity personal account elements from DOM if present
   document.querySelectorAll(".cover-wrap .actions, .list-btn-mobile, #add-to-fav").forEach((el) => el.remove());
 
-  const epWrapper = document.querySelector(".episode-wrapper");
-  const overview = document.querySelector(".content .overview") || document.querySelector(".overview");
-  if (!epWrapper && !overview) return;
+  // Determine anchor element and position (always placed above episode selector)
+  const anchorData = provider?.getActionsAnchor?.();
+  let targetAnchor = null;
+  let insertMode = "before";
+
+  if (anchorData?.element) {
+    targetAnchor = anchorData.element;
+    insertMode = anchorData.position || "before";
+  } else if (anchorData instanceof HTMLElement) {
+    targetAnchor = anchorData;
+    insertMode = "before";
+  } else {
+    const epWrapper = document.querySelector(".episode-wrapper, section[x-data*='epList'], section:has(.ep-tile)");
+    if (epWrapper) {
+      targetAnchor = epWrapper;
+      insertMode = "before";
+    } else {
+      const overview = document.querySelector(".content .overview, .overview");
+      if (overview) {
+        targetAnchor = overview;
+        insertMode = "append";
+      }
+    }
+  }
+
+  if (!targetAnchor) return;
 
   let bar = document.getElementById("al-control-bar");
   if (!bar) {
@@ -18,9 +78,19 @@ export function renderActions(media, hasToken, actions, { isLoading = false, vie
     bar.className = "al-card";
   }
 
-  // Anchor bar directly below the episode selector
-  if (epWrapper && bar.previousElementSibling !== epWrapper) epWrapper.after(bar);
-  else if (!epWrapper && overview && bar.parentElement !== overview) overview.appendChild(bar);
+  if (insertMode === "before") {
+    if (bar.nextElementSibling !== targetAnchor) {
+      targetAnchor.before(bar);
+    }
+  } else if (insertMode === "after") {
+    if (bar.previousElementSibling !== targetAnchor) {
+      targetAnchor.after(bar);
+    }
+  } else if (insertMode === "append") {
+    if (bar.parentElement !== targetAnchor) {
+      targetAnchor.appendChild(bar);
+    }
+  }
 
   if (!hasToken) {
     bar.innerHTML = `
@@ -90,6 +160,97 @@ export function renderActions(media, hasToken, actions, { isLoading = false, vie
   const isBuddyAhead = !!(buddyData?.name && (buddyData.progress || 0) > progress);
   const canSyncBuddy = isBuddyAhead || (isBuddyCompleted && entry?.status !== "COMPLETED");
 
+  // Compact, symbolic episode controller chip placed directly next to the anime title
+  let episodeStatusHtml = "";
+  if (activeEp > 0) {
+    if (autoTrackState?.isActive && autoTrackState.targetEp === activeEp) {
+      // 1. Countdown active
+      episodeStatusHtml = `
+        <div class="al-ep-chip is-countdown" title="Auto-tracking progress in ${autoTrackState.countdown}s">
+          <div class="al-ep-chip-badge">
+            ${iconHtml(Clock, { width: 12, height: 12, class: "al-pulse" })}
+            <span class="al-ep-chip-num">Ep. ${activeEp}</span>
+            <span class="al-ep-chip-timer">${autoTrackState.countdown}s</span>
+          </div>
+          <div class="al-ep-chip-actions">
+            <button type="button" class="al-ep-mini-btn danger" id="al-ep-cancel" title="Cancel auto-track">
+              ${iconHtml(X, { width: 11, height: 11 })}
+            </button>
+            <button type="button" class="al-ep-mini-btn success" id="al-ep-savenow" title="Mark Ep. ${activeEp} as watched now">
+              ${iconHtml(Check, { width: 12, height: 12 })}
+            </button>
+          </div>
+        </div>`;
+    } else if (trackedProgress > 0 && activeEp === trackedProgress) {
+      // 2. Synced with AniList
+      const rewindTarget = activeEp - 1;
+      episodeStatusHtml = `
+        <div class="al-ep-chip is-synced" title="Tracked on AniList as Ep. ${activeEp}">
+          <div class="al-ep-chip-badge">
+            ${iconHtml(CheckCheck, { width: 12, height: 12 })}
+            <span class="al-ep-chip-num">Ep. ${activeEp}</span>
+            <span class="al-ep-chip-text">Synced</span>
+          </div>
+          <div class="al-ep-chip-actions">
+            <button type="button" class="al-ep-mini-btn rewind" id="al-ep-rewind" title="${rewindTarget > 0 ? `Rewind AniList to Ep. ${rewindTarget}` : "Mark as unwatched"}">
+              ${iconHtml(RotateCcw, { width: 11, height: 11 })}
+              <span>${rewindTarget > 0 ? `Ep. ${rewindTarget}` : "Reset"}</span>
+            </button>
+          </div>
+        </div>`;
+    } else if (trackedProgress > 0 && activeEp < trackedProgress) {
+      // 3. Already Watched in the past
+      const rewindTarget = activeEp - 1;
+      episodeStatusHtml = `
+        <div class="al-ep-chip is-watched" title="Episode ${activeEp} already watched (AniList at Ep. ${trackedProgress})">
+          <div class="al-ep-chip-badge">
+            ${iconHtml(Check, { width: 12, height: 12 })}
+            <span class="al-ep-chip-num">Ep. ${activeEp}</span>
+            <span class="al-ep-chip-text">Seen</span>
+          </div>
+          <div class="al-ep-chip-actions">
+            <button type="button" class="al-ep-mini-btn rewind" id="al-ep-rewind" title="${rewindTarget > 0 ? `Rewind AniList to Ep. ${rewindTarget}` : "Mark as unwatched"}">
+              ${iconHtml(RotateCcw, { width: 11, height: 11 })}
+              <span>${rewindTarget > 0 ? `Ep. ${rewindTarget}` : "Reset"}</span>
+            </button>
+          </div>
+        </div>`;
+    } else {
+      const resume = Resume.extract(entry?.notes) || Resume.getLocal(media.id);
+      const isResuming = resume && resume.ep === activeEp && resume.time > 15 && resume.percent < 88;
+
+      if (isResuming) {
+        episodeStatusHtml = `
+          <div class="al-ep-chip is-resuming" title="Resume at ${Resume.formatTime(resume.time)} (${resume.percent}%) • Mark Ep. ${activeEp} as watched">
+            <div class="al-ep-chip-badge">
+              ${iconHtml(Play, { width: 12, height: 12 })}
+              <span class="al-ep-chip-num">Ep. ${activeEp}</span>
+              <span class="al-ep-chip-text" style="color: #c084fc;">${Resume.formatTime(resume.time)}</span>
+            </div>
+            <div class="al-ep-chip-actions">
+              <button type="button" class="al-ep-mini-btn success" id="al-ep-save" title="Mark Ep. ${activeEp} as watched">
+                ${iconHtml(Check, { width: 12, height: 12 })}
+              </button>
+            </div>
+          </div>`;
+      } else {
+        // 4. Untracked / Future episode: single prominent checkmark tick to mark watched
+        episodeStatusHtml = `
+          <div class="al-ep-chip is-untracked" title="Mark Ep. ${activeEp} as watched (AniList currently at Ep. ${trackedProgress > 0 ? trackedProgress : 0})">
+            <div class="al-ep-chip-badge">
+              ${iconHtml(Zap, { width: 12, height: 12 })}
+              <span class="al-ep-chip-num">Ep. ${activeEp}</span>
+            </div>
+            <div class="al-ep-chip-actions">
+              <button type="button" class="al-ep-mini-btn success" id="al-ep-save" title="Mark Ep. ${activeEp} as watched">
+                ${iconHtml(Check, { width: 12, height: 12 })}
+              </button>
+            </div>
+          </div>`;
+      }
+    }
+  }
+
   bar.innerHTML = `
     <div class="al-card-row">
       <div class="al-left">
@@ -98,19 +259,14 @@ export function renderActions(media, hasToken, actions, { isLoading = false, vie
             <span class="al-title-text">${title}</span>
             ${iconHtml(ExternalLink, { width: 12, height: 12, class: "al-badge-icon" })}
           </a>
+
           ${entry ? `
-            <div class="al-more-wrap">
-              <button type="button" class="al-icon-btn al-more-btn" id="al-bar-more" title="More options">
-                ${iconHtml(MoreHorizontal, { width: 14, height: 14 })}
-              </button>
-              <div class="al-more-menu" id="al-more-menu" style="display: none;">
-                <button type="button" class="al-more-menu-item" id="al-menu-reset" title="Reset progress to Ep. 0 (Haven't watched yet)">
-                  ${iconHtml(RotateCcw, { width: 13, height: 13 })}
-                  <span>Reset to Ep. 0</span>
-                </button>
-              </div>
-            </div>
+            <select class="al-select al-status-select" id="al-bar-status" title="Anime status">
+              ${Object.entries(AniListAPI.statuses).map(([k, v]) => `<option value="${k}" ${entry.status === k ? "selected" : ""}>${v}</option>`).join("")}
+            </select>
           ` : ""}
+
+          ${episodeStatusHtml}
         </div>
       </div>
 
@@ -128,27 +284,23 @@ export function renderActions(media, hasToken, actions, { isLoading = false, vie
                 ${canSyncBuddy ? `
                   <button type="button" class="al-buddy-sync-btn ${isBuddyCompleted ? "is-completed" : ""}" id="al-bar-buddy-sync" title="${isBuddyCompleted ? `${buddyData.name} completed this anime • Click to sync & mark as Completed` : `Sync with ${buddyData.name} to Ep. ${buddyData.progress}`}">
                     ${iconHtml(Link, { width: 12, height: 12 })}
-                    <span>${isBuddyCompleted ? `${buddyData.name} Completed` : `Ep. ${buddyData.progress}`}</span>
+                    <span>${isBuddyCompleted ? `${buddyData.name} Done` : `Ep. ${buddyData.progress}`}</span>
                   </button>
                 ` : `
                   <span class="al-buddy-tag ${isBuddyCompleted ? "is-completed" : ""}" title="${buddyData.name}: ${isBuddyCompleted ? "Completed" : `Ep. ${buddyData.progress || 0}`}">
-                    ${isBuddyCompleted ? `<span class="al-dot"></span><span>${buddyData.name} Completed</span>` : `<span>Ep. ${buddyData.progress || 0}</span>`}
+                    ${isBuddyCompleted ? `<span class="al-dot"></span><span>${buddyData.name} Done</span>` : `<span>Ep. ${buddyData.progress || 0}</span>`}
                   </span>
                 `}
               ` : ""}
             </div>
 
-            <select class="al-select" id="al-bar-status" title="Anime status">
-              ${Object.entries(AniListAPI.statuses).map(([k, v]) => `<option value="${k}" ${entry.status === k ? "selected" : ""}>${v}</option>`).join("")}
-            </select>
-
-            <select class="al-select" id="al-bar-score" title="Your rating">
+            <select class="al-select al-score-select" id="al-bar-score" title="Your rating">
               <option value="0">Score: −</option>
               ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((s) => `<option value="${s}" ${entry.score === s ? "selected" : ""}>★ ${s}/10</option>`).join("")}
             </select>
 
-            <button type="button" class="al-icon-btn danger" id="al-bar-del" title="Remove from AniList library">
-              ${iconHtml(Trash2, { width: 14, height: 14 })}
+            <button type="button" class="al-icon-btn danger al-bar-del-btn" id="al-bar-del" title="Remove from AniList library">
+              ${iconHtml(Trash2, { width: 13, height: 13 })}
             </button>
           </div>
         `}
@@ -188,6 +340,7 @@ export function renderActions(media, hasToken, actions, { isLoading = false, vie
       </div>
     ` : ""}`;
 
+  // Bind Events
   bar.querySelector("#al-bar-add")?.addEventListener("click", actions.onAdd);
   bar.querySelector("#al-bar-del")?.addEventListener("click", actions.onDelete);
   bar.querySelector("#al-bar-status")?.addEventListener("change", (e) => actions.onStatusChange(e.target.value));
@@ -198,26 +351,19 @@ export function renderActions(media, hasToken, actions, { isLoading = false, vie
     }
   });
 
-  const moreBtn = bar.querySelector("#al-bar-more");
-  const moreMenu = bar.querySelector("#al-more-menu");
-  if (moreBtn && moreMenu) {
-    moreBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const isOpen = moreMenu.style.display !== "none";
-      moreMenu.style.display = isOpen ? "none" : "block";
-    });
+  // Episode Controller Action Listeners
+  bar.querySelector("#al-ep-cancel")?.addEventListener("click", () => {
+    actions.onCancelCountdown?.();
+  });
 
-    bar.querySelector("#al-menu-reset")?.addEventListener("click", () => {
-      moreMenu.style.display = "none";
-      if (typeof actions.onResetProgress === "function") actions.onResetProgress();
-    });
+  bar.querySelector("#al-ep-savenow, #al-ep-save")?.addEventListener("click", () => {
+    actions.onSave?.(activeEp);
+  });
 
-    document.addEventListener("click", (e) => {
-      if (!moreBtn.contains(e.target) && !moreMenu.contains(e.target)) {
-        moreMenu.style.display = "none";
-      }
-    });
-  }
+  bar.querySelector("#al-ep-rewind")?.addEventListener("click", () => {
+    const rewindTarget = Math.max(0, activeEp - 1);
+    actions.onRewind?.(rewindTarget, activeEp);
+  });
 
   // Setup Shared Buddy Picker
   const buddyBox = bar.querySelector("#al-bar-buddy-box");

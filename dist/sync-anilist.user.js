@@ -1,20 +1,26 @@
 // ==UserScript==
-// @name         AnimeUnity to AniList Sync
+// @name         AniList Streaming Sync
 // @namespace    https://github.com/pallax03/my-userscripts
-// @version      1.3.1
+// @version      1.3.2
 // @author       Alex Mazzoni
-// @description  Automatically sync watched AnimeUnity episodes to AniList and skip opening sequences with AniSkip
+// @description  Automatically sync watched AnimeUnity and AnimeSaturn episodes to AniList and skip opening sequences with AniSkip
 // @license      MIT
 // @source       https://github.com/pallax03/my-userscripts.git
 // @downloadURL  https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/sync-anilist.user.js
 // @updateURL    https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/sync-anilist.user.js
 // @include      *://*.animeunity.*/*
 // @include      *://animeunity.*/*
+// @include      *://*.animesaturn.*/*
+// @include      *://animesaturn.*/*
+// @include      *://*.saturncdn.*/*
+// @include      *://play.saturncdn.*/*
 // @include      *://*.vixcloud.*/*
 // @include      *://vixcloud.*/*
 // @include      *://*.vixcloud2.*/*
 // @include      *://vixcloud2.*/*
 // @include      /^https?:\/\/(?:[a-z0-9-]+\.)?animeunity\.[a-z]{2,}\/.*$/
+// @include      /^https?:\/\/(?:[a-z0-9-]+\.)?animesaturn\.[a-z]{2,}\/.*$/
+// @include      /^https?:\/\/(?:[a-z0-9-]+\.)?saturncdn\.[a-z]{2,}\/.*$/
 // @include      /^https?:\/\/(?:[a-z0-9-]+\.)?vixcloud[0-9]?\.[a-z]{2,}\/.*$/
 // @match        *://*.animeunity.to/*
 // @match        *://animeunity.to/*
@@ -28,6 +34,20 @@
 // @match        *://animeunity.cc/*
 // @match        *://*.animeunity.fun/*
 // @match        *://animeunity.fun/*
+// @match        *://*.animesaturn.net/*
+// @match        *://animesaturn.net/*
+// @match        *://*.animesaturn.cx/*
+// @match        *://animesaturn.cx/*
+// @match        *://*.animesaturn.cc/*
+// @match        *://animesaturn.cc/*
+// @match        *://*.animesaturn.in/*
+// @match        *://animesaturn.in/*
+// @match        *://*.animesaturn.me/*
+// @match        *://animesaturn.me/*
+// @match        *://*.animesaturn.to/*
+// @match        *://animesaturn.to/*
+// @match        *://*.saturncdn.net/*
+// @match        *://play.saturncdn.net/*
 // @match        *://*.vixcloud.cc/*
 // @match        *://vixcloud.cc/*
 // @match        *://*.vixcloud.co/*
@@ -51,6 +71,16 @@
 // @connect      graphql.anilist.co
 // @connect      anilist.co
 // @connect      api.aniskip.com
+// @connect      animesaturn.net
+// @connect      saturncdn.net
+// @connect      animeunity.to
+// @connect      animeunity.so
+// @connect      animeunity.tv
+// @connect      animeunity.co
+// @connect      animeunity.cc
+// @connect      animeunity.fun
+// @connect      animeunity.*
+// @connect      animesaturn.*
 // @grant        GM_addStyle
 // @grant        GM_deleteValue
 // @grant        GM_getValue
@@ -71,7 +101,7 @@
 			else (document.head || document.documentElement).appendChild(document.createElement("style")).append(c);
 		})(t);
 	};
-	_css(".al-badge{white-space:nowrap;-webkit-backdrop-filter:blur(8px);border:1px solid #0000;border-radius:6px;align-items:center;gap:5px;padding:3px 8px;font-size:11px;font-weight:700;line-height:1.2;display:inline-flex}.al-badge svg{flex-shrink:0}.al-badge.al-badge-CURRENT{color:#76caf6;background:#3db4f229;border-color:#3db4f273}.al-badge.al-badge-CURRENT .al-dot{background:#3db4f2;box-shadow:0 0 6px #3db4f299}.al-badge.al-badge-PLANNING{color:#b9c3d0;background:#94a3b829;border-color:#94a3b873}.al-badge.al-badge-PLANNING .al-dot{background:#94a3b8;box-shadow:0 0 6px #94a3b899}.al-badge.al-badge-COMPLETED{color:#45df7e;background:#22c55e29;border-color:#22c55e73}.al-badge.al-badge-COMPLETED .al-dot{background:#22c55e;box-shadow:0 0 6px #22c55e99}.al-badge.al-badge-PAUSED{color:#f8c937;background:#eab30829;border-color:#eab30873}.al-badge.al-badge-PAUSED .al-dot{background:#eab308;box-shadow:0 0 6px #eab30899}.al-badge.al-badge-REPEATING{color:#1fd9f9;background:#06b6d429;border-color:#06b6d473}.al-badge.al-badge-REPEATING .al-dot{background:#06b6d4;box-shadow:0 0 6px #06b6d499}.al-badge.al-badge-DROPPED{color:#f47c7c;background:#ef444429;border-color:#ef444473}.al-badge.al-badge-DROPPED .al-dot{background:#ef4444;box-shadow:0 0 6px #ef444499}.al-dot{border-radius:50%;flex-shrink:0;width:6px;height:6px;display:inline-block}.al-btn{cursor:pointer;white-space:nowrap;border:1px solid #0000;border-radius:9px;justify-content:center;align-items:center;gap:6px;padding:8px 16px;font-size:13px;font-weight:700;text-decoration:none;transition:all .2s cubic-bezier(.4,0,.2,1);display:inline-flex}.al-btn:hover{text-decoration:none;transform:translateY(-1px)}.al-btn:active{transform:translateY(0)}.al-btn.primary{background:linear-gradient(135deg,#3db4f2 0%,#0284c7 100%);box-shadow:0 4px 14px #3db4f259;color:#06101e!important}.al-btn.primary:hover{filter:brightness(1.08);box-shadow:0 6px 20px #3db4f28c;color:#06101e!important}.al-btn.secondary{background:#ffffff14;border-color:#ffffff26;color:#e2e8f0!important}.al-btn.secondary:hover{background:#ffffff24;color:#fff!important}.al-btn.danger{background:#ef444426;border-color:#ef444459;color:#fca5a5!important}.al-btn.danger:hover{background:#ef444447;border-color:#ef4444;color:#fff!important}.al-overlay{-webkit-backdrop-filter:blur(16px);animation:.2s al-fade-in;inset:0!important;box-sizing:border-box!important;z-index:2147483647!important;pointer-events:auto!important;visibility:visible!important;opacity:1!important;background:#03070dd9!important;justify-content:center!important;align-items:center!important;width:100vw!important;min-width:100vw!important;height:100vh!important;min-height:100vh!important;margin:0!important;padding:16px!important;display:flex!important;position:fixed!important;inset:0!important}.al-overlay.al-overlay-drawer{justify-content:flex-end!important;align-items:stretch!important;padding:0!important}.al-modal{color:#fff;background:linear-gradient(135deg,#101a27 0%,#080f18 100%);border:1px solid #3db4f259;border-radius:16px;width:90%;max-width:440px;max-height:calc(100vh - 32px);padding:24px;animation:.25s cubic-bezier(.16,1,.3,1) al-modal-in;overflow-y:auto;box-shadow:0 20px 60px #000000d9,0 0 30px #3db4f22e;z-index:2147483647!important;pointer-events:auto!important;visibility:visible!important;opacity:1!important;box-sizing:border-box!important;position:relative!important}.al-modal .al-modal-header{justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px;display:flex}.al-modal .al-modal-header .al-modal-header-left{align-items:center;gap:14px;min-width:0;display:flex}.al-modal .al-modal-header .al-modal-close-btn{color:#94a3b8;cursor:pointer;background:#ffffff0f;border:1px solid #ffffff1a;border-radius:9px;flex-shrink:0;justify-content:center;align-items:center;width:32px;height:32px;transition:all .15s;display:inline-flex}.al-modal .al-modal-header .al-modal-close-btn:hover{color:#fff;background:#ffffff24;border-color:#ffffff38;transform:scale(1.05)}.al-modal .al-modal-icon{color:#3db4f2;background:linear-gradient(135deg,#3db4f233,#0284c71a);border:1px solid #3db4f266;border-radius:12px;flex-shrink:0;justify-content:center;align-items:center;width:44px;height:44px;display:flex;box-shadow:0 0 15px #3db4f24d}.al-modal .al-modal-title{color:#fff;margin:0;font-size:18px;font-weight:700;line-height:1.2}.al-modal .al-modal-subtitle{color:#94a3b8;margin:3px 0 0;font-size:12px;line-height:1.3}.al-modal .al-modal-body{flex-direction:column;gap:12px;display:flex}.al-modal .al-modal-actions{justify-content:flex-end;align-items:center;gap:10px;margin-top:20px;display:flex}.al-auth-link{background:linear-gradient(135deg,#3db4f226,#0ea5e914);border:1px solid #3db4f259;border-radius:10px;justify-content:space-between;align-items:center;padding:11px 14px;font-size:13px;font-weight:700;text-decoration:none;transition:all .2s;display:flex;color:#3db4f2!important}.al-auth-link .al-auth-tag{color:#06101e;text-transform:uppercase;background:#3db4f2;border-radius:5px;padding:2px 6px;font-size:10px;font-weight:900}.al-auth-link:hover{background:linear-gradient(135deg,#3db4f240,#0ea5e929);border-color:#3db4f2}.al-auth-hint{color:#94a3b8;margin:0;font-size:12px;line-height:1.4}.al-input-group input{box-sizing:border-box;color:#fff;background:#0d1521d9;border:1px solid #3db4f259;border-radius:10px;outline:none;width:100%;padding:10px 14px;font-size:13px;transition:all .2s}.al-input-group input:focus{border-color:#3db4f2;box-shadow:0 0 15px #3db4f24d}.al-prefs-modal{max-width:460px!important}.al-prefs-modal .al-prefs-body{flex-direction:column;gap:12px;display:flex}.al-prefs-modal .al-pref-group{background:#ffffff08;border:1px solid #ffffff14;border-radius:12px;flex-direction:column;transition:background .25s,border-color .25s,box-shadow .25s;display:flex;overflow:hidden}.al-prefs-modal .al-pref-group.is-active{background:#3db4f20a;border-color:#3db4f259;box-shadow:0 4px 16px #0000004d}.al-prefs-modal .al-pref-group.is-active .al-pref-header{border-bottom:1px solid #3db4f226}.al-prefs-modal .al-pref-group .al-pref-header{cursor:pointer;justify-content:space-between;align-items:center;gap:14px;margin:0;padding:12px 14px;transition:background .15s;display:flex}.al-prefs-modal .al-pref-group .al-pref-header:hover{background:#ffffff08}.al-prefs-modal .al-pref-group .al-pref-info{flex-direction:column;gap:2px;display:flex}.al-prefs-modal .al-pref-group .al-pref-title{color:#f1f5f9;font-size:13px;font-weight:600}.al-prefs-modal .al-pref-group .al-pref-desc{color:#94a3b8;font-size:11px;font-weight:500}.al-prefs-modal .al-pref-group .al-pref-sub{background:#080e1799;flex-direction:column;gap:12px;padding:12px 14px;animation:.22s cubic-bezier(.16,1,.3,1) al-slide-down;display:flex}.al-prefs-modal .al-pref-group .al-pref-sub.is-hidden{display:none!important}.al-prefs-modal .al-pref-group .al-pref-sub .al-pref-row{color:#cbd5e1;cursor:pointer;justify-content:space-between;align-items:center;gap:12px;margin:0;font-size:12px;font-weight:500;display:flex}.al-prefs-modal .al-pref-group .al-pref-sub .al-pref-row .al-pref-sub-label{color:#94a3b8;align-items:center;gap:8px;display:flex}.al-prefs-modal .al-pref-group .al-pref-sub .al-pref-row .al-pref-sub-label svg{color:#3db4f2}.al-prefs-modal .al-pref-group .al-pref-sub .al-pref-row .al-select-xs{color:#f1f5f9;cursor:pointer;background:#0e1622f2;border:1px solid #ffffff29;border-radius:7px;outline:none;padding:4px 8px;font-size:12px;font-weight:600}.al-prefs-modal .al-pref-group .al-pref-sub .al-pref-row .al-select-xs:hover,.al-prefs-modal .al-pref-group .al-pref-sub .al-pref-row .al-select-xs:focus{border-color:#3db4f2}.al-prefs-modal .al-pref-group .al-pref-sub .al-pref-row .al-checkbox{accent-color:#3db4f2;cursor:pointer;width:16px;height:16px}.al-prefs-modal .al-switch{appearance:none;cursor:pointer;background:#ffffff29;border-radius:12px;outline:none;flex-shrink:0;width:36px;height:20px;transition:background .2s;position:relative}.al-prefs-modal .al-switch:after{content:\"\";background:#fff;border-radius:50%;width:16px;height:16px;transition:transform .2s cubic-bezier(.16,1,.3,1);position:absolute;top:2px;left:2px;box-shadow:0 1px 3px #0006}.al-prefs-modal .al-switch:checked{background:#3db4f2}.al-prefs-modal .al-switch:checked:after{background:#06101e;transform:translate(16px)}.al-prefs-modal .al-avatar-sm{object-fit:cover;border:1px solid #3db4f2;border-radius:50%;width:22px;height:22px;box-shadow:0 0 6px #3db4f24d}.al-prefs-modal .al-btn-logout{padding:5px 10px;font-size:11px;color:#fca5a5!important;border-color:#ef44444d!important}.al-prefs-modal .al-btn-logout:hover{color:#fff!important;background:#ef444433!important;border-color:#ef4444!important}.al-toast{-webkit-backdrop-filter:blur(12px);animation:.2s cubic-bezier(.16,1,.3,1) al-modal-in;width:auto!important;max-width:380px!important;height:auto!important;min-height:unset!important;color:#fff!important;z-index:1000000!important;pointer-events:none!important;background:#0e1a29f2!important;border:1px solid #3db4f2!important;border-left-width:4px!important;border-radius:10px!important;padding:10px 20px!important;font-size:13px!important;font-weight:700!important;line-height:1.4!important;position:fixed!important;inset:auto auto 85px 50%!important;transform:translate(-50%)!important;box-shadow:0 12px 36px #000000d9,0 0 16px #3db4f240!important}.al-drawer{box-sizing:border-box!important;background:linear-gradient(#101a27 0%,#070e17 100%)!important;border:none!important;border-left:1px solid #3db4f259!important;border-radius:20px 0 0 20px!important;flex-direction:column!important;width:100%!important;max-width:480px!important;height:100dvh!important;max-height:100dvh!important;margin:0!important;padding:0!important;animation:.28s cubic-bezier(.16,1,.3,1) al-drawer-in!important;display:flex!important;overflow:hidden!important;box-shadow:-14px 0 60px #000000d9,-2px 0 25px #3db4f22e!important}.al-drawer .al-modal-header{-webkit-backdrop-filter:blur(12px);background:#0e1622d9;border-bottom:1px solid #ffffff14;flex-shrink:0;margin:0!important;padding:22px 24px 18px!important}.al-drawer .al-modal-body{flex-direction:column;gap:16px;display:flex;-webkit-overflow-scrolling:touch!important;flex:auto!important;padding:24px!important;overflow-y:auto!important}.al-drawer .al-modal-body::-webkit-scrollbar{width:6px}.al-drawer .al-modal-body::-webkit-scrollbar-track{background:#0003}.al-drawer .al-modal-body::-webkit-scrollbar-thumb{background:#ffffff29;border-radius:3px}.al-drawer .al-modal-body::-webkit-scrollbar-thumb:hover{background:#3db4f266}.al-drawer .al-modal-actions{-webkit-backdrop-filter:blur(12px);background:#080e16f5;border-top:1px solid #ffffff14;flex-shrink:0;justify-content:flex-end;align-items:center;gap:12px;display:flex;margin:0!important;padding:16px 24px!important}@media (width<=768px){.al-drawer{width:100vw!important;max-width:100vw!important;box-shadow:none!important;border:none!important;border-radius:0!important;animation:.25s cubic-bezier(.16,1,.3,1) al-drawer-mobile-in!important}.al-drawer .al-modal-header{padding:18px 18px 14px!important}.al-drawer .al-modal-body{padding:18px!important}.al-drawer .al-modal-actions{padding:14px 18px calc(14px + env(safe-area-inset-bottom,0px))!important}}@keyframes al-modal-in{0%{opacity:0;transform:translateY(10px)scale(.97)}to{opacity:1;transform:translateY(0)scale(1)}}@keyframes al-fade-in{0%{opacity:0}to{opacity:1}}@keyframes al-slide-down{0%{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}@keyframes al-drawer-in{0%{opacity:.6;transform:translate(100%)}to{opacity:1;transform:translate(0)}}@keyframes al-drawer-mobile-in{0%{opacity:.6;transform:translateY(100%)}to{opacity:1;transform:translateY(0)}}.cover-wrap .actions,.list-btn-mobile,#add-to-fav,a[href*=\\/login].list,a[href*=\\/login].btn-danger{display:none!important}#video-bottom{border-bottom:1px solid #3db4f233;min-height:40px;background-color:var(--color-background-1,#131722)!important;justify-content:center!important;align-items:center!important;padding:6px 12px!important;display:flex!important;position:relative!important;overflow:visible!important}#video-bottom a.prev{z-index:2;transition:all .2s;color:#94a3b8!important;white-space:nowrap!important;align-items:center!important;gap:6px!important;font-size:12px!important;font-weight:600!important;text-decoration:none!important;display:inline-flex!important;position:absolute!important;top:50%!important;left:12px!important;transform:translateY(-50%)!important}#video-bottom a.prev:hover{color:#3db4f2!important;text-decoration:none!important}#video-bottom a.next{z-index:2;transition:all .2s;color:#94a3b8!important;white-space:nowrap!important;align-items:center!important;gap:6px!important;font-size:12px!important;font-weight:600!important;text-decoration:none!important;display:inline-flex!important;position:absolute!important;top:50%!important;right:12px!important;transform:translateY(-50%)!important}#video-bottom a.next:hover{color:#3db4f2!important;text-decoration:none!important}@media (width<=500px){#video-bottom{padding:4px 8px!important}#video-bottom a.prev span,#video-bottom a.next span{display:none!important}#video-bottom a.prev,#video-bottom a.next{font-size:14px!important}}#video-bottom #al-video-bottom-widget{z-index:1;justify-content:center;align-items:center;gap:8px;max-width:calc(100% - 170px);margin:0 auto;display:flex}@media (width<=500px){#video-bottom #al-video-bottom-widget{max-width:calc(100% - 64px)}}#video-bottom #al-video-bottom-widget .al-vb-status-slot,#video-bottom #al-video-bottom-widget .al-vb-buddy-slot{align-items:center;display:inline-flex}#video-bottom #al-video-bottom-widget .al-vb-mark-btn{cursor:pointer;white-space:nowrap;background:linear-gradient(135deg,#3db4f2 0%,#0284c7 100%);border:none;border-radius:6px;align-items:center;gap:5px;min-height:26px;padding:4px 12px;font-size:11px;font-weight:800;transition:all .2s cubic-bezier(.16,1,.3,1);display:inline-flex;box-shadow:0 0 12px #3db4f266;color:#06101e!important}#video-bottom #al-video-bottom-widget .al-vb-mark-btn:hover{filter:brightness(1.08);transform:scale(1.04);box-shadow:0 0 16px #3db4f299}#video-bottom #al-video-bottom-widget .al-vb-mark-btn:active{transform:scale(.97)}#video-bottom #al-video-bottom-widget .al-vb-countdown{background:#0e1622f2;border:1px solid #3db4f273;border-radius:8px;justify-content:space-between;align-items:center;gap:8px;max-width:100%;padding:3px 6px;animation:2s ease-in-out infinite al-pulse-border;display:inline-flex;box-shadow:0 0 14px #3db4f240}#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-timer{color:#e2e8f0;white-space:nowrap;align-items:center;gap:5px;padding:0 4px;font-size:11px;font-weight:600;display:flex}#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-timer strong{color:#3db4f2}#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-btn{cursor:pointer;white-space:nowrap;justify-content:center;align-items:center;min-width:24px;min-height:24px;padding:0;transition:all .15s;display:inline-flex}#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-btn.al-vb-cancel{color:#fca5a5;background:#ef44441a;border:1px solid #ef44444d;border-radius:6px}#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-btn.al-vb-cancel:hover,#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-btn.al-vb-cancel:active{color:#fff;background:#ef44444d;border-color:#ef4444}#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-btn.al-vb-save{color:#06101e;background:linear-gradient(135deg,#3db4f2 0%,#0284c7 100%);border:none;border-radius:6px;box-shadow:0 0 8px #3db4f259}#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-btn.al-vb-save:hover,#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-btn.al-vb-save:active{filter:brightness(1.15);box-shadow:0 0 12px #3db4f28c}#video-bottom #al-video-bottom-widget .al-vb-synced{color:#4ade80;white-space:nowrap;background:#22c55e1f;border:1px solid #22c55e4d;border-radius:6px;align-items:center;gap:5px;min-height:26px;padding:4px 8px;font-size:11px;font-weight:600;display:inline-flex}#video-bottom #al-video-bottom-widget .al-vb-synced .al-vb-reset-btn{color:#94a3b8!important;cursor:pointer!important;background:0 0!important;border:none!important;justify-content:center!important;align-items:center!important;width:18px!important;height:18px!important;margin-left:2px!important;padding:0!important;transition:color .15s!important;display:inline-flex!important}#video-bottom #al-video-bottom-widget .al-vb-synced .al-vb-reset-btn:hover{color:#ef4444!important}#video-bottom #al-video-bottom-widget .al-vb-recap{color:#93c5fd;white-space:nowrap;background:#3b82f61f;border:1px solid #3b82f64d;border-radius:6px;align-items:center;gap:8px;min-height:26px;padding:3px 8px;font-size:11px;font-weight:600;display:inline-flex}#video-bottom #al-video-bottom-widget .al-vb-recap .al-vb-recap-text{align-items:center;gap:5px;display:flex}#video-bottom #al-video-bottom-widget .al-vb-recap .al-vb-btn.ghost-xs{color:#e2e8f0;cursor:pointer;background:#ffffff14;border:1px solid #ffffff26;border-radius:5px;justify-content:center;align-items:center;min-width:22px;min-height:22px;padding:0;display:inline-flex}#video-bottom #al-video-bottom-widget .al-vb-recap .al-vb-btn.ghost-xs:hover{color:#fff;background:#3db4f240;border-color:#3db4f2}.al-card{-webkit-backdrop-filter:blur(20px);background:linear-gradient(135deg,#111a26f0 0%,#0a121cfa 100%);border:1px solid #3db4f24d;border-radius:14px;width:100%;margin-top:14px;margin-bottom:24px;padding:12px 18px 14px;transition:border-color .3s,box-shadow .3s;position:relative;overflow:visible;box-shadow:0 12px 35px #0009,0 0 20px #3db4f21f}.al-card:hover{border-color:#3db4f280;box-shadow:0 14px 40px #000000b3,0 0 25px #3db4f233}.al-card .al-card-row{flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;width:100%;display:flex}.al-card .al-left{align-items:center;gap:10px;min-width:0;display:flex}.al-card .al-right,.al-card .al-controls-group{align-items:center;gap:10px;display:flex}.al-card .al-controls-group .al-buddy-cluster{box-sizing:border-box;background:#0e1622a6;border:1px solid #3db4f238;border-radius:10px;align-items:center;gap:6px;height:36px;padding:2px 6px 2px 2px;transition:all .2s;display:inline-flex}.al-card .al-controls-group .al-buddy-cluster:hover{background:#0e1622d9;border-color:#3db4f273}.al-card .al-controls-group .al-buddy-cluster.has-completed{background:#0a1914b3;border-color:#22c55e66}.al-card .al-controls-group .al-buddy-cluster.has-completed:hover{border-color:#22c55ea6}.al-card .al-controls-group .al-buddy-cluster .al-buddy-box{align-items:center;display:inline-flex}.al-card .al-controls-group .al-buddy-cluster .al-buddy-box .al-buddy-btn{background:0 0;border:none;height:30px;padding:0 8px 0 6px;font-size:12px}.al-card .al-controls-group .al-buddy-cluster .al-buddy-box .al-buddy-btn:hover{box-shadow:none;background:#ffffff0f}.al-card .al-controls-group .al-buddy-cluster .al-buddy-sync-btn{cursor:pointer;white-space:nowrap;background:linear-gradient(135deg,#3db4f238,#0284c74d);border:1px solid #3db4f280;border-radius:7px;align-items:center;gap:5px;height:28px;padding:0 10px;font-size:11.5px;font-weight:700;transition:all .2s cubic-bezier(.4,0,.2,1);display:inline-flex;box-shadow:0 0 10px #3db4f233;color:#38bdf8!important}.al-card .al-controls-group .al-buddy-cluster .al-buddy-sync-btn svg{flex-shrink:0;transition:transform .2s}.al-card .al-controls-group .al-buddy-cluster .al-buddy-sync-btn:hover{background:linear-gradient(135deg,#3db4f2 0%,#0284c7 100%);border-color:#0000;transform:translateY(-1px);box-shadow:0 4px 14px #3db4f273;color:#06101e!important}.al-card .al-controls-group .al-buddy-cluster .al-buddy-sync-btn:hover svg{transform:scale(1.1)}.al-card .al-controls-group .al-buddy-cluster .al-buddy-sync-btn:active{transform:translateY(0)}.al-card .al-controls-group .al-buddy-cluster .al-buddy-sync-btn.is-completed{background:linear-gradient(135deg,#22c55e40,#16a34a59);border:1px solid #22c55e99;box-shadow:0 0 12px #22c55e40;color:#4ade80!important}.al-card .al-controls-group .al-buddy-cluster .al-buddy-sync-btn.is-completed:hover{background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);border-color:#0000;box-shadow:0 4px 16px #22c55e80;color:#052e16!important}.al-card .al-controls-group .al-buddy-cluster .al-buddy-tag{white-space:nowrap;color:#94a3b8;background:#ffffff0f;border:1px solid #ffffff1a;border-radius:6px;align-items:center;gap:5px;height:26px;padding:0 8px;font-size:11px;font-weight:700;display:inline-flex}.al-card .al-controls-group .al-buddy-cluster .al-buddy-tag .al-dot{background:#94a3b8;border-radius:50%;flex-shrink:0;width:5px;height:5px;display:inline-block}.al-card .al-controls-group .al-buddy-cluster .al-buddy-tag.is-completed{color:#4ade80;background:#22c55e26;border-color:#22c55e66}.al-card .al-controls-group .al-buddy-cluster .al-buddy-tag.is-completed .al-dot{background:#22c55e;box-shadow:0 0 6px #22c55e99}.al-card .al-info{color:#e2e8f0;align-items:center;gap:10px;font-size:13px;font-weight:600;display:flex}.al-card .al-pill{text-transform:uppercase;letter-spacing:.5px;color:#06101e;background:linear-gradient(135deg,#3db4f2,#0284c7);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:800}.al-card .al-pill.danger{color:#fff;background:linear-gradient(135deg,#ef4444,#b91c1c)}.al-card .al-badge{background:linear-gradient(135deg,#3db4f22e,#0ea5e91a);border:1px solid #3db4f273;border-radius:9px;align-items:center;gap:8px;max-width:320px;padding:6px 14px;font-size:13px;font-weight:700;text-decoration:none;transition:all .2s;display:inline-flex;color:#3db4f2!important}.al-card .al-badge .al-title-text{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.al-card .al-badge .al-badge-icon{opacity:.85;flex-shrink:0;transition:transform .2s,opacity .2s}.al-card .al-badge:hover{background:linear-gradient(135deg,#3db4f247,#0ea5e933);border-color:#3db4f2;text-decoration:none;transform:translateY(-1px);box-shadow:0 0 15px #3db4f259}.al-card .al-badge:hover .al-badge-icon{opacity:1;transform:translate(1px,-1px)}.al-card .al-icon-btn{color:#94a3b8;cursor:pointer;background:#ffffff0d;border:1px solid #ffffff1f;border-radius:8px;justify-content:center;align-items:center;width:34px;height:34px;transition:all .2s;display:inline-flex}.al-card .al-icon-btn:hover{color:#fff;background:#ffffff1f;border-color:#ffffff4d;transform:translateY(-1px)}.al-card .al-icon-btn.primary{background:linear-gradient(135deg,#3db4f2 0%,#0284c7 100%);border:none;color:#06101e!important}.al-card .al-icon-btn.primary:hover{filter:brightness(1.15);box-shadow:0 0 10px #3db4f280;color:#06101e!important}.al-card .al-icon-btn.danger:hover{color:#ef4444;background:#ef44442e;border-color:#ef4444;box-shadow:0 0 12px #ef44444d}.al-card .al-title-meta-wrap{flex-wrap:wrap;align-items:center;gap:8px;display:flex}.al-card .al-more-wrap{align-items:center;display:inline-flex;position:relative}.al-card .al-more-wrap .al-more-menu{-webkit-backdrop-filter:blur(20px);z-index:100;border:1px solid #3db4f259;border-radius:8px;min-width:140px;padding:4px;position:absolute;top:calc(100% + 6px);left:0;right:auto;box-shadow:0 8px 24px #0009;background:#0d1624!important}.al-card .al-more-wrap .al-more-menu .al-more-menu-item{color:#ef4444;cursor:pointer;text-align:left;background:0 0;border:none;border-radius:6px;align-items:center;gap:6px;width:100%;padding:6px 10px;font-size:12px;font-weight:600;transition:all .15s;display:flex}.al-card .al-more-wrap .al-more-menu .al-more-menu-item:hover{color:#fca5a5;background:#ef444426}.al-card .al-card-dates-row{border-top:1px solid #ffffff0f;justify-content:space-between;align-items:center;width:100%;margin-top:10px;padding-top:8px;display:flex}.al-card .al-card-dates-row .al-date-col{align-items:center;gap:6px;display:flex}.al-card .al-card-dates-row .al-date-col.al-date-start{justify-content:flex-start}.al-card .al-card-dates-row .al-date-col.al-date-end{justify-content:flex-end;margin-left:auto}.al-card .al-card-dates-row .al-meta-date{color:#94a3b8;white-space:nowrap;background:#ffffff0a;border:1px solid #ffffff14;border-radius:6px;align-items:center;gap:5px;padding:2.5px 8px;font-size:11px;font-weight:600;display:inline-flex}.al-card .al-card-dates-row .al-meta-date svg{color:#38bdf8;opacity:.85}.al-card .al-card-dates-row .al-meta-date.al-meta-repeat{color:#a78bfa;background:#a78bfa14;border-color:#a78bfa40}.al-card .al-card-dates-row .al-meta-date.al-meta-repeat svg{color:#a78bfa}.al-card .al-select{appearance:none;color:#f1f5f9;cursor:pointer;background:#0e1622d9 url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='none' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round' d='m1 1 4 4 4-4'/%3E%3C/svg%3E\") right 10px center no-repeat;border:1px solid #ffffff29;border-radius:9px;outline:none;height:36px;padding:6px 30px 6px 12px;font-size:13px;font-weight:600;transition:all .2s}.al-card .al-select:hover,.al-card .al-select:focus{border-color:#3db4f2;box-shadow:0 0 12px #3db4f240}.al-card .al-select option{color:#fff;background:#0e1622}.al-card .al-card-progress-bar{background:#ffffff0f;height:3px;position:absolute;bottom:0;left:0;right:0}.al-card .al-card-progress-bar .al-card-progress-fill{background:linear-gradient(90deg,#3db4f2,#22c55e);height:100%;transition:width .3s;box-shadow:0 0 8px #3db4f2b3}@media (width<=768px){.al-card{padding:12px 14px 14px}.al-card .al-card-row{flex-direction:column;align-items:stretch;gap:12px}.al-card .al-left{width:100%}.al-card .al-left .al-title-meta-wrap{justify-content:space-between;align-items:center;gap:8px;width:100%;display:flex}.al-card .al-left .al-title-meta-wrap .al-badge{flex:1;min-width:0;max-width:none}.al-card .al-left .al-title-meta-wrap .al-more-wrap{flex-shrink:0}.al-card .al-left .al-title-meta-wrap .al-more-wrap .al-more-menu{left:auto;right:0}.al-card .al-right{width:100%}.al-card .al-controls-group{flex-wrap:wrap;align-items:center;gap:8px;width:100%;display:flex}.al-card .al-controls-group .al-buddy-cluster{box-sizing:border-box;justify-content:space-between;align-items:center;gap:8px;width:100%;height:auto;min-height:38px;padding:4px 6px;display:flex}.al-card .al-controls-group .al-buddy-cluster .al-buddy-box{flex:1;min-width:0}.al-card .al-controls-group .al-buddy-cluster .al-buddy-box .al-buddy-picker-wrap{width:100%}.al-card .al-controls-group .al-buddy-cluster .al-buddy-box .al-buddy-picker-wrap .al-buddy-btn{justify-content:flex-start;width:100%}.al-card .al-controls-group .al-select{flex:calc(50% - 24px);min-width:100px;height:36px}.al-card .al-controls-group .al-icon-btn.danger{flex-shrink:0;width:36px;height:36px}}.al-avatar{object-fit:cover;border:2px solid #3db4f2;border-radius:50%;width:36px;height:36px;transition:transform .2s,box-shadow .2s;box-shadow:0 0 12px #3db4f266}.al-avatar:hover{transform:scale(1.05);box-shadow:0 0 18px #3db4f2a6}.al-avatar-mobile{object-fit:cover;cursor:pointer;border:2px solid #3db4f2;border-radius:50%;width:32px;height:32px;box-shadow:0 0 10px #3db4f259}.al-dropdown-menu{-webkit-backdrop-filter:blur(20px);box-sizing:border-box;min-width:220px;max-width:calc(100vw - 24px);max-height:calc(100vh - 75px);overflow:hidden auto;box-shadow:0 16px 45px #000000d9,0 0 20px #3db4f226;background:linear-gradient(135deg,#111a26fa 0%,#080f18fc 100%)!important;border:1px solid #3db4f24d!important;border-radius:14px!important;padding:0!important}.al-dropdown-menu:before{content:\"\";background:0 0;height:16px;position:absolute;top:-15px;left:0;right:0}.al-dropdown-menu .al-dropdown-header{background:#ffffff08;border-bottom:1px solid #ffffff14;padding:14px 16px 12px}.al-dropdown-menu .al-dropdown-header .al-user-info{align-items:center;gap:10px;display:flex}.al-dropdown-menu .al-dropdown-header .al-dropdown-avatar{object-fit:cover;border:2px solid #3db4f2;border-radius:50%;width:40px;height:40px;box-shadow:0 0 12px #3db4f273}.al-dropdown-menu .al-dropdown-header .al-user-text{flex-direction:column;display:flex;overflow:hidden}.al-dropdown-menu .al-dropdown-header .al-username{color:#fff;white-space:nowrap;text-overflow:ellipsis;max-width:145px;font-size:14px;font-weight:700;overflow:hidden}.al-dropdown-menu .al-dropdown-header .al-user-status{color:#94a3b8;align-items:center;gap:6px;font-size:11px;font-weight:600;display:flex}.al-dropdown-menu .al-dropdown-header .al-status-dot{background:#22c55e;border-radius:50%;width:7px;height:7px;box-shadow:0 0 8px #22c55e}.al-dropdown-menu .al-dropdown-body{padding:6px 0}.al-dropdown-menu .al-dropdown-footer{background:#00000040;border-top:1px solid #ffffff14;padding:6px 8px}.al-dropdown-menu .al-dropdown-item{color:#cbd5e1;cursor:pointer;background:0 0;border:none;justify-content:space-between;align-items:center;width:100%;padding:10px 16px;font-size:13px;font-weight:500;text-decoration:none;transition:all .15s;display:flex}.al-dropdown-menu .al-dropdown-item .al-item-left{align-items:center;gap:10px;display:flex}.al-dropdown-menu .al-dropdown-item .al-item-ext{color:#64748b;transition:color .15s}.al-dropdown-menu .al-dropdown-item:hover{text-decoration:none;color:#fff!important;background:#3db4f224!important}.al-dropdown-menu .al-dropdown-item:hover .al-item-ext{color:#3db4f2}.al-dropdown-menu .al-dropdown-item.danger{color:#fca5a5;background:#ef444414;border:1px solid #ef444438;border-radius:8px;margin:2px 0;padding:8px 12px;font-weight:600}.al-dropdown-menu .al-dropdown-item.danger:hover{box-shadow:0 0 14px #ef444440;color:#fff!important;background:#ef444438!important;border-color:#ef444480!important}.episode-wrapper .episode-item.al-done:not(.active):not(.al-tracked){background-color:#3db4f21f!important;border:1px solid #3db4f24d!important}.episode-wrapper .episode-item.al-done:not(.active):not(.al-tracked) a{color:#93c5fd!important}.episode-wrapper .episode-item.al-tracked{position:relative;border:2px solid #3db4f2!important}.episode-wrapper .episode-item.al-tracked:not(.active){background-color:#3db4f233!important}.episode-wrapper .episode-item.al-tracked:not(.active) a{color:#3db4f2!important;font-weight:700!important}.episode-wrapper .episode-item.al-tracked:after{content:\"✓\";color:#06101e;z-index:6;background:#3db4f2;border-radius:50%;justify-content:center;align-items:center;width:15px;height:15px;font-size:10px;font-weight:900;display:flex;position:absolute;top:-6px;right:-6px;box-shadow:0 2px 6px #0009}.episode-wrapper .episode-item.seen:not(.active):not(.al-tracked):not(.al-done){background-color:var(--color-background-1,#191d26)!important;color:inherit!important}.episode-wrapper .episode-item.active{z-index:10!important;background:#007bff!important;transform:scale(1.12)!important;box-shadow:0 0 16px #007bfff2,0 0 0 2px #fff!important}.episode-wrapper .episode-item.active a{color:#fff!important;font-weight:900!important}.al-toast{width:auto!important;max-width:380px!important;height:auto!important;min-height:unset!important;color:#fff!important;z-index:100000!important;pointer-events:none!important;background:linear-gradient(135deg,#102538 0%,#091724 100%)!important;border:1px solid #3db4f259!important;border-left:4px solid #3db4f2!important;border-radius:9px!important;padding:12px 20px!important;font-size:13px!important;font-weight:600!important;line-height:1.4!important;position:fixed!important;inset:auto 24px 24px auto!important;transform:none!important;box-shadow:0 10px 30px #0009,0 0 15px #3db4f233!important}.al-toast.al-toast-alert,.al-toast.alert{border-color:#ef444473!important;box-shadow:0 10px 30px #0009,0 0 15px #ef444440!important}@keyframes al-pulse-border{0%,to{border-color:#3db4f273;box-shadow:0 0 12px #3db4f233}50%{border-color:#3db4f2cc;box-shadow:0 0 20px #3db4f273}}.al-home-shelf-row{width:100%;margin-top:10px;margin-bottom:24px}.al-home-shelf{-webkit-backdrop-filter:blur(16px);background:#0e16228c;border:1px solid #ffffff14;border-radius:14px;width:100%;padding:16px 20px;box-shadow:0 8px 32px #00000040}@media (width<=576px){.al-home-shelf{padding:14px 12px}}.al-shelf-header{border-bottom:1px solid #ffffff0f;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;display:flex}.al-shelf-title-wrap{align-items:center;gap:10px;display:flex}.al-shelf-title-wrap .al-shelf-icon{color:#3db4f2;background:#3db4f226;border-radius:8px;justify-content:center;align-items:center;width:28px;height:28px;display:flex;box-shadow:0 0 10px #3db4f240}.al-shelf-title-wrap .al-shelf-title{letter-spacing:.6px;text-transform:uppercase;color:#fff;margin:0;font-size:1.15rem;font-weight:800;line-height:1}.al-shelf-title-wrap .al-shelf-count{color:#94a3b8;background:#ffffff14;border:1px solid #ffffff0f;border-radius:10px;justify-content:center;align-items:center;padding:2px 8px;font-size:11px;font-weight:700;display:inline-flex}.al-shelf-controls{align-items:center;gap:12px;display:flex}.al-shelf-pref-btn{color:#94a3b8;cursor:pointer;background:#ffffff0d;border:1px solid #ffffff14;border-radius:8px;justify-content:center;align-items:center;width:28px;height:28px;transition:all .2s;display:flex}.al-shelf-pref-btn:hover{color:#3db4f2;background:#3db4f226;border-color:#3db4f259}.al-shelf-filter{cursor:pointer;-webkit-user-select:none;user-select:none;background:#ffffff0a;border:1px solid #ffffff0f;border-radius:8px;align-items:center;gap:8px;padding:5px 10px;transition:all .2s;display:inline-flex}.al-shelf-filter:hover{background:#ffffff12;border-color:#ffffff1f}.al-shelf-filter .al-shelf-toggle-box{background:#ffffff26;border-radius:10px;width:32px;height:18px;transition:background-color .2s;position:relative}.al-shelf-filter .al-shelf-toggle-box.active{background:#3db4f2;box-shadow:0 0 8px #3db4f266}.al-shelf-filter .al-shelf-toggle-box .al-shelf-toggle-knob{background:#fff;border-radius:50%;width:14px;height:14px;transition:transform .2s cubic-bezier(.16,1,.3,1);position:absolute;top:2px;left:2px}.al-shelf-filter .al-shelf-toggle-box .al-shelf-toggle-knob.active{transform:translate(14px)}.al-shelf-filter .al-shelf-filter-label{color:#cbd5e1;align-items:center;gap:5px;font-size:11.5px;font-weight:600;display:flex}.al-shelf-filter .al-shelf-unwatched-pill{color:#3db4f2;background:#3db4f233;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700}.al-shelf-carousel-wrap{width:100%;position:relative}.al-shelf-track{scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#3db4f24d transparent;gap:16px;padding:4px 2px 14px;display:flex;overflow-x:auto}.al-shelf-track::-webkit-scrollbar{height:6px}.al-shelf-track::-webkit-scrollbar-track{background:#ffffff08;border-radius:4px}.al-shelf-track::-webkit-scrollbar-thumb{background:#3db4f24d;border-radius:4px}.al-shelf-track::-webkit-scrollbar-thumb:hover{background:#3db4f299}.al-shelf-card{scroll-snap-align:start;cursor:pointer;background:#121a26d9;border:1px solid #ffffff12;border-radius:12px;flex-direction:column;flex:0 0 175px;width:175px;transition:transform .22s cubic-bezier(.16,1,.3,1),box-shadow .22s,border-color .22s;display:flex;position:relative;overflow:hidden}@media (width<=576px){.al-shelf-card{flex:0 0 150px;width:150px}}.al-shelf-card.al-card-loading{opacity:.65;cursor:wait;pointer-events:none}.al-shelf-card:hover{border-color:#3db4f259;transform:translateY(-4px);box-shadow:0 12px 24px #00000073}.al-shelf-card:hover .al-card-cover img{transform:scale(1.05)}.al-card-cover{aspect-ratio:2/3;background:#090e16;border-radius:12px 12px 0 0;width:100%;position:relative;overflow:hidden}.al-card-cover img{object-fit:cover;width:100%;height:100%;transition:transform .3s;display:block}.al-card-badge-top-left{z-index:3;position:absolute;top:8px;left:8px}.al-card-badge-top-right{z-index:3;position:absolute;top:8px;right:8px}.al-card-al-link{color:#94a3b8;-webkit-backdrop-filter:blur(6px);background:#0a0e16bf;border:1px solid #ffffff26;border-radius:6px;justify-content:center;align-items:center;width:24px;height:24px;text-decoration:none;transition:all .2s;display:flex}.al-card-al-link:hover{background:#02a9ff40;border-color:#02a9ff;transform:scale(1.08);box-shadow:0 0 10px #02a9ff80}.al-card-cover-overlay{z-index:2;background:linear-gradient(#0000 0%,#090e1699 40%,#090e16f2 100%);flex-direction:column;gap:4px;padding:24px 8px 6px;display:flex;position:absolute;bottom:0;left:0;right:0}.al-card-progress-text{color:#e2e8f0;text-shadow:0 1px 3px #000c;justify-content:space-between;align-items:center;font-size:10px;font-weight:700;display:flex}.al-card-progress-bar{background:#ffffff2e;border-radius:2px;width:100%;height:4px;overflow:hidden}.al-card-progress-fill{background:#3db4f2;border-radius:2px;height:100%;transition:width .3s}.al-card-body{background:#0e141e99;flex-direction:column;flex:1;justify-content:space-between;gap:10px;padding:10px 10px 12px;display:flex}.al-card-title{color:#f1f5f9;-webkit-line-clamp:2;text-overflow:ellipsis;-webkit-box-orient:vertical;min-height:32px;font-size:12px;font-weight:600;line-height:1.35;text-decoration:none;transition:color .2s;display:-webkit-box;overflow:hidden}.al-card-title:hover{color:#3db4f2}.al-card-actions{width:100%}.al-card-btn{cursor:pointer;border:none;border-radius:6px;justify-content:center;align-items:center;gap:5px;width:100%;padding:6px 8px;font-size:11.5px;font-weight:700;text-decoration:none;transition:all .2s;display:flex}.al-card-btn.al-btn-play{color:#fff;background:#3db4f2;box-shadow:0 2px 8px #3db4f24d}.al-card-btn.al-btn-play:hover{color:#fff;background:#2ca5e6;box-shadow:0 4px 14px #3db4f280}.al-card-btn.al-btn-caughtup{color:#4ade80;background:#22c55e1f;border:1px solid #22c55e4d}.al-card-btn.al-btn-caughtup:hover{color:#86efac;background:#22c55e38;border-color:#22c55e80}.al-card-btn.al-btn-secondary{color:#94a3b8;background:#ffffff0d;border:1px solid #ffffff14}.al-card-btn.al-btn-secondary:hover{color:#e2e8f0;background:#ffffff1a}.al-shelf-empty{text-align:center;color:#94a3b8;background:#ffffff05;border:1px dashed #ffffff14;border-radius:10px;flex-direction:column;justify-content:center;align-items:center;gap:12px;padding:36px 16px;display:flex}.al-shelf-empty .al-shelf-empty-icon{color:#475569}.al-shelf-empty .al-shelf-empty-title{color:#cbd5e1;font-size:14px;font-weight:700}.al-shelf-empty .al-shelf-empty-desc{color:#64748b;max-width:360px;font-size:12px;line-height:1.5}.al-shelf-skeleton{aspect-ratio:2/3;background:linear-gradient(90deg,#ffffff08 25%,#ffffff14 50%,#ffffff08 75%) 0 0/200% 100%;border-radius:12px;flex:0 0 175px;width:175px;animation:1.5s infinite al-skeleton-shimmer}@media (width<=576px){.al-shelf-skeleton{flex:0 0 150px;width:150px}}@keyframes al-skeleton-shimmer{0%{background-position:200% 0}to{background-position:-200% 0}}.al-skeleton-pill{background:linear-gradient(90deg,#ffffff0a 25%,#ffffff17 50%,#ffffff0a 75%) 0 0/200% 100%;border-radius:8px;animation:1.5s infinite al-skeleton-shimmer}.al-spin{animation:.8s linear infinite al-spin;display:inline-block}@keyframes al-spin{0%{transform:rotate(0)}to{transform:rotate(360deg)}}.al-agent-candidate{border-radius:8px;transition:all .2s;animation:2s ease-in-out infinite al-candidate-pulse;position:relative;background:#3db4f21f!important;outline:2px solid #3db4f2!important}@keyframes al-candidate-pulse{0%,to{box-shadow:0 0 0 2px #3db4f2b3,0 0 14px #3db4f24d}50%{box-shadow:0 0 0 3px #3db4f2,0 0 22px #3db4f28c}}.al-agent-countdown-badge{box-sizing:border-box;color:#e2e8f0;pointer-events:none;background:#3db4f22e;border:1px solid #3db4f266;border-radius:6px;justify-content:space-between;align-items:center;width:100%;margin-top:6px;padding:4px 10px;font-size:11px;display:flex}.al-agent-countdown-badge strong{color:#3db4f2;font-weight:700}.al-agent-countdown-badge .al-agent-cancel-hint{color:#94a3b8;font-size:10px}.search-backdrop{z-index:99999!important;pointer-events:auto!important;justify-content:center!important;width:100vw!important;height:100vh!important;display:flex!important;position:fixed!important;top:0!important;left:0!important}.search-backdrop.show{opacity:1!important;visibility:visible!important}.search-backdrop .search-container{opacity:1!important;z-index:100000!important;display:block!important}.search-backdrop .results{opacity:1!important;z-index:100001!important;display:block!important}.al-vt-sync-badge{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);z-index:10;background:#0f172ad9;border-bottom:1px solid #3db4f240;justify-content:center;align-items:center;padding:6px 12px;display:flex}.al-vt-sync-badge .al-vt-inner{background:#1e293bb3;border:1px solid #3db4f24d;border-radius:9999px;align-items:center;gap:10px;padding:3px 10px;display:inline-flex}.al-vt-sync-badge .al-vt-info{color:#e2e8f0;align-items:center;gap:6px;font-size:11px;display:inline-flex}.al-vt-sync-badge .al-vt-info strong{color:#38bdf8;font-weight:700}.al-vt-sync-badge .al-vt-sync-btn{cursor:pointer;background:linear-gradient(135deg,#38bdf8 0%,#0284c7 100%);border:none;border-radius:9999px;align-items:center;gap:4px;padding:2px 8px;font-size:11px;font-weight:800;transition:all .15s;display:inline-flex;color:#06101e!important}.al-vt-sync-badge .al-vt-sync-btn:hover{filter:brightness(1.1);transform:scale(1.04)}video-player,.video-player{z-index:25;position:relative}.overview>.row:has(#al-control-bar){z-index:25;position:relative}#al-control-bar{z-index:30!important;position:relative!important}#al-control-bar.has-open-popover{z-index:99999!important}.al-elevated-stack{z-index:99999!important;position:relative!important}.al-buddy-btn{color:#e2e8f0;cursor:pointer;box-sizing:border-box;background:#0e1622d9;border:1px solid #ffffff29;border-radius:9px;outline:none;align-items:center;gap:7px;height:36px;padding:0 12px 0 10px;transition:all .2s cubic-bezier(.4,0,.2,1);display:inline-flex}.al-buddy-btn:hover{background:#142032f2;border-color:#38bdf8;box-shadow:0 0 12px #3db4f240}.al-buddy-btn.is-active{background:#0e1a2af2;border-color:#3db4f280;padding:0 10px 0 6px}.al-buddy-btn.is-active:hover{border-color:#38bdf8;box-shadow:0 0 14px #3db4f259}.al-buddy-btn .al-buddy-avatar-chip{object-fit:cover;border:1.5px solid #38bdf8;border-radius:50%;flex-shrink:0;width:22px;height:22px}.al-buddy-btn .al-buddy-name-chip{color:#38bdf8;text-overflow:ellipsis;white-space:nowrap;max-width:105px;font-size:12px;font-weight:700;overflow:hidden}.al-buddy-btn .al-buddy-icon{color:#94a3b8;flex-shrink:0}.al-buddy-btn .al-buddy-label{color:#cbd5e1;font-size:13px;font-weight:600}.al-buddy-btn .al-buddy-chevron{color:#94a3b8;flex-shrink:0;transition:transform .2s}.al-buddy-picker-wrap,.al-buddy-box{display:inline-block;position:relative}.al-buddy-picker-wrap .al-buddy-popover,.al-buddy-box .al-buddy-popover{-webkit-backdrop-filter:blur(24px);box-sizing:border-box;border:1px solid #3db4f259;border-radius:12px;width:280px;padding:8px;position:absolute;top:calc(100% + 6px);right:0;box-shadow:0 20px 50px #000000f2,0 0 20px #3db4f233;z-index:999999!important;background:#0d1624!important}@media (width<=576px){.al-buddy-picker-wrap .al-buddy-popover,.al-buddy-box .al-buddy-popover{width:min(290px,100vw - 32px);right:-10px}}.al-buddy-pop-search-box{background:#ffffff0f;border:1px solid #ffffff24;border-radius:8px;align-items:center;gap:8px;margin-bottom:6px;padding:7px 10px;transition:all .2s;display:flex}.al-buddy-pop-search-box:focus-within{background:#ffffff17;border-color:#38bdf8;box-shadow:0 0 10px #38bdf840}.al-buddy-pop-search-box .al-buddy-search-icon{color:#94a3b8;flex-shrink:0}.al-buddy-pop-search-box .al-buddy-search-input{width:100%;color:#f8fafc!important;box-shadow:none!important;background:0 0!important;border:none!important;outline:none!important;padding:0!important;font-size:12.5px!important;font-weight:500!important}.al-buddy-pop-search-box .al-buddy-search-input::placeholder{color:#64748b}.al-buddy-pop-options{flex-direction:column;gap:2px;max-height:220px;display:flex;overflow-y:auto}.al-buddy-pop-options::-webkit-scrollbar{width:4px}.al-buddy-pop-options::-webkit-scrollbar-thumb{background:#3db4f24d;border-radius:4px}.al-buddy-pop-options .al-buddy-loading,.al-buddy-pop-options .al-buddy-empty{color:#94a3b8;text-align:center;padding:14px;font-size:12px}.al-buddy-pop-options .al-buddy-option{cursor:pointer;text-align:left;box-sizing:border-box;background:0 0;border:1px solid #0000;border-radius:8px;align-items:center;gap:9px;width:100%;padding:7px 9px;transition:all .15s;display:flex}.al-buddy-pop-options .al-buddy-option:hover{background:#38bdf81f;border-color:#38bdf840}.al-buddy-pop-options .al-buddy-option.selected{background:#38bdf82e;border-color:#38bdf866}.al-buddy-pop-options .al-buddy-option.selected .al-buddy-opt-name{color:#38bdf8;font-weight:700}.al-buddy-pop-options .al-buddy-option .al-buddy-opt-avatar{object-fit:cover;border:1px solid #3db4f259;border-radius:50%;flex-shrink:0;width:24px;height:24px}.al-buddy-pop-options .al-buddy-option .al-buddy-opt-name{color:#e2e8f0;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:12.5px;font-weight:600;overflow:hidden}.al-buddy-pop-options .al-buddy-option .al-buddy-opt-badge{color:#38bdf8;text-transform:uppercase;letter-spacing:.3px;background:#38bdf82e;border-radius:4px;padding:2px 6px;font-size:9px;font-weight:800}.al-buddy-pop-options .al-buddy-option .al-buddy-opt-check{color:#38bdf8;flex-shrink:0}.al-buddy-pop-footer{border-top:1px solid #ffffff14;margin-top:6px;padding-top:6px}.al-buddy-pop-footer .al-buddy-pop-remove{color:#ef4444;cursor:pointer;background:#ef444414;border:1px solid #ef444440;border-radius:8px;justify-content:center;align-items:center;gap:6px;width:100%;padding:6px;font-size:11.5px;font-weight:600;transition:all .15s;display:flex}.al-buddy-pop-footer .al-buddy-pop-remove:hover{color:#fff;background:#ef444433;border-color:#ef4444}.al-card-buddy-overlay{z-index:3;-webkit-backdrop-filter:blur(10px);box-sizing:border-box;background:#0a101ad9;border:1px solid #38bdf866;border-radius:9999px;justify-content:space-between;align-items:center;gap:6px;padding:3px 8px 3px 4px;display:flex;position:absolute;top:38px;left:8px;right:8px;box-shadow:0 4px 12px #00000080}.al-card-buddy-overlay .al-card-buddy-left{flex:1;align-items:center;gap:6px;min-width:0;display:flex;overflow:hidden}.al-card-buddy-overlay .al-card-buddy-avatar{object-fit:cover!important;border:1.5px solid #38bdf8!important;border-radius:50%!important;flex-shrink:0!important;width:20px!important;min-width:20px!important;max-width:20px!important;height:20px!important;min-height:20px!important;max-height:20px!important;display:block!important}.al-card-buddy-overlay .al-card-buddy-name{color:#38bdf8;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;font-size:11px;font-weight:700;overflow:hidden}.al-card-buddy-overlay .al-card-buddy-status{color:#f1f5f9;white-space:nowrap;background:#ffffff1f;border-radius:9999px;flex-shrink:0;margin-left:auto;padding:1.5px 6px;font-size:10px;font-weight:800}.al-btn-buddy-sync{cursor:pointer;box-sizing:border-box;border:none;justify-content:center;align-items:center;gap:5px;width:100%;margin-bottom:6px;transition:all .15s;display:flex;box-shadow:0 0 10px #3db4f240;color:#06101e!important;background:linear-gradient(135deg,#3db4f2 0%,#0284c7 100%)!important;border-radius:6px!important;padding:5px 8px!important;font-size:11px!important;font-weight:800!important}.al-btn-buddy-sync:hover{filter:brightness(1.15);transform:translateY(-1px);box-shadow:0 0 12px #3db4f273}.al-btn-buddy-sync:active{transform:translateY(0)}.al-buddy-picker-wrap{align-items:center;gap:6px;display:inline-flex;position:relative}.al-pref-collapsible .al-pref-header{justify-content:space-between;align-items:center;display:flex}.al-pref-collapsible .al-pref-title-click{cursor:pointer;-webkit-user-select:none;user-select:none;flex:1;align-items:center;gap:8px;display:flex}.al-pref-collapsible .al-pref-title-click .al-pref-chevron{color:#94a3b8;justify-content:center;align-items:center;transition:transform .2s;display:inline-flex}.al-pref-collapsible:not(.is-open) .al-pref-title-click .al-pref-chevron{transform:rotate(-90deg)}.al-pref-collapsible:not(.is-open) .al-pref-sub{display:none!important}.al-pref-collapsible.is-open .al-pref-title-click .al-pref-chevron{transform:rotate(0)}.al-prefs-modal .al-pref-group,.al-prefs-modal .al-pref-group .al-pref-sub{overflow:visible!important}.al-prefs-modal .al-buddy-box{align-items:center;display:flex}.al-prefs-modal .al-buddy-box .al-buddy-btn{height:34px;padding:0 10px 0 6px;font-size:12.5px}.al-prefs-modal .al-buddy-box .al-buddy-btn .al-buddy-avatar-chip{width:22px;height:22px}#au-skip-intro-btn{display:none;z-index:2147483647!important;-webkit-backdrop-filter:blur(8px)!important;color:#fff!important;cursor:pointer!important;-webkit-user-select:none!important;user-select:none!important;pointer-events:auto!important;background:#0a101aeb!important;border:1.5px solid #3db4f2!important;border-radius:8px!important;align-items:center!important;gap:6px!important;padding:8px 16px!important;font-family:inherit!important;font-size:13px!important;font-weight:800!important;transition:transform .15s,background .15s,color .15s!important;position:absolute!important;bottom:56px!important;right:20px!important;box-shadow:0 4px 16px #0009,0 0 12px #3db4f266!important}#au-skip-intro-btn:hover{color:#06101e!important;background:#3db4f2!important;transform:scale(1.04)!important}#au-skip-intro-btn:active{transform:scale(.98)!important}");
+	_css(".al-badge{white-space:nowrap;-webkit-backdrop-filter:blur(8px);border:1px solid #0000;border-radius:6px;align-items:center;gap:5px;padding:3px 8px;font-size:11px;font-weight:700;line-height:1.2;display:inline-flex}.al-badge svg{flex-shrink:0}.al-badge.al-badge-CURRENT{color:#76caf6;background:#3db4f229;border-color:#3db4f273}.al-badge.al-badge-CURRENT .al-dot{background:#3db4f2;box-shadow:0 0 6px #3db4f299}.al-badge.al-badge-PLANNING{color:#b9c3d0;background:#94a3b829;border-color:#94a3b873}.al-badge.al-badge-PLANNING .al-dot{background:#94a3b8;box-shadow:0 0 6px #94a3b899}.al-badge.al-badge-COMPLETED{color:#45df7e;background:#22c55e29;border-color:#22c55e73}.al-badge.al-badge-COMPLETED .al-dot{background:#22c55e;box-shadow:0 0 6px #22c55e99}.al-badge.al-badge-PAUSED{color:#f8c937;background:#eab30829;border-color:#eab30873}.al-badge.al-badge-PAUSED .al-dot{background:#eab308;box-shadow:0 0 6px #eab30899}.al-badge.al-badge-REPEATING{color:#1fd9f9;background:#06b6d429;border-color:#06b6d473}.al-badge.al-badge-REPEATING .al-dot{background:#06b6d4;box-shadow:0 0 6px #06b6d499}.al-badge.al-badge-DROPPED{color:#f47c7c;background:#ef444429;border-color:#ef444473}.al-badge.al-badge-DROPPED .al-dot{background:#ef4444;box-shadow:0 0 6px #ef444499}.al-dot{border-radius:50%;flex-shrink:0;width:6px;height:6px;display:inline-block}.al-btn{cursor:pointer;white-space:nowrap;border:1px solid #0000;border-radius:9px;justify-content:center;align-items:center;gap:6px;padding:8px 16px;font-size:13px;font-weight:700;text-decoration:none;transition:all .2s cubic-bezier(.4,0,.2,1);display:inline-flex}.al-btn:hover{text-decoration:none;transform:translateY(-1px)}.al-btn:active{transform:translateY(0)}.al-btn.primary{background:linear-gradient(135deg,#3db4f2 0%,#0284c7 100%);box-shadow:0 4px 14px #3db4f259;color:#06101e!important}.al-btn.primary:hover{filter:brightness(1.08);box-shadow:0 6px 20px #3db4f28c;color:#06101e!important}.al-btn.secondary{background:#ffffff14;border-color:#ffffff26;color:#e2e8f0!important}.al-btn.secondary:hover{background:#ffffff24;color:#fff!important}.al-btn.danger{background:#ef444426;border-color:#ef444459;color:#fca5a5!important}.al-btn.danger:hover{background:#ef444447;border-color:#ef4444;color:#fff!important}.al-overlay{-webkit-backdrop-filter:blur(16px);animation:.2s al-fade-in;inset:0!important;box-sizing:border-box!important;z-index:2147483647!important;pointer-events:auto!important;visibility:visible!important;opacity:1!important;background:#03070dd9!important;justify-content:center!important;align-items:center!important;width:100vw!important;min-width:100vw!important;height:100vh!important;min-height:100vh!important;margin:0!important;padding:16px!important;display:flex!important;position:fixed!important;inset:0!important}.al-overlay.al-overlay-drawer{justify-content:flex-end!important;align-items:stretch!important;padding:0!important}.al-modal{color:#fff;background:linear-gradient(135deg,#101a27 0%,#080f18 100%);border:1px solid #3db4f259;border-radius:16px;width:90%;max-width:440px;max-height:calc(100vh - 32px);padding:24px;animation:.25s cubic-bezier(.16,1,.3,1) al-modal-in;overflow-y:auto;box-shadow:0 20px 60px #000000d9,0 0 30px #3db4f22e;z-index:2147483647!important;pointer-events:auto!important;visibility:visible!important;opacity:1!important;box-sizing:border-box!important;position:relative!important}.al-modal .al-modal-header{justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px;display:flex}.al-modal .al-modal-header .al-modal-header-left{align-items:center;gap:14px;min-width:0;display:flex}.al-modal .al-modal-header .al-modal-close-btn{color:#94a3b8;cursor:pointer;background:#ffffff0f;border:1px solid #ffffff1a;border-radius:9px;flex-shrink:0;justify-content:center;align-items:center;width:32px;height:32px;transition:all .15s;display:inline-flex}.al-modal .al-modal-header .al-modal-close-btn:hover{color:#fff;background:#ffffff24;border-color:#ffffff38;transform:scale(1.05)}.al-modal .al-modal-icon{color:#3db4f2;background:linear-gradient(135deg,#3db4f233,#0284c71a);border:1px solid #3db4f266;border-radius:12px;flex-shrink:0;justify-content:center;align-items:center;width:44px;height:44px;display:flex;box-shadow:0 0 15px #3db4f24d}.al-modal .al-modal-title{color:#fff;margin:0;font-size:18px;font-weight:700;line-height:1.2}.al-modal .al-modal-subtitle{color:#94a3b8;margin:3px 0 0;font-size:12px;line-height:1.3}.al-modal .al-modal-body{flex-direction:column;gap:12px;display:flex}.al-modal .al-modal-actions{justify-content:flex-end;align-items:center;gap:10px;margin-top:20px;display:flex}.al-auth-link{background:linear-gradient(135deg,#3db4f226,#0ea5e914);border:1px solid #3db4f259;border-radius:10px;justify-content:space-between;align-items:center;padding:11px 14px;font-size:13px;font-weight:700;text-decoration:none;transition:all .2s;display:flex;color:#3db4f2!important}.al-auth-link .al-auth-tag{color:#06101e;text-transform:uppercase;background:#3db4f2;border-radius:5px;padding:2px 6px;font-size:10px;font-weight:900}.al-auth-link:hover{background:linear-gradient(135deg,#3db4f240,#0ea5e929);border-color:#3db4f2}.al-auth-hint{color:#94a3b8;margin:0;font-size:12px;line-height:1.4}.al-input-group input{box-sizing:border-box;color:#fff;background:#0d1521d9;border:1px solid #3db4f259;border-radius:10px;outline:none;width:100%;padding:10px 14px;font-size:13px;transition:all .2s}.al-input-group input:focus{border-color:#3db4f2;box-shadow:0 0 15px #3db4f24d}.al-prefs-modal{max-width:460px!important}.al-prefs-modal .al-prefs-body{flex-direction:column;gap:12px;display:flex}.al-prefs-modal .al-pref-group{background:#ffffff08;border:1px solid #ffffff14;border-radius:12px;flex-direction:column;transition:background .25s,border-color .25s,box-shadow .25s;display:flex;overflow:hidden}.al-prefs-modal .al-pref-group.is-active{background:#3db4f20a;border-color:#3db4f259;box-shadow:0 4px 16px #0000004d}.al-prefs-modal .al-pref-group.is-active .al-pref-header{border-bottom:1px solid #3db4f226}.al-prefs-modal .al-pref-group .al-pref-header{cursor:pointer;justify-content:space-between;align-items:center;gap:14px;margin:0;padding:12px 14px;transition:background .15s;display:flex}.al-prefs-modal .al-pref-group .al-pref-header:hover{background:#ffffff08}.al-prefs-modal .al-pref-group .al-pref-info{flex-direction:column;gap:2px;display:flex}.al-prefs-modal .al-pref-group .al-pref-title{color:#f1f5f9;font-size:13px;font-weight:600}.al-prefs-modal .al-pref-group .al-pref-desc{color:#94a3b8;font-size:11px;font-weight:500}.al-prefs-modal .al-pref-group .al-pref-sub{background:#080e1799;flex-direction:column;gap:12px;padding:12px 14px;animation:.22s cubic-bezier(.16,1,.3,1) al-slide-down;display:flex}.al-prefs-modal .al-pref-group .al-pref-sub.is-hidden{display:none!important}.al-prefs-modal .al-pref-group .al-pref-sub .al-pref-row{color:#cbd5e1;cursor:pointer;justify-content:space-between;align-items:center;gap:12px;margin:0;font-size:12px;font-weight:500;display:flex}.al-prefs-modal .al-pref-group .al-pref-sub .al-pref-row .al-pref-sub-label{color:#94a3b8;align-items:center;gap:8px;display:flex}.al-prefs-modal .al-pref-group .al-pref-sub .al-pref-row .al-pref-sub-label svg{color:#3db4f2}.al-prefs-modal .al-pref-group .al-pref-sub .al-pref-row .al-select-xs{color:#f1f5f9;cursor:pointer;background:#0e1622f2;border:1px solid #ffffff29;border-radius:7px;outline:none;padding:4px 8px;font-size:12px;font-weight:600}.al-prefs-modal .al-pref-group .al-pref-sub .al-pref-row .al-select-xs:hover,.al-prefs-modal .al-pref-group .al-pref-sub .al-pref-row .al-select-xs:focus{border-color:#3db4f2}.al-prefs-modal .al-pref-group .al-pref-sub .al-pref-row .al-checkbox{accent-color:#3db4f2;cursor:pointer;width:16px;height:16px}.al-prefs-modal .al-switch{appearance:none;cursor:pointer;background:#ffffff29;border-radius:12px;outline:none;flex-shrink:0;width:36px;height:20px;transition:background .2s;position:relative}.al-prefs-modal .al-switch:after{content:\"\";background:#fff;border-radius:50%;width:16px;height:16px;transition:transform .2s cubic-bezier(.16,1,.3,1);position:absolute;top:2px;left:2px;box-shadow:0 1px 3px #0006}.al-prefs-modal .al-switch:checked{background:#3db4f2}.al-prefs-modal .al-switch:checked:after{background:#06101e;transform:translate(16px)}.al-prefs-modal .al-avatar-sm{object-fit:cover;border:1px solid #3db4f2;border-radius:50%;width:22px;height:22px;box-shadow:0 0 6px #3db4f24d}.al-prefs-modal .al-btn-logout{padding:5px 10px;font-size:11px;color:#fca5a5!important;border-color:#ef44444d!important}.al-prefs-modal .al-btn-logout:hover{color:#fff!important;background:#ef444433!important;border-color:#ef4444!important}.al-toast{-webkit-backdrop-filter:blur(12px);animation:.2s cubic-bezier(.16,1,.3,1) al-modal-in;width:auto!important;max-width:380px!important;height:auto!important;min-height:unset!important;color:#fff!important;z-index:1000000!important;pointer-events:none!important;background:#0e1a29f2!important;border:1px solid #3db4f2!important;border-left-width:4px!important;border-radius:10px!important;padding:10px 20px!important;font-size:13px!important;font-weight:700!important;line-height:1.4!important;position:fixed!important;inset:auto auto 85px 50%!important;transform:translate(-50%)!important;box-shadow:0 12px 36px #000000d9,0 0 16px #3db4f240!important}.al-drawer{box-sizing:border-box!important;background:linear-gradient(#101a27 0%,#070e17 100%)!important;border:none!important;border-left:1px solid #3db4f259!important;border-radius:20px 0 0 20px!important;flex-direction:column!important;width:100%!important;max-width:480px!important;height:100dvh!important;max-height:100dvh!important;margin:0!important;padding:0!important;animation:.28s cubic-bezier(.16,1,.3,1) al-drawer-in!important;display:flex!important;overflow:hidden!important;box-shadow:-14px 0 60px #000000d9,-2px 0 25px #3db4f22e!important}.al-drawer .al-modal-header{-webkit-backdrop-filter:blur(12px);background:#0e1622d9;border-bottom:1px solid #ffffff14;flex-shrink:0;margin:0!important;padding:22px 24px 18px!important}.al-drawer .al-modal-body{flex-direction:column;gap:16px;display:flex;-webkit-overflow-scrolling:touch!important;flex:auto!important;padding:24px!important;overflow-y:auto!important}.al-drawer .al-modal-body::-webkit-scrollbar{width:6px}.al-drawer .al-modal-body::-webkit-scrollbar-track{background:#0003}.al-drawer .al-modal-body::-webkit-scrollbar-thumb{background:#ffffff29;border-radius:3px}.al-drawer .al-modal-body::-webkit-scrollbar-thumb:hover{background:#3db4f266}.al-drawer .al-modal-actions{-webkit-backdrop-filter:blur(12px);background:#080e16f5;border-top:1px solid #ffffff14;flex-shrink:0;justify-content:flex-end;align-items:center;gap:12px;display:flex;margin:0!important;padding:16px 24px!important}@media (width<=768px){.al-drawer{width:100vw!important;max-width:100vw!important;box-shadow:none!important;border:none!important;border-radius:0!important;animation:.25s cubic-bezier(.16,1,.3,1) al-drawer-mobile-in!important}.al-drawer .al-modal-header{padding:18px 18px 14px!important}.al-drawer .al-modal-body{padding:18px!important}.al-drawer .al-modal-actions{padding:14px 18px calc(14px + env(safe-area-inset-bottom,0px))!important}}@keyframes al-modal-in{0%{opacity:0;transform:translateY(10px)scale(.97)}to{opacity:1;transform:translateY(0)scale(1)}}@keyframes al-fade-in{0%{opacity:0}to{opacity:1}}@keyframes al-slide-down{0%{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}@keyframes al-drawer-in{0%{opacity:.6;transform:translate(100%)}to{opacity:1;transform:translate(0)}}@keyframes al-drawer-mobile-in{0%{opacity:.6;transform:translateY(100%)}to{opacity:1;transform:translateY(0)}}.cover-wrap .actions,.list-btn-mobile,#add-to-fav,a[href*=\\/login].list,a[href*=\\/login].btn-danger{display:none!important}#video-bottom{border-bottom:1px solid #3db4f233;min-height:40px;background-color:var(--color-background-1,#131722)!important;justify-content:center!important;align-items:center!important;padding:6px 12px!important;display:flex!important;position:relative!important;overflow:visible!important}#video-bottom a.prev{z-index:2;transition:all .2s;color:#94a3b8!important;white-space:nowrap!important;align-items:center!important;gap:6px!important;font-size:12px!important;font-weight:600!important;text-decoration:none!important;display:inline-flex!important;position:absolute!important;top:50%!important;left:12px!important;transform:translateY(-50%)!important}#video-bottom a.prev:hover{color:#3db4f2!important;text-decoration:none!important}#video-bottom a.next{z-index:2;transition:all .2s;color:#94a3b8!important;white-space:nowrap!important;align-items:center!important;gap:6px!important;font-size:12px!important;font-weight:600!important;text-decoration:none!important;display:inline-flex!important;position:absolute!important;top:50%!important;right:12px!important;transform:translateY(-50%)!important}#video-bottom a.next:hover{color:#3db4f2!important;text-decoration:none!important}@media (width<=500px){#video-bottom{padding:4px 8px!important}#video-bottom a.prev span,#video-bottom a.next span{display:none!important}#video-bottom a.prev,#video-bottom a.next{font-size:14px!important}}#video-bottom #al-video-bottom-widget{z-index:1;justify-content:center;align-items:center;gap:8px;max-width:calc(100% - 170px);margin:0 auto;display:flex}@media (width<=500px){#video-bottom #al-video-bottom-widget{max-width:calc(100% - 64px)}}#video-bottom #al-video-bottom-widget .al-vb-status-slot,#video-bottom #al-video-bottom-widget .al-vb-buddy-slot{align-items:center;display:inline-flex}#video-bottom #al-video-bottom-widget .al-vb-mark-btn{cursor:pointer;white-space:nowrap;background:linear-gradient(135deg,#3db4f2 0%,#0284c7 100%);border:none;border-radius:6px;align-items:center;gap:5px;min-height:26px;padding:4px 12px;font-size:11px;font-weight:800;transition:all .2s cubic-bezier(.16,1,.3,1);display:inline-flex;box-shadow:0 0 12px #3db4f266;color:#06101e!important}#video-bottom #al-video-bottom-widget .al-vb-mark-btn:hover{filter:brightness(1.08);transform:scale(1.04);box-shadow:0 0 16px #3db4f299}#video-bottom #al-video-bottom-widget .al-vb-mark-btn:active{transform:scale(.97)}#video-bottom #al-video-bottom-widget .al-vb-countdown{background:#0e1622f2;border:1px solid #3db4f273;border-radius:8px;justify-content:space-between;align-items:center;gap:8px;max-width:100%;padding:3px 6px;animation:2s ease-in-out infinite al-pulse-border;display:inline-flex;box-shadow:0 0 14px #3db4f240}#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-timer{color:#e2e8f0;white-space:nowrap;align-items:center;gap:5px;padding:0 4px;font-size:11px;font-weight:600;display:flex}#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-timer strong{color:#3db4f2}#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-btn{cursor:pointer;white-space:nowrap;justify-content:center;align-items:center;min-width:24px;min-height:24px;padding:0;transition:all .15s;display:inline-flex}#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-btn.al-vb-cancel{color:#fca5a5;background:#ef44441a;border:1px solid #ef44444d;border-radius:6px}#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-btn.al-vb-cancel:hover,#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-btn.al-vb-cancel:active{color:#fff;background:#ef44444d;border-color:#ef4444}#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-btn.al-vb-save{color:#06101e;background:linear-gradient(135deg,#3db4f2 0%,#0284c7 100%);border:none;border-radius:6px;box-shadow:0 0 8px #3db4f259}#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-btn.al-vb-save:hover,#video-bottom #al-video-bottom-widget .al-vb-countdown .al-vb-btn.al-vb-save:active{filter:brightness(1.15);box-shadow:0 0 12px #3db4f28c}#video-bottom #al-video-bottom-widget .al-vb-synced{color:#4ade80;white-space:nowrap;background:#22c55e1f;border:1px solid #22c55e4d;border-radius:6px;align-items:center;gap:5px;min-height:26px;padding:4px 8px;font-size:11px;font-weight:600;display:inline-flex}#video-bottom #al-video-bottom-widget .al-vb-synced .al-vb-reset-btn{color:#94a3b8!important;cursor:pointer!important;background:0 0!important;border:none!important;justify-content:center!important;align-items:center!important;width:18px!important;height:18px!important;margin-left:2px!important;padding:0!important;transition:color .15s!important;display:inline-flex!important}#video-bottom #al-video-bottom-widget .al-vb-synced .al-vb-reset-btn:hover{color:#ef4444!important}#video-bottom #al-video-bottom-widget .al-vb-recap{color:#93c5fd;white-space:nowrap;background:#3b82f61f;border:1px solid #3b82f64d;border-radius:6px;align-items:center;gap:8px;min-height:26px;padding:3px 8px;font-size:11px;font-weight:600;display:inline-flex}#video-bottom #al-video-bottom-widget .al-vb-recap .al-vb-recap-text{align-items:center;gap:5px;display:flex}#video-bottom #al-video-bottom-widget .al-vb-recap .al-vb-btn.ghost-xs{color:#e2e8f0;cursor:pointer;background:#ffffff14;border:1px solid #ffffff26;border-radius:5px;justify-content:center;align-items:center;min-width:22px;min-height:22px;padding:0;display:inline-flex}#video-bottom #al-video-bottom-widget .al-vb-recap .al-vb-btn.ghost-xs:hover{color:#fff;background:#3db4f240;border-color:#3db4f2}.al-card{-webkit-backdrop-filter:blur(20px);background:linear-gradient(135deg,#111a26f0 0%,#0a121cfa 100%);border:1px solid #3db4f24d;border-radius:14px;width:100%;margin-top:14px;margin-bottom:24px;padding:12px 18px 14px;transition:border-color .3s,box-shadow .3s;position:relative;overflow:visible;box-shadow:0 12px 35px #0009,0 0 20px #3db4f21f}.al-card:hover{border-color:#3db4f280;box-shadow:0 14px 40px #000000b3,0 0 25px #3db4f233}.al-card .al-card-row{flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;width:100%;display:flex}.al-card .al-left{flex-wrap:wrap;align-items:center;gap:8px;min-width:0;display:flex}.al-card .al-right,.al-card .al-controls-group{align-items:center;gap:10px;display:flex}.al-card .al-controls-group .al-buddy-cluster{box-sizing:border-box;background:#0e1622a6;border:1px solid #3db4f238;border-radius:10px;align-items:center;gap:6px;height:36px;padding:2px 6px 2px 2px;transition:all .2s;display:inline-flex}.al-card .al-controls-group .al-buddy-cluster:hover{background:#0e1622d9;border-color:#3db4f273}.al-card .al-controls-group .al-buddy-cluster.has-completed{background:#0a1914b3;border-color:#22c55e66}.al-card .al-controls-group .al-buddy-cluster.has-completed:hover{border-color:#22c55ea6}.al-card .al-controls-group .al-buddy-cluster .al-buddy-box{align-items:center;display:inline-flex}.al-card .al-controls-group .al-buddy-cluster .al-buddy-box .al-buddy-btn{background:0 0;border:none;height:30px;padding:0 8px 0 6px;font-size:12px}.al-card .al-controls-group .al-buddy-cluster .al-buddy-box .al-buddy-btn:hover{box-shadow:none;background:#ffffff0f}.al-card .al-controls-group .al-buddy-cluster .al-buddy-sync-btn{cursor:pointer;white-space:nowrap;background:linear-gradient(135deg,#3db4f238,#0284c74d);border:1px solid #3db4f280;border-radius:7px;align-items:center;gap:5px;height:28px;padding:0 10px;font-size:11.5px;font-weight:700;transition:all .2s cubic-bezier(.4,0,.2,1);display:inline-flex;box-shadow:0 0 10px #3db4f233;color:#38bdf8!important}.al-card .al-controls-group .al-buddy-cluster .al-buddy-sync-btn svg{flex-shrink:0;transition:transform .2s}.al-card .al-controls-group .al-buddy-cluster .al-buddy-sync-btn:hover{background:linear-gradient(135deg,#3db4f2 0%,#0284c7 100%);border-color:#0000;transform:translateY(-1px);box-shadow:0 4px 14px #3db4f273;color:#06101e!important}.al-card .al-controls-group .al-buddy-cluster .al-buddy-sync-btn:hover svg{transform:scale(1.1)}.al-card .al-controls-group .al-buddy-cluster .al-buddy-sync-btn:active{transform:translateY(0)}.al-card .al-controls-group .al-buddy-cluster .al-buddy-sync-btn.is-completed{background:linear-gradient(135deg,#22c55e40,#16a34a59);border:1px solid #22c55e99;box-shadow:0 0 12px #22c55e40;color:#4ade80!important}.al-card .al-controls-group .al-buddy-cluster .al-buddy-sync-btn.is-completed:hover{background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);border-color:#0000;box-shadow:0 4px 16px #22c55e80;color:#052e16!important}.al-card .al-controls-group .al-buddy-cluster .al-buddy-tag{white-space:nowrap;color:#94a3b8;background:#ffffff0f;border:1px solid #ffffff1a;border-radius:6px;align-items:center;gap:5px;height:26px;padding:0 8px;font-size:11px;font-weight:700;display:inline-flex}.al-card .al-controls-group .al-buddy-cluster .al-buddy-tag .al-dot{background:#94a3b8;border-radius:50%;flex-shrink:0;width:5px;height:5px;display:inline-block}.al-card .al-controls-group .al-buddy-cluster .al-buddy-tag.is-completed{color:#4ade80;background:#22c55e26;border-color:#22c55e66}.al-card .al-controls-group .al-buddy-cluster .al-buddy-tag.is-completed .al-dot{background:#22c55e;box-shadow:0 0 6px #22c55e99}.al-card .al-info{color:#e2e8f0;align-items:center;gap:10px;font-size:13px;font-weight:600;display:flex}.al-card .al-pill{text-transform:uppercase;letter-spacing:.5px;color:#06101e;background:linear-gradient(135deg,#3db4f2,#0284c7);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:800}.al-card .al-pill.danger{color:#fff;background:linear-gradient(135deg,#ef4444,#b91c1c)}.al-card .al-badge{background:linear-gradient(135deg,#3db4f22e,#0ea5e91a);border:1px solid #3db4f273;border-radius:9px;align-items:center;gap:8px;max-width:320px;padding:6px 14px;font-size:13px;font-weight:700;text-decoration:none;transition:all .2s;display:inline-flex;color:#3db4f2!important}.al-card .al-badge .al-title-text{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.al-card .al-badge .al-badge-icon{opacity:.85;flex-shrink:0;transition:transform .2s,opacity .2s}.al-card .al-badge:hover{background:linear-gradient(135deg,#3db4f247,#0ea5e933);border-color:#3db4f2;text-decoration:none;transform:translateY(-1px);box-shadow:0 0 15px #3db4f259}.al-card .al-badge:hover .al-badge-icon{opacity:1;transform:translate(1px,-1px)}.al-card .al-icon-btn{color:#94a3b8;cursor:pointer;background:#ffffff0d;border:1px solid #ffffff1f;border-radius:8px;justify-content:center;align-items:center;width:34px;height:34px;transition:all .2s;display:inline-flex}.al-card .al-icon-btn:hover{color:#fff;background:#ffffff1f;border-color:#ffffff4d;transform:translateY(-1px)}.al-card .al-icon-btn.primary{background:linear-gradient(135deg,#3db4f2 0%,#0284c7 100%);border:none;color:#06101e!important}.al-card .al-icon-btn.primary:hover{filter:brightness(1.15);box-shadow:0 0 10px #3db4f280;color:#06101e!important}.al-card .al-icon-btn.danger:hover{color:#ef4444;background:#ef44442e;border-color:#ef4444;box-shadow:0 0 12px #ef44444d}.al-card .al-title-meta-wrap{flex-wrap:wrap;align-items:center;gap:8px;display:inline-flex}.al-card .al-ep-chip{box-sizing:border-box;white-space:nowrap;background:#0e1622d9;border:1px solid #ffffff1a;border-radius:8px;align-items:center;gap:6px;padding:3px 6px 3px 8px;font-size:11.5px;transition:all .2s;display:inline-flex}.al-card .al-ep-chip .al-ep-chip-badge{align-items:center;gap:5px;font-weight:600;display:inline-flex}.al-card .al-ep-chip .al-ep-chip-badge .al-ep-chip-num{font-weight:700}.al-card .al-ep-chip .al-ep-chip-badge .al-ep-chip-timer{color:#f59e0b;font-weight:800}.al-card .al-ep-chip .al-ep-chip-badge .al-ep-chip-text{opacity:.85;font-size:10.5px}.al-card .al-ep-chip .al-ep-chip-actions{align-items:center;gap:4px;margin-left:2px;display:inline-flex}.al-card .al-ep-chip .al-ep-mini-btn{cursor:pointer;white-space:nowrap;-webkit-user-select:none;user-select:none;border:none;border-radius:5px;justify-content:center;align-items:center;gap:4px;height:22px;padding:0 7px;font-size:11px;font-weight:700;transition:all .15s cubic-bezier(.16,1,.3,1);display:inline-flex}.al-card .al-ep-chip .al-ep-mini-btn.primary{color:#06101e;background:#3db4f2}.al-card .al-ep-chip .al-ep-mini-btn.primary:hover{background:#2ca5e6;box-shadow:0 0 8px #3db4f280}.al-card .al-ep-chip .al-ep-mini-btn.success{background:#10b981;border:none;min-width:24px;height:22px;padding:0 6px;box-shadow:0 0 8px #10b98166;color:#fff!important}.al-card .al-ep-chip .al-ep-mini-btn.success svg{stroke-width:2.75px;filter:drop-shadow(0 1px 2px #00000059);color:#fff!important;stroke:#fff!important}.al-card .al-ep-chip .al-ep-mini-btn.success:hover{background:#059669;transform:translateY(-1px);box-shadow:0 0 12px #10b981a6}.al-card .al-ep-chip .al-ep-mini-btn.success:active{transform:translateY(0)}.al-card .al-ep-chip .al-ep-mini-btn.cancel,.al-card .al-ep-chip .al-ep-mini-btn.danger{color:#fca5a5;background:#ef444426;border:1px solid #ef444459;padding:0 5px}.al-card .al-ep-chip .al-ep-mini-btn.cancel:hover,.al-card .al-ep-chip .al-ep-mini-btn.danger:hover{color:#fff;background:#ef44444d;border-color:#ef4444}.al-card .al-ep-chip .al-ep-mini-btn.rewind{color:#94a3b8;background:#ffffff12;border:1px solid #ffffff24}.al-card .al-ep-chip .al-ep-mini-btn.rewind:hover{color:#fca5a5;background:#ef444433;border-color:#ef444473}.al-card .al-ep-chip.is-countdown{color:#fbbf24;background:#f59e0b1a;border-color:#f59e0b59;box-shadow:0 0 10px #f59e0b26}.al-card .al-ep-chip.is-countdown svg{color:#f59e0b}.al-card .al-ep-chip.is-synced{color:#38bdf8;background:#38bdf81a;border-color:#38bdf84d}.al-card .al-ep-chip.is-synced svg{color:#38bdf8}.al-card .al-ep-chip.is-watched{color:#34d399;background:#34d3991a;border-color:#34d39940}.al-card .al-ep-chip.is-watched svg{color:#34d399}.al-card .al-ep-chip.is-untracked{color:#facc15;background:#eab30814;border-color:#eab30840}.al-card .al-ep-chip.is-untracked svg{color:#eab308}.al-card .al-ep-chip.is-resuming{color:#c084fc;background:#a855f71f;border-color:#a855f759}.al-card .al-ep-chip.is-resuming svg{color:#a855f7}.al-card .al-card-dates-row{border-top:1px solid #ffffff0f;justify-content:space-between;align-items:center;width:100%;margin-top:10px;padding-top:8px;display:flex}.al-card .al-card-dates-row .al-date-col{align-items:center;gap:6px;display:flex}.al-card .al-card-dates-row .al-date-col.al-date-start{justify-content:flex-start}.al-card .al-card-dates-row .al-date-col.al-date-end{justify-content:flex-end;margin-left:auto}.al-card .al-card-dates-row .al-meta-date{color:#94a3b8;white-space:nowrap;background:#ffffff0a;border:1px solid #ffffff14;border-radius:6px;align-items:center;gap:5px;padding:2.5px 8px;font-size:11px;font-weight:600;display:inline-flex}.al-card .al-card-dates-row .al-meta-date svg{color:#38bdf8;opacity:.85}.al-card .al-card-dates-row .al-meta-date.al-meta-repeat{color:#a78bfa;background:#a78bfa14;border-color:#a78bfa40}.al-card .al-card-dates-row .al-meta-date.al-meta-repeat svg{color:#a78bfa}.al-card .al-select{appearance:none;color:#f1f5f9;cursor:pointer;background:#0e1622d9 url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='none' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round' d='m1 1 4 4 4-4'/%3E%3C/svg%3E\") right 10px center no-repeat;border:1px solid #ffffff29;border-radius:9px;outline:none;height:34px;padding:5px 28px 5px 11px;font-size:12.5px;font-weight:600;transition:all .2s}.al-card .al-select:hover,.al-card .al-select:focus{border-color:#3db4f2;box-shadow:0 0 12px #3db4f240}.al-card .al-select option{color:#fff;background:#0e1622}.al-card .al-select.al-status-select{background-color:#0e1622d9;border-color:#3db4f259}.al-card .al-select.al-status-select:hover,.al-card .al-select.al-status-select:focus{border-color:#3db4f2}.al-card .al-card-progress-bar{background:#ffffff0f;height:3px;position:absolute;bottom:0;left:0;right:0}.al-card .al-card-progress-bar .al-card-progress-fill{background:linear-gradient(90deg,#3db4f2,#22c55e);height:100%;transition:width .3s;box-shadow:0 0 8px #3db4f2b3}@media (width<=768px){.al-card{padding:12px 14px 14px}.al-card .al-card-row{flex-direction:column;align-items:stretch;gap:10px}.al-card .al-left{width:100%}.al-card .al-left .al-title-meta-wrap{flex-wrap:wrap;align-items:center;gap:8px;width:100%;display:flex}.al-card .al-left .al-title-meta-wrap .al-badge{flex:auto;min-width:130px;max-width:none}.al-card .al-left .al-title-meta-wrap .al-status-select{flex:none}.al-card .al-left .al-title-meta-wrap .al-ep-chip{width:auto;max-width:100%}.al-card .al-right{width:100%}.al-card .al-controls-group{flex-wrap:wrap;align-items:center;gap:8px;width:100%;display:flex}.al-card .al-controls-group .al-buddy-cluster{box-sizing:border-box;justify-content:space-between;align-items:center;gap:8px;width:100%;height:auto;min-height:38px;padding:4px 6px;display:flex}.al-card .al-controls-group .al-buddy-cluster .al-buddy-box{flex:1;min-width:0}.al-card .al-controls-group .al-buddy-cluster .al-buddy-box .al-buddy-picker-wrap{width:100%}.al-card .al-controls-group .al-buddy-cluster .al-buddy-box .al-buddy-picker-wrap .al-buddy-btn{justify-content:flex-start;width:100%}.al-card .al-controls-group .al-score-select{flex:auto;min-width:90px;height:36px}.al-card .al-controls-group .al-bar-del-btn{flex-shrink:0;width:36px;height:36px}}.al-avatar{object-fit:cover;border:2px solid #3db4f2;border-radius:50%;width:36px;height:36px;transition:transform .2s,box-shadow .2s;box-shadow:0 0 12px #3db4f266}.al-avatar:hover{transform:scale(1.05);box-shadow:0 0 18px #3db4f2a6}.al-avatar-mobile{object-fit:cover;cursor:pointer;border:2px solid #3db4f2;border-radius:50%;width:32px;height:32px;box-shadow:0 0 10px #3db4f259}.al-dropdown-menu{-webkit-backdrop-filter:blur(20px);box-sizing:border-box;min-width:220px;max-width:calc(100vw - 24px);max-height:calc(100vh - 75px);display:none;overflow:hidden auto;box-shadow:0 16px 45px #000000d9,0 0 20px #3db4f226;background:linear-gradient(135deg,#111a26fa 0%,#080f18fc 100%)!important;border:1px solid #3db4f24d!important;border-radius:14px!important;padding:0!important}.al-dropdown-menu.show{display:block!important}.al-dropdown-menu:before{content:\"\";background:0 0;height:16px;position:absolute;top:-15px;left:0;right:0}.al-dropdown-menu .al-dropdown-header{background:#ffffff08;border-bottom:1px solid #ffffff14;padding:14px 16px 12px}.al-dropdown-menu .al-dropdown-header .al-user-info{align-items:center;gap:10px;display:flex}.al-dropdown-menu .al-dropdown-header .al-dropdown-avatar{object-fit:cover;border:2px solid #3db4f2;border-radius:50%;width:40px;height:40px;box-shadow:0 0 12px #3db4f273}.al-dropdown-menu .al-dropdown-header .al-user-text{flex-direction:column;display:flex;overflow:hidden}.al-dropdown-menu .al-dropdown-header .al-username{color:#fff;white-space:nowrap;text-overflow:ellipsis;max-width:145px;font-size:14px;font-weight:700;overflow:hidden}.al-dropdown-menu .al-dropdown-header .al-user-status{color:#94a3b8;align-items:center;gap:6px;font-size:11px;font-weight:600;display:flex}.al-dropdown-menu .al-dropdown-header .al-status-dot{background:#22c55e;border-radius:50%;width:7px;height:7px;box-shadow:0 0 8px #22c55e}.al-dropdown-menu .al-dropdown-body{padding:6px 0}.al-dropdown-menu .al-dropdown-footer{background:#00000040;border-top:1px solid #ffffff14;padding:6px 8px}.al-dropdown-menu .al-dropdown-item{color:#cbd5e1;cursor:pointer;background:0 0;border:none;justify-content:space-between;align-items:center;width:100%;padding:10px 16px;font-size:13px;font-weight:500;text-decoration:none;transition:all .15s;display:flex}.al-dropdown-menu .al-dropdown-item .al-item-left{align-items:center;gap:10px;display:flex}.al-dropdown-menu .al-dropdown-item .al-item-ext{color:#64748b;transition:color .15s}.al-dropdown-menu .al-dropdown-item:hover{text-decoration:none;color:#fff!important;background:#3db4f224!important}.al-dropdown-menu .al-dropdown-item:hover .al-item-ext{color:#3db4f2}.al-dropdown-menu .al-dropdown-item.danger{color:#fca5a5;background:#ef444414;border:1px solid #ef444438;border-radius:8px;margin:2px 0;padding:8px 12px;font-weight:600}.al-dropdown-menu .al-dropdown-item.danger:hover{box-shadow:0 0 14px #ef444440;color:#fff!important;background:#ef444438!important;border-color:#ef444480!important}.episode-wrapper .episode-item.al-done:not(.active):not(.al-tracked){background-color:#3db4f21f!important;border:1px solid #3db4f24d!important}.episode-wrapper .episode-item.al-done:not(.active):not(.al-tracked) a{color:#93c5fd!important}.episode-wrapper .episode-item.al-tracked{position:relative;border:2px solid #3db4f2!important}.episode-wrapper .episode-item.al-tracked:not(.active){background-color:#3db4f233!important}.episode-wrapper .episode-item.al-tracked:not(.active) a{color:#3db4f2!important;font-weight:700!important}.episode-wrapper .episode-item.al-tracked:after{content:\"✓\";color:#06101e;z-index:6;background:#3db4f2;border-radius:50%;justify-content:center;align-items:center;width:15px;height:15px;font-size:10px;font-weight:900;display:flex;position:absolute;top:-6px;right:-6px;box-shadow:0 2px 6px #0009}.episode-wrapper .episode-item.seen:not(.active):not(.al-tracked):not(.al-done){background-color:var(--color-background-1,#191d26)!important;color:inherit!important}.episode-wrapper .episode-item.active{z-index:10!important;background:#007bff!important;transform:scale(1.12)!important;box-shadow:0 0 16px #007bfff2,0 0 0 2px #fff!important}.episode-wrapper .episode-item.active a{color:#fff!important;font-weight:900!important}.al-toast{width:auto!important;max-width:380px!important;height:auto!important;min-height:unset!important;color:#fff!important;z-index:100000!important;pointer-events:none!important;background:linear-gradient(135deg,#102538 0%,#091724 100%)!important;border:1px solid #3db4f259!important;border-left:4px solid #3db4f2!important;border-radius:9px!important;padding:12px 20px!important;font-size:13px!important;font-weight:600!important;line-height:1.4!important;position:fixed!important;inset:auto 24px 24px auto!important;transform:none!important;box-shadow:0 10px 30px #0009,0 0 15px #3db4f233!important}.al-toast.al-toast-alert,.al-toast.alert{border-color:#ef444473!important;box-shadow:0 10px 30px #0009,0 0 15px #ef444440!important}@keyframes al-pulse-border{0%,to{border-color:#3db4f273;box-shadow:0 0 12px #3db4f233}50%{border-color:#3db4f2cc;box-shadow:0 0 20px #3db4f273}}.al-home-shelf-row{width:100%;margin-top:10px;margin-bottom:24px}.al-home-shelf{-webkit-backdrop-filter:blur(16px);background:#0e16228c;border:1px solid #ffffff14;border-radius:14px;width:100%;padding:16px 20px;box-shadow:0 8px 32px #00000040}@media (width<=576px){.al-home-shelf{padding:14px 12px}}.al-shelf-header{border-bottom:1px solid #ffffff0f;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;display:flex}.al-shelf-title-wrap{align-items:center;gap:10px;display:flex}.al-shelf-title-wrap .al-shelf-icon{color:#3db4f2;background:#3db4f226;border-radius:8px;justify-content:center;align-items:center;width:28px;height:28px;display:flex;box-shadow:0 0 10px #3db4f240}.al-shelf-title-wrap .al-shelf-title{letter-spacing:.6px;text-transform:uppercase;color:#fff;margin:0;font-size:1.15rem;font-weight:800;line-height:1}.al-shelf-title-wrap .al-shelf-count{color:#94a3b8;background:#ffffff14;border:1px solid #ffffff0f;border-radius:10px;justify-content:center;align-items:center;padding:2px 8px;font-size:11px;font-weight:700;display:inline-flex}.al-shelf-controls{flex-wrap:wrap;align-items:center;gap:8px;display:flex}.al-shelf-pref-btn{color:#94a3b8;cursor:pointer;background:#ffffff0d;border:1px solid #ffffff14;border-radius:8px;flex-shrink:0;justify-content:center;align-items:center;width:28px;height:28px;transition:all .2s;display:flex}.al-shelf-pref-btn:hover{color:#3db4f2;background:#3db4f226;border-color:#3db4f259}.al-shelf-chip-btn{cursor:pointer;-webkit-user-select:none;user-select:none;color:#94a3b8;white-space:nowrap;background:#ffffff0d;border:1px solid #ffffff14;border-radius:20px;align-items:center;gap:5px;padding:4px 10px;font-size:11px;font-weight:600;transition:all .2s cubic-bezier(.16,1,.3,1);display:inline-flex}.al-shelf-chip-btn svg{flex-shrink:0;transition:transform .2s}.al-shelf-chip-btn .al-chip-count{color:#cbd5e1;background:#ffffff1a;border-radius:10px;margin-left:2px;padding:1px 5px;font-size:9.5px;font-weight:800}.al-shelf-chip-btn:hover{color:#f1f5f9;background:#ffffff1a;border-color:#fff3}.al-shelf-chip-btn.is-active{color:#38bdf8;background:#3db4f22e;border-color:#3db4f280;box-shadow:0 0 10px #3db4f240}.al-shelf-chip-btn.is-active .al-chip-count{color:#e0f2fe;background:#3db4f259}.al-shelf-chip-btn.is-sync.is-active{color:#38bdf8;background:#0ea5e92e;border-color:#0ea5e980}.al-shelf-chip-btn.is-sync.is-active .al-chip-count{color:#e0f2fe;background:#0ea5e959}.al-shelf-carousel-wrap{width:100%;position:relative}.al-shelf-track{scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#3db4f24d transparent;gap:16px;padding:4px 2px 14px;display:flex;overflow-x:auto}.al-shelf-track::-webkit-scrollbar{height:6px}.al-shelf-track::-webkit-scrollbar-track{background:#ffffff08;border-radius:4px}.al-shelf-track::-webkit-scrollbar-thumb{background:#3db4f24d;border-radius:4px}.al-shelf-track::-webkit-scrollbar-thumb:hover{background:#3db4f299}.al-shelf-card{scroll-snap-align:start;cursor:pointer;background:#121a26d9;border:1px solid #ffffff12;border-radius:12px;flex-direction:column;flex:0 0 175px;width:175px;transition:transform .22s cubic-bezier(.16,1,.3,1),box-shadow .22s,border-color .22s;display:flex;position:relative;overflow:hidden}@media (width<=576px){.al-shelf-card{flex:0 0 170px;width:170px}}.al-shelf-card.al-card-loading{opacity:.65;cursor:wait;pointer-events:none}.al-shelf-card:hover{border-color:#3db4f259;transform:translateY(-4px);box-shadow:0 12px 24px #00000073}.al-shelf-card:hover .al-card-cover img{transform:scale(1.05)}.al-card-cover{aspect-ratio:2/3;background:#090e16;border-radius:12px 12px 0 0;width:100%;position:relative;overflow:hidden}.al-card-cover img{object-fit:cover;width:100%;height:100%;transition:transform .3s;display:block}.al-card-badge-top-left{z-index:3;position:absolute;top:8px;left:8px}.al-card-badge-top-right{z-index:3;position:absolute;top:8px;right:8px}.al-card-al-link{color:#94a3b8;-webkit-backdrop-filter:blur(6px);background:#0a0e16bf;border:1px solid #ffffff26;border-radius:6px;justify-content:center;align-items:center;width:24px;height:24px;text-decoration:none;transition:all .2s;display:flex}.al-card-al-link:hover{background:#02a9ff40;border-color:#02a9ff;transform:scale(1.08);box-shadow:0 0 10px #02a9ff80}.al-card-cover-overlay{z-index:2;background:linear-gradient(#0000 0%,#090e1699 40%,#090e16f2 100%);flex-direction:column;gap:4px;padding:24px 8px 6px;display:flex;position:absolute;bottom:0;left:0;right:0}.al-card-progress-text{color:#e2e8f0;text-shadow:0 1px 3px #000c;justify-content:space-between;align-items:center;font-size:10px;font-weight:700;display:flex}.al-card-progress-bar{background:#ffffff2e;border-radius:2px;width:100%;height:4px;overflow:hidden}.al-card-progress-fill{background:#3db4f2;border-radius:2px;height:100%;transition:width .3s}.al-card-body{background:#0e141e99;flex-direction:column;flex:1;justify-content:space-between;gap:10px;padding:10px 10px 12px;display:flex}.al-card-title{color:#f1f5f9;-webkit-line-clamp:2;text-overflow:ellipsis;-webkit-box-orient:vertical;min-height:34px;font-size:12.5px;font-weight:600;line-height:1.35;text-decoration:none;transition:color .2s;display:-webkit-box;overflow:hidden}.al-card-title:hover{color:#3db4f2}.al-card-actions{width:100%}.al-card-btn{cursor:pointer;border:none;border-radius:6px;justify-content:center;align-items:center;gap:5px;width:100%;min-height:30px;padding:7px 10px;font-size:12px;font-weight:700;text-decoration:none;transition:all .2s;display:flex}.al-card-btn.al-btn-play{color:#fff;background:#3db4f2;box-shadow:0 2px 8px #3db4f24d}.al-card-btn.al-btn-play:hover{color:#fff;background:#2ca5e6;box-shadow:0 4px 14px #3db4f280}.al-card-btn.al-btn-caughtup{color:#4ade80;background:#22c55e1f;border:1px solid #22c55e4d}.al-card-btn.al-btn-caughtup:hover{color:#86efac;background:#22c55e38;border-color:#22c55e80}.al-card-btn.al-btn-secondary{color:#94a3b8;background:#ffffff0d;border:1px solid #ffffff14}.al-card-btn.al-btn-secondary:hover{color:#e2e8f0;background:#ffffff1a}.al-shelf-empty{text-align:center;color:#94a3b8;background:#ffffff05;border:1px dashed #ffffff14;border-radius:10px;flex-direction:column;justify-content:center;align-items:center;gap:12px;padding:36px 16px;display:flex}.al-shelf-empty .al-shelf-empty-icon{color:#475569}.al-shelf-empty .al-shelf-empty-title{color:#cbd5e1;font-size:14px;font-weight:700}.al-shelf-empty .al-shelf-empty-desc{color:#64748b;max-width:360px;font-size:12px;line-height:1.5}.al-shelf-skeleton{aspect-ratio:2/3;background:linear-gradient(90deg,#ffffff08 25%,#ffffff14 50%,#ffffff08 75%) 0 0/200% 100%;border-radius:12px;flex:0 0 175px;width:175px;animation:1.5s infinite al-skeleton-shimmer}@media (width<=576px){.al-shelf-skeleton{flex:0 0 150px;width:150px}}@keyframes al-skeleton-shimmer{0%{background-position:200% 0}to{background-position:-200% 0}}.al-skeleton-pill{background:linear-gradient(90deg,#ffffff0a 25%,#ffffff17 50%,#ffffff0a 75%) 0 0/200% 100%;border-radius:8px;animation:1.5s infinite al-skeleton-shimmer}.al-spin{animation:.8s linear infinite al-spin;display:inline-block}@keyframes al-spin{0%{transform:rotate(0)}to{transform:rotate(360deg)}}.al-agent-candidate{border-radius:8px;transition:all .2s;animation:2s ease-in-out infinite al-candidate-pulse;position:relative;background:#3db4f21f!important;outline:2px solid #3db4f2!important}@keyframes al-candidate-pulse{0%,to{box-shadow:0 0 0 2px #3db4f2b3,0 0 14px #3db4f24d}50%{box-shadow:0 0 0 3px #3db4f2,0 0 22px #3db4f28c}}.al-agent-countdown-badge{box-sizing:border-box;color:#e2e8f0;pointer-events:none;background:#3db4f22e;border:1px solid #3db4f266;border-radius:6px;justify-content:space-between;align-items:center;width:100%;margin-top:6px;padding:4px 10px;font-size:11px;display:flex}.al-agent-countdown-badge strong{color:#3db4f2;font-weight:700}.al-agent-countdown-badge .al-agent-cancel-hint{color:#94a3b8;font-size:10px}.search-backdrop{z-index:99999!important;pointer-events:auto!important;justify-content:center!important;width:100vw!important;height:100vh!important;display:flex!important;position:fixed!important;top:0!important;left:0!important}.search-backdrop.show{opacity:1!important;visibility:visible!important}.search-backdrop .search-container{opacity:1!important;z-index:100000!important;display:block!important}.search-backdrop .results{opacity:1!important;z-index:100001!important;display:block!important}.al-vt-sync-badge{-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);z-index:10;background:#0f172ad9;border-bottom:1px solid #3db4f240;justify-content:center;align-items:center;padding:6px 12px;display:flex}.al-vt-sync-badge .al-vt-inner{background:#1e293bb3;border:1px solid #3db4f24d;border-radius:9999px;align-items:center;gap:10px;padding:3px 10px;display:inline-flex}.al-vt-sync-badge .al-vt-info{color:#e2e8f0;align-items:center;gap:6px;font-size:11px;display:inline-flex}.al-vt-sync-badge .al-vt-info strong{color:#38bdf8;font-weight:700}.al-vt-sync-badge .al-vt-sync-btn{cursor:pointer;background:linear-gradient(135deg,#38bdf8 0%,#0284c7 100%);border:none;border-radius:9999px;align-items:center;gap:4px;padding:2px 8px;font-size:11px;font-weight:800;transition:all .15s;display:inline-flex;color:#06101e!important}.al-vt-sync-badge .al-vt-sync-btn:hover{filter:brightness(1.1);transform:scale(1.04)}video-player,.video-player{z-index:25;position:relative}.overview>.row:has(#al-control-bar){z-index:25;position:relative}#al-control-bar{z-index:30!important;position:relative!important}#al-control-bar.has-open-popover{z-index:99999!important}.al-elevated-stack{z-index:99999!important;position:relative!important}.al-buddy-btn{color:#e2e8f0;cursor:pointer;box-sizing:border-box;background:#0e1622d9;border:1px solid #ffffff29;border-radius:9px;outline:none;align-items:center;gap:7px;height:36px;padding:0 12px 0 10px;transition:all .2s cubic-bezier(.4,0,.2,1);display:inline-flex}.al-buddy-btn:hover{background:#142032f2;border-color:#38bdf8;box-shadow:0 0 12px #3db4f240}.al-buddy-btn.is-active{background:#0e1a2af2;border-color:#3db4f280;padding:0 10px 0 6px}.al-buddy-btn.is-active:hover{border-color:#38bdf8;box-shadow:0 0 14px #3db4f259}.al-buddy-btn .al-buddy-avatar-chip{object-fit:cover;border:1.5px solid #38bdf8;border-radius:50%;flex-shrink:0;width:22px;height:22px}.al-buddy-btn .al-buddy-name-chip{color:#38bdf8;text-overflow:ellipsis;white-space:nowrap;max-width:105px;font-size:12px;font-weight:700;overflow:hidden}.al-buddy-btn .al-buddy-icon{color:#94a3b8;flex-shrink:0}.al-buddy-btn .al-buddy-label{color:#cbd5e1;font-size:13px;font-weight:600}.al-buddy-btn .al-buddy-chevron{color:#94a3b8;flex-shrink:0;transition:transform .2s}.al-buddy-picker-wrap,.al-buddy-box{display:inline-block;position:relative}.al-buddy-picker-wrap .al-buddy-popover,.al-buddy-box .al-buddy-popover{-webkit-backdrop-filter:blur(24px);box-sizing:border-box;border:1px solid #3db4f259;border-radius:12px;width:280px;padding:8px;position:absolute;top:calc(100% + 6px);right:0;box-shadow:0 20px 50px #000000f2,0 0 20px #3db4f233;z-index:999999!important;background:#0d1624!important}@media (width<=576px){.al-buddy-picker-wrap .al-buddy-popover,.al-buddy-box .al-buddy-popover{width:min(290px,100vw - 32px);right:-10px}}.al-buddy-pop-search-box{background:#ffffff0f;border:1px solid #ffffff24;border-radius:8px;align-items:center;gap:8px;margin-bottom:6px;padding:7px 10px;transition:all .2s;display:flex}.al-buddy-pop-search-box:focus-within{background:#ffffff17;border-color:#38bdf8;box-shadow:0 0 10px #38bdf840}.al-buddy-pop-search-box .al-buddy-search-icon{color:#94a3b8;flex-shrink:0}.al-buddy-pop-search-box .al-buddy-search-input{width:100%;color:#f8fafc!important;box-shadow:none!important;background:0 0!important;border:none!important;outline:none!important;padding:0!important;font-size:12.5px!important;font-weight:500!important}.al-buddy-pop-search-box .al-buddy-search-input::placeholder{color:#64748b}.al-buddy-pop-options{flex-direction:column;gap:2px;max-height:220px;display:flex;overflow-y:auto}.al-buddy-pop-options::-webkit-scrollbar{width:4px}.al-buddy-pop-options::-webkit-scrollbar-thumb{background:#3db4f24d;border-radius:4px}.al-buddy-pop-options .al-buddy-loading,.al-buddy-pop-options .al-buddy-empty{color:#94a3b8;text-align:center;padding:14px;font-size:12px}.al-buddy-pop-options .al-buddy-option{cursor:pointer;text-align:left;box-sizing:border-box;background:0 0;border:1px solid #0000;border-radius:8px;align-items:center;gap:9px;width:100%;padding:7px 9px;transition:all .15s;display:flex}.al-buddy-pop-options .al-buddy-option:hover{background:#38bdf81f;border-color:#38bdf840}.al-buddy-pop-options .al-buddy-option.selected{background:#38bdf82e;border-color:#38bdf866}.al-buddy-pop-options .al-buddy-option.selected .al-buddy-opt-name{color:#38bdf8;font-weight:700}.al-buddy-pop-options .al-buddy-option .al-buddy-opt-avatar{object-fit:cover;border:1px solid #3db4f259;border-radius:50%;flex-shrink:0;width:24px;height:24px}.al-buddy-pop-options .al-buddy-option .al-buddy-opt-name{color:#e2e8f0;text-overflow:ellipsis;white-space:nowrap;flex:1;font-size:12.5px;font-weight:600;overflow:hidden}.al-buddy-pop-options .al-buddy-option .al-buddy-opt-badge{color:#38bdf8;text-transform:uppercase;letter-spacing:.3px;background:#38bdf82e;border-radius:4px;padding:2px 6px;font-size:9px;font-weight:800}.al-buddy-pop-options .al-buddy-option .al-buddy-opt-check{color:#38bdf8;flex-shrink:0}.al-buddy-pop-footer{border-top:1px solid #ffffff14;margin-top:6px;padding-top:6px}.al-buddy-pop-footer .al-buddy-pop-remove{color:#ef4444;cursor:pointer;background:#ef444414;border:1px solid #ef444440;border-radius:8px;justify-content:center;align-items:center;gap:6px;width:100%;padding:6px;font-size:11.5px;font-weight:600;transition:all .15s;display:flex}.al-buddy-pop-footer .al-buddy-pop-remove:hover{color:#fff;background:#ef444433;border-color:#ef4444}.al-card-buddy-overlay{z-index:3;-webkit-backdrop-filter:blur(10px);box-sizing:border-box;background:#0a101ad9;border:1px solid #38bdf866;border-radius:9999px;justify-content:space-between;align-items:center;gap:6px;padding:3px 8px 3px 4px;display:flex;position:absolute;top:38px;left:8px;right:8px;box-shadow:0 4px 12px #00000080}.al-card-buddy-overlay .al-card-buddy-left{flex:1;align-items:center;gap:6px;min-width:0;display:flex;overflow:hidden}.al-card-buddy-overlay .al-card-buddy-avatar{object-fit:cover!important;border:1.5px solid #38bdf8!important;border-radius:50%!important;flex-shrink:0!important;width:20px!important;min-width:20px!important;max-width:20px!important;height:20px!important;min-height:20px!important;max-height:20px!important;display:block!important}.al-card-buddy-overlay .al-card-buddy-name{color:#38bdf8;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;font-size:11px;font-weight:700;overflow:hidden}.al-card-buddy-overlay .al-card-buddy-status{color:#f1f5f9;white-space:nowrap;background:#ffffff1f;border-radius:9999px;flex-shrink:0;margin-left:auto;padding:1.5px 6px;font-size:10px;font-weight:800}.al-btn-buddy-sync{cursor:pointer;box-sizing:border-box;border:none;justify-content:center;align-items:center;gap:5px;width:100%;margin-bottom:6px;transition:all .15s;display:flex;box-shadow:0 0 10px #3db4f240;color:#06101e!important;background:linear-gradient(135deg,#3db4f2 0%,#0284c7 100%)!important;border-radius:6px!important;padding:5px 8px!important;font-size:11px!important;font-weight:800!important}.al-btn-buddy-sync:hover{filter:brightness(1.15);transform:translateY(-1px);box-shadow:0 0 12px #3db4f273}.al-btn-buddy-sync:active{transform:translateY(0)}.al-buddy-picker-wrap{align-items:center;gap:6px;display:inline-flex;position:relative}.al-pref-collapsible .al-pref-header{justify-content:space-between;align-items:center;display:flex}.al-pref-collapsible .al-pref-title-click{cursor:pointer;-webkit-user-select:none;user-select:none;flex:1;align-items:center;gap:8px;display:flex}.al-pref-collapsible .al-pref-title-click .al-pref-chevron{color:#94a3b8;justify-content:center;align-items:center;transition:transform .2s;display:inline-flex}.al-pref-collapsible:not(.is-open) .al-pref-title-click .al-pref-chevron{transform:rotate(-90deg)}.al-pref-collapsible:not(.is-open) .al-pref-sub{display:none!important}.al-pref-collapsible.is-open .al-pref-title-click .al-pref-chevron{transform:rotate(0)}.al-prefs-modal .al-pref-group,.al-prefs-modal .al-pref-group .al-pref-sub{overflow:visible!important}.al-prefs-modal .al-buddy-box{align-items:center;display:flex}.al-prefs-modal .al-buddy-box .al-buddy-btn{height:34px;padding:0 10px 0 6px;font-size:12.5px}.al-prefs-modal .al-buddy-box .al-buddy-btn .al-buddy-avatar-chip{width:22px;height:22px}#au-skip-intro-btn{display:none;z-index:2147483647!important;-webkit-backdrop-filter:blur(8px)!important;color:#fff!important;cursor:pointer!important;-webkit-user-select:none!important;user-select:none!important;pointer-events:auto!important;background:#0a101aeb!important;border:1.5px solid #3db4f2!important;border-radius:8px!important;align-items:center!important;gap:6px!important;padding:8px 16px!important;font-family:inherit!important;font-size:13px!important;font-weight:800!important;transition:transform .15s,background .15s,color .15s!important;position:absolute!important;bottom:56px!important;right:20px!important;box-shadow:0 4px 16px #0009,0 0 12px #3db4f266!important}#au-skip-intro-btn:hover{color:#06101e!important;background:#3db4f2!important;transform:scale(1.04)!important}#au-skip-intro-btn:active{transform:scale(.98)!important}.al-nav-saturn{align-items:center;margin-right:8px;display:inline-flex;position:relative}.al-nav-saturn .al-saturn-nav-avatar{transition:transform .15s}.al-nav-saturn .al-saturn-nav-avatar:hover{transform:scale(1.08)}.al-nav-saturn .al-dropdown-menu{z-index:99999;position:absolute;top:calc(100% + 10px);left:auto;right:0}.ep-tile.al-done{color:#93c5fd!important;background-color:#3db4f226!important;border-color:#3db4f266!important}.ep-tile.al-done .ep-seen{opacity:1!important;color:#3db4f2!important;display:inline-flex!important}.ep-tile.al-current{border-color:#3db4f2!important;box-shadow:0 0 10px #3db4f273!important}.al-btn-pref-action{color:#cbd5e1;cursor:pointer;background:#ffffff0f;border:1px solid #ffffff26;border-radius:6px;align-items:center;gap:5px;padding:4px 10px;font-size:11.5px;font-weight:700;transition:all .2s;display:inline-flex}.al-btn-pref-action.danger{color:#f87171;background:#ef44441f;border-color:#ef44444d}.al-btn-pref-action.danger:hover{color:#fff;background:#ef444440;border-color:#ef4444;box-shadow:0 0 10px #ef44444d}.al-cross-switch-btn{color:#38bdf8;cursor:pointer;white-space:nowrap;-webkit-backdrop-filter:blur(10px);-webkit-user-select:none;user-select:none;background:#0e1622d9;border:1px solid #3db4f259;border-radius:8px;align-items:center;gap:6px;padding:4px 10px;font-size:11.5px;font-weight:700;text-decoration:none;transition:all .2s cubic-bezier(.16,1,.3,1);display:inline-flex;box-shadow:0 2px 8px #0000004d}.al-cross-switch-btn .al-switch-icon{color:#38bdf8;align-items:center;display:inline-flex}.al-cross-switch-btn .al-switch-label{color:#f1f5f9}.al-cross-switch-btn .al-switch-ep{color:#38bdf8;background:#3db4f233;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:800}.al-cross-switch-btn .al-switch-ext{opacity:.7;transition:transform .2s,opacity .2s}.al-cross-switch-btn:hover{color:#fff;background:linear-gradient(135deg,#3db4f240,#0284c759);border-color:#3db4f2;transform:translateY(-1px);box-shadow:0 0 14px #3db4f273}.al-cross-switch-btn:hover .al-switch-ext{opacity:1;transform:translate(1px,-1px)}.al-cross-switch-btn:active{transform:translateY(0)}.al-cross-switch-btn.is-loading{opacity:.75;pointer-events:none}.al-cross-switch-btn.for-saturn{color:#c084fc;background:#9333ea29;border:1px solid #a855f773;box-shadow:0 0 10px #a855f733}.al-cross-switch-btn.for-saturn .al-switch-icon{color:#c084fc}.al-cross-switch-btn.for-saturn .al-switch-label{color:#f3e8ff}.al-cross-switch-btn.for-saturn .al-switch-ep{color:#f3e8ff;background:#a855f740}.al-cross-switch-btn.for-saturn .al-switch-ext{color:#c084fc}.al-cross-switch-btn.for-saturn:hover{color:#fff;background:linear-gradient(135deg,#a855f752,#7e22ce73);border-color:#c084fc;transform:translateY(-1px);box-shadow:0 0 18px #a855f78c}.al-cross-switch-btn.for-unity{color:#38bdf8;background:#0284c729;border:1px solid #38bdf873;margin-left:6px;box-shadow:0 0 10px #38bdf833}.al-cross-switch-btn.for-unity .al-switch-icon{color:#38bdf8}.al-cross-switch-btn.for-unity .al-switch-label{color:#f0f9ff}.al-cross-switch-btn.for-unity .al-switch-ep{color:#e0f2fe;background:#38bdf840}.al-cross-switch-btn.for-unity .al-switch-ext{color:#38bdf8}.al-cross-switch-btn.for-unity:hover{color:#fff;background:linear-gradient(135deg,#38bdf852,#0284c773);border-color:#38bdf8;transform:translateY(-1px);box-shadow:0 0 18px #38bdf88c}#video-top{position:relative!important}#video-top .al-cross-switch-btn.for-saturn{z-index:5;margin:0;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}#video-top .al-cross-switch-btn.for-saturn:hover{transform:translate(-50%,calc(-50% - 1px))}#video-top .al-cross-switch-btn.for-saturn:active{transform:translate(-50%,-50%)}@media (width<=576px){#video-top .al-cross-switch-btn.for-saturn{margin-left:auto;position:static;transform:none}#video-top .al-cross-switch-btn.for-saturn:hover{transform:translateY(-1px)}#video-top .al-cross-switch-btn.for-saturn:active{transform:translateY(0)}}");
 	var Storage = {
 		get: (k) => {
 			let raw = null;
@@ -132,7 +162,7 @@
 			setTimeout(() => el.remove(), 300);
 		}, duration);
 	}
-	if (window.self === window.top && !window.__AU_LOGGER_INIT__) {
+	if (typeof window !== "undefined" && window.self === window.top && !window.__AU_LOGGER_INIT__) {
 		window.__AU_LOGGER_INIT__ = true;
 		window.addEventListener("message", (e) => {
 			if (e.data?.type === "AU_LOG_BRIDGE") {
@@ -147,7 +177,7 @@
 		});
 	}
 	function createLogger(prefix = "[AU]") {
-		const isTop = window.self === window.top;
+		const isTop = typeof window !== "undefined" ? window.self === window.top : true;
 		function logMessage(level, msg, data) {
 			if (isTop) {
 				const tag = `%c${prefix}%c`;
@@ -198,7 +228,8 @@
 					body: JSON.stringify({
 						query,
 						variables
-					})
+					}),
+					keepalive: true
 				})).json();
 				if (errors) {
 					const first = errors[0];
@@ -220,8 +251,10 @@
 			silent: true,
 			onAuthError
 		}),
-		getMedia: (search) => AniListAPI.call(`query($s:String){Media(search:$s,type:ANIME){id idMal episodes title{romaji english}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}`, { s: search }, { silent: true }),
-		getMediaById: (id) => AniListAPI.call(`query($id:Int){Media(id:$id,type:ANIME){id idMal episodes title{romaji english}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}`, { id: Number(id) }, { silent: true }),
+		getMedia: (search) => AniListAPI.call(`query($s:String){Media(search:$s,type:ANIME){id idMal episodes format status title{romaji english userPreferred}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}`, { s: search }, { silent: true }),
+		searchMedia: (search) => AniListAPI.call(`query($s:String){Page(page:1,perPage:5){media(search:$s,type:ANIME,sort:SEARCH_MATCH){id idMal episodes format status title{romaji english userPreferred}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}}`, { s: search }, { silent: true }),
+		getMediaById: (id) => AniListAPI.call(`query($id:Int){Media(id:$id,type:ANIME){id idMal episodes format status title{romaji english userPreferred}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}`, { id: Number(id) }, { silent: true }),
+		getMediaByMalId: (idMal) => AniListAPI.call(`query($id:Int){Media(idMal:$id,type:ANIME){id idMal episodes format status title{romaji english userPreferred}mediaListEntry{id status score progress notes repeat startedAt{year month day}completedAt{year month day}}}}`, { id: Number(idMal) }, { silent: true }),
 		getUserCollection: (userId) => AniListAPI.call(`query($u:Int){MediaListCollection(userId:$u,type:ANIME){lists{entries{id mediaId status score progress notes repeat startedAt{year month day}completedAt{year month day} media{id idMal episodes title{romaji english}}}}}}`, { u: userId }, { silent: true }),
 		getUserWatching: (userId) => AniListAPI.call(`query($u:Int){MediaListCollection(userId:$u,type:ANIME,status_in:[CURRENT,REPEATING],sort:UPDATED_TIME_DESC){lists{entries{id mediaId status score progress notes repeat startedAt{year month day}completedAt{year month day}updatedAt media{id idMal episodes status siteUrl bannerImage coverImage{extraLarge large medium}title{romaji english}nextAiringEpisode{episode airingAt timeUntilAiring}}}}}}`, { u: userId }, { silent: true }),
 		getUserFollowing: (userId, page = 1) => AniListAPI.call(`query($u:Int!,$p:Int){Page(page:$p,perPage:50){pageInfo{hasNextPage} following(userId:$u){id name avatar{medium}}}}`, {
@@ -298,40 +331,35 @@
 		cy: "12",
 		r: "10"
 	}], ["path", { d: "M12 6v6l4 2" }]];
-	var Ellipsis = [
-		["circle", {
-			cx: "12",
-			cy: "12",
-			r: "1"
-		}],
-		["circle", {
-			cx: "19",
-			cy: "12",
-			r: "1"
-		}],
-		["circle", {
-			cx: "5",
-			cy: "12",
-			r: "1"
-		}]
-	];
 	var ExternalLink = [
 		["path", { d: "M15 3h6v6" }],
 		["path", { d: "M10 14 21 3" }],
 		["path", { d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" }]
 	];
-	var Eye = [["path", { d: "M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" }], ["circle", {
-		cx: "12",
-		cy: "12",
-		r: "3"
-	}]];
 	var FastForward = [["path", { d: "M12 6a2 2 0 0 1 3.414-1.414l6 6a2 2 0 0 1 0 2.828l-6 6A2 2 0 0 1 12 18z" }], ["path", { d: "M2 6a2 2 0 0 1 3.414-1.414l6 6a2 2 0 0 1 0 2.828l-6 6A2 2 0 0 1 2 18z" }]];
+	var Globe = [
+		["circle", {
+			cx: "12",
+			cy: "12",
+			r: "10"
+		}],
+		["path", { d: "M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" }],
+		["path", { d: "M2 12h20" }]
+	];
 	var KeyRound = [["path", { d: "M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" }], ["circle", {
 		cx: "16.5",
 		cy: "7.5",
 		r: ".5",
 		fill: "currentColor"
 	}]];
+	var Languages = [
+		["path", { d: "m5 8 6 6" }],
+		["path", { d: "m4 14 6-6 2-3" }],
+		["path", { d: "M2 5h12" }],
+		["path", { d: "M7 2h1" }],
+		["path", { d: "m22 22-5-10-5 10" }],
+		["path", { d: "M14 18h6" }]
+	];
 	var Link = [["path", { d: "M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" }], ["path", { d: "M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" }]];
 	var LoaderCircle = [["path", { d: "M21 12a9 9 0 1 1-6.219-8.56" }]];
 	var LogOut = [
@@ -341,12 +369,6 @@
 	];
 	var Play = [["path", { d: "M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" }]];
 	var Plus = [["path", { d: "M5 12h14" }], ["path", { d: "M12 5v14" }]];
-	var RefreshCcw = [
-		["path", { d: "M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" }],
-		["path", { d: "M3 3v5h5" }],
-		["path", { d: "M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" }],
-		["path", { d: "M16 16h5v5" }]
-	];
 	var RotateCcw = [["path", { d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" }], ["path", { d: "M3 3v5h5" }]];
 	var Search = [["path", { d: "m21 21-4.34-4.34" }], ["circle", {
 		cx: "11",
@@ -372,6 +394,13 @@
 		["path", { d: "M3 6h18" }],
 		["path", { d: "M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" }]
 	];
+	var Tv = [["path", { d: "m17 2-5 5-5-5" }], ["rect", {
+		width: "20",
+		height: "15",
+		x: "2",
+		y: "7",
+		rx: "2"
+	}]];
 	var User = [["path", { d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" }], ["circle", {
 		cx: "12",
 		cy: "7",
@@ -556,20 +585,109 @@
 			if (e.key === "Enter") modal.querySelector("#al-m-ok")?.click();
 		});
 	};
-	function cleanTitle(title) {
+	function cleanTitle$1(title) {
 		if (!title) return "";
-		return title.replace(/\s*\((ITA|SUB|SUB ITA|DUB|ITA SUB|OVA|TV)\)/gi, "").replace(/\s+(ITA|SUB|DUB)$/gi, "").replace(/\s+\d+(?:st|nd|rd|th)\s+Season/gi, "").replace(/\s+Season\s+\d+/gi, "").replace(/\s+\d+-nensei-hen.*/gi, "").replace(/:\s*2nd\s*&\s*3rd\s*STAGE.*/gi, "").trim();
+		return title.replace(/\s*\((ITA|SUB|SUB ITA|DUB|ITA SUB|OVA|TV)\)/gi, "").replace(/\s+(ITA|SUB|DUB)$/gi, "").replace(/\[[^\]]+\]/g, "").trim();
 	}
-	function generateSearchCandidates(media) {
+	function extractSeason(title) {
+		if (!title) return 1;
+		const t = title.toLowerCase();
+		const seasonMatch = t.match(/\b(?:season|stagione)\s*(\d+)\b/i) || t.match(/\b(\d+)(?:st|nd|rd|th)\s+season\b/i);
+		if (seasonMatch) return parseInt(seasonMatch[1], 10);
+		if (/\b(?:second\s+season|2nd\s+season)\b/i.test(t)) return 2;
+		if (/\b(?:third\s+season|3rd\s+season)\b/i.test(t)) return 3;
+		if (/\b(?:fourth\s+season|4th\s+season)\b/i.test(t)) return 4;
+		if (/\b(?:final\s+season)\b/i.test(t)) return 4;
+		if (/\bii\b/i.test(t)) return 2;
+		if (/\biii\b/i.test(t)) return 3;
+		if (/\biv\b/i.test(t)) return 4;
+		const seasonBeforePart = t.match(/\b(\d+)\s+(?:part|parte)\s+\d+\b/i);
+		if (seasonBeforePart) return parseInt(seasonBeforePart[1], 10);
+		const partMatch = t.match(/\b(?:part|parte)\s*(\d+)\b/i);
+		if (partMatch) return parseInt(partMatch[1], 10);
+		const trailingMatch = t.replace(/\s*\((?:ita|sub|dub|sub ita)\)/gi, "").trim().match(/(?:^|\s+)(\d+)$/);
+		if (trailingMatch) {
+			const n = parseInt(trailingMatch[1], 10);
+			if (n > 0 && n <= 20) return n;
+		}
+		return 1;
+	}
+	function scoreSearchResult(result, media, isDubPref = false) {
+		if (!result || !media) return -999;
+		let score = 0;
+		const rTitle = result.title || result.title_eng || "";
+		const rUrl = result.url || result.slug || "";
+		const isDub = result.dub === 1 || rTitle.includes("(ITA)") || rUrl.includes("-ita-") || rUrl.endsWith("-ita");
+		if (isDubPref) {
+			if (isDub) score += 30;
+			else score -= 20;
+		} else if (!isDub) score += 30;
+		else score -= 20;
+		let anilistId = result.anilist_id;
+		if (!anilistId && result.poster) {
+			const m = String(result.poster).match(/\/bx?(\d+)[-_.]/i);
+			if (m && m[1]) anilistId = parseInt(m[1], 10);
+		}
+		if (anilistId && anilistId === media.id) score += 200;
+		const mediaTitle = media.title?.romaji || media.title?.english || media.title?.userPreferred || "";
+		if (extractSeason(mediaTitle) === extractSeason(rTitle)) score += 100;
+		else score -= 100;
+		const lowMedia = mediaTitle.toLowerCase();
+		const lowRes = rTitle.toLowerCase();
+		for (const sub of [
+			"steel ball run",
+			"stone ocean",
+			"vento aureo",
+			"diamond is unbreakable",
+			"stardust crusaders",
+			"phantom blood",
+			"battle tendency"
+		]) if (lowMedia.includes(sub) !== lowRes.includes(sub)) score -= 150;
+		for (const word of [
+			"quest",
+			"picture drama",
+			"recap",
+			"special",
+			"drama cd"
+		]) if (lowRes.includes(word) && !lowMedia.includes(word)) score -= 100;
+		const rEps = parseInt(result.episodes || result.episodes_count, 10);
+		if (media.episodes && !isNaN(rEps) && rEps > 0) {
+			if (rEps === media.episodes) score += 35;
+			else if (Math.abs(rEps - media.episodes) <= 2) score += 15;
+		}
+		const targetYear = media.seasonYear || media.startDate?.year;
+		const rYear = parseInt(result.year || result.date, 10);
+		if (targetYear && !isNaN(rYear) && rYear > 0) {
+			if (rYear === targetYear) score += 25;
+			else if (Math.abs(rYear - targetYear) <= 1) score += 10;
+		}
+		const rType = (result.type || "").toUpperCase();
+		if (media.format && rType) {
+			if (media.format === rType) score += 20;
+			else if (media.format === "TV" && (rType === "OVA" || rType === "MOVIE" || rType === "SPECIAL")) score -= 50;
+		}
+		return score;
+	}
+	function generateSearchCandidates$1(media) {
 		if (!media) return [];
 		const candidates = [];
-		const eng = media.title?.english;
 		const rom = media.title?.romaji;
-		for (const raw of [eng, rom]) {
+		const eng = media.title?.english;
+		const pref = media.title?.userPreferred;
+		for (const raw of [
+			rom,
+			eng,
+			pref
+		]) {
 			if (!raw) continue;
-			const clean = cleanTitle(raw);
+			const clean = cleanTitle$1(raw);
 			if (clean && clean.length >= 3) candidates.push(clean);
-			const parts = raw.split(/[:\-\(\)]+/).map((p) => cleanTitle(p.trim())).filter((p) => p.length >= 3);
+			const season = extractSeason(raw);
+			if (season > 1) {
+				const baseName = clean.replace(/\b(?:second|third|fourth|\d+(?:st|nd|rd|th)?)\s+season\b/gi, "").replace(/\s+part\s+\d+/gi, "").trim();
+				if (baseName && baseName.length >= 3) candidates.push(`${baseName} ${season}`);
+			}
+			const parts = raw.split(/[:\-\(\)]+/).map((p) => cleanTitle$1(p.trim())).filter((p) => p.length >= 3);
 			candidates.push(...parts);
 			const noSeason = clean.split(/\b(?:\d+th|1st|2nd|3rd|\d+)\s+season\b/i)[0].trim();
 			if (noSeason && noSeason.length >= 3) candidates.push(noSeason);
@@ -578,92 +696,49 @@
 		}
 		return [...new Set(candidates.filter((c) => c && c.length >= 3))];
 	}
-	async function resolveAnimeUnityAnime(media, { preferredDub } = {}) {
-		if (!media?.id) return null;
-		const prefDubInt = (preferredDub || Storage.get("al_pref_language") || "sub") === "dub" ? 1 : 0;
-		const rawMap = Storage.get("al_au_map");
-		const map = rawMap && typeof rawMap === "object" && !Array.isArray(rawMap) ? rawMap : {};
-		const cached = map[media.id];
-		if (cached?.id && cached?.slug) {
-			if (cached.dub === void 0 || cached.dub === prefDubInt || cached.hasAlternativeDub === false) return cached;
+	var BaseProvider = class {
+		constructor(name) {
+			this.name = name;
 		}
-		const csrf = document.querySelector("meta[name=\"csrf-token\"]")?.content;
-		const candidates = generateSearchCandidates(media);
-		for (const query of candidates) try {
-			const res = await fetch("/livesearch", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					"X-CSRF-TOKEN": csrf || "",
-					"X-Requested-With": "XMLHttpRequest"
-				},
-				body: JSON.stringify({ title: query })
-			});
-			if (!res.ok) continue;
-			const records = (await res.json())?.records || [];
-			if (!records.length) continue;
-			const matches = records.filter((r) => r.anilist_id === media.id);
-			if (matches.length > 0) {
-				let selected = matches.find((r) => r.dub === prefDubInt);
-				if (!selected) selected = matches[0];
-				const resolved = {
-					id: selected.id,
-					slug: selected.slug,
-					dub: selected.dub,
-					title: selected.title || selected.title_eng,
-					matchingQuery: query,
-					hasAlternativeDub: matches.length > 1,
-					updatedAt: Date.now()
-				};
-				map[media.id] = resolved;
-				Storage.set("al_au_map", map);
-				return resolved;
-			}
-		} catch (err) {
-			console.warn("[animeunity-utils] /livesearch error for query:", query, err);
+		isHome() {
+			return false;
 		}
-		return null;
-	}
-	function scanAnimeUnityPageMap() {
-		const rawMap = Storage.get("al_au_map");
-		const map = rawMap && typeof rawMap === "object" && !Array.isArray(rawMap) ? rawMap : {};
-		let updated = false;
-		document.querySelectorAll("layout-items[items-json]").forEach((el) => {
-			try {
-				const raw = el.getAttribute("items-json");
-				if (!raw) return;
-				const parsed = JSON.parse(raw);
-				(Array.isArray(parsed) ? parsed : parsed?.data || []).forEach((item) => {
-					const anime = item?.anime;
-					const anilistId = anime?.anilist_id;
-					if (anilistId && anime.id && anime.slug) {
-						const epNum = parseInt(item.number, 10);
-						map[anilistId] = {
-							id: anime.id,
-							slug: anime.slug,
-							title: anime.title || anime.title_eng,
-							dub: anime.dub || 0,
-							latestEp: isNaN(epNum) ? void 0 : epNum,
-							updatedAt: Date.now()
-						};
-						updated = true;
-					}
-				});
-			} catch (_) {}
-		});
-		if (updated) Storage.set("al_au_map", map);
-		return map;
-	}
-	function getAnimeUnityUrl(media, { targetEp } = {}) {
-		if (!media) return "";
-		const rawMap = Storage.get("al_au_map");
-		const mapped = (rawMap && typeof rawMap === "object" && !Array.isArray(rawMap) ? rawMap : {})[media.id];
-		if (mapped?.id && mapped?.slug) {
-			const epSuffix = targetEp ? `?ep=${targetEp}` : "";
-			return `/anime/${mapped.id}-${mapped.slug}${epSuffix}`;
+		isAnimePage() {
+			return false;
 		}
-		return "";
-	}
+		isWatchPage() {
+			return false;
+		}
+		getAnimeInfo() {
+			return {
+				title: null,
+				romajiTitle: null,
+				anilistId: null,
+				malId: null,
+				currentEp: null,
+				totalEp: null
+			};
+		}
+		getShelfAnchor() {
+			return null;
+		}
+		getNavAnchor() {
+			return null;
+		}
+		getActionsAnchor() {
+			return null;
+		}
+		getVideoBottomAnchor() {
+			return null;
+		}
+		highlightEpisodes(trackedProgress) {}
+		getActiveEpisode() {
+			return null;
+		}
+		async resolveTargetUrl(media, targetEp = 1) {
+			return null;
+		}
+	};
 	function getAnimeKey(pathname = window.location.pathname) {
 		const m = pathname.match(/\/anime\/(\d+)/i);
 		return m ? m[1] : null;
@@ -769,49 +844,511 @@
 			return null;
 		}
 	}
-	var extractPageMetadata = () => {
-		const { anilistId, title } = getAnimeMetadata();
-		return {
-			anilistId,
-			romajiTitle: title
-		};
+	function getActiveEpisode() {
+		const activeEl = document.querySelector(".episode-wrapper .episode-item.active, .episode-item.active");
+		if (activeEl) {
+			const num = parseInt(activeEl.innerText.trim(), 10);
+			if (!isNaN(num) && num > 0) return num;
+		}
+		try {
+			const epAttr = document.querySelector("video-player")?.getAttribute("episode");
+			if (epAttr) {
+				const parsed = JSON.parse(epAttr);
+				const num = parseInt(parsed?.number, 10);
+				if (!isNaN(num) && num > 0) return num;
+			}
+		} catch (_) {}
+		return 0;
+	}
+	var lastAutoSelectedKey = "";
+	function autoSelectTargetEpisode(media, trackedProgress, retryCount = 0) {
+		const targetStr = new URLSearchParams(window.location.search).get("ep") || sessionStorage.getItem("al_target_ep");
+		let targetEp = 0;
+		if (targetStr) targetEp = parseInt(targetStr, 10);
+		if (!targetEp || isNaN(targetEp) || targetEp <= 0) return;
+		const currentKey = `${window.location.pathname}_ep${targetEp}`;
+		if (lastAutoSelectedKey === currentKey && retryCount === 0) return;
+		sessionStorage.removeItem("al_target_ep");
+		const playerVue = document.querySelector("video-player")?.__vue__ || document.querySelector(".episode-wrapper")?.__vue__;
+		if (playerVue && Array.isArray(playerVue.episodes) && playerVue.episodes.length > 0) {
+			const epObj = playerVue.episodes.find((e) => parseInt(e.number, 10) === targetEp);
+			if (epObj) {
+				lastAutoSelectedKey = currentKey;
+				if (Array.isArray(playerVue.episodes_tabs) && playerVue.episodes_tabs.length > 0) {
+					const targetTab = playerVue.episodes_tabs.find((tab) => tab.episodes?.some((e) => e.id === epObj.id));
+					if (targetTab && playerVue.episode_tab !== targetTab && typeof playerVue.switchTab === "function") playerVue.switchTab(targetTab);
+				}
+				if (typeof playerVue.switchEpisode === "function") {
+					if (parseInt(playerVue.episode?.number, 10) !== targetEp) playerVue.switchEpisode(epObj);
+				}
+				setTimeout(() => {
+					const activeItem = document.querySelector(".episode-wrapper .episode-item.active");
+					const wrapper = activeItem?.closest(".episode-wrapper");
+					if (activeItem && wrapper && wrapper.scrollWidth > wrapper.clientWidth) wrapper.scrollTo({
+						left: activeItem.offsetLeft - wrapper.clientWidth / 2 + activeItem.clientWidth / 2,
+						behavior: "smooth"
+					});
+				}, 100);
+				return;
+			}
+		}
+		if (retryCount < 10) {
+			setTimeout(() => {
+				autoSelectTargetEpisode(media, trackedProgress, retryCount + 1);
+			}, 150);
+			return;
+		}
+		lastAutoSelectedKey = currentKey;
+		const items = document.querySelectorAll(".episode-wrapper .episode-item");
+		if (items.length > 0) {
+			for (const item of items) if (parseInt(item.innerText.trim(), 10) === targetEp) {
+				if (!item.classList.contains("active")) (item.querySelector("a") || item).click();
+				const wrapper = item.closest(".episode-wrapper");
+				if (wrapper && wrapper.scrollWidth > wrapper.clientWidth) wrapper.scrollTo({
+					left: item.offsetLeft - wrapper.clientWidth / 2 + item.clientWidth / 2,
+					behavior: "smooth"
+				});
+				break;
+			}
+		}
+	}
+	var AnimeUnityProvider = class extends BaseProvider {
+		constructor() {
+			super("AnimeUnity");
+		}
+		isHome() {
+			const p = window.location.pathname;
+			return p === "/" || p === "/home" || p === "";
+		}
+		isAnimePage() {
+			return /\/anime\/\d+/i.test(window.location.pathname);
+		}
+		isWatchPage() {
+			return /\/anime\/\d+[^/]*\/\d+/i.test(window.location.pathname);
+		}
+		getAnimeInfo() {
+			const { malId, anilistId, title: metaTitle } = getAnimeMetadata();
+			const domTitle = document.querySelector("#anime .title, h1.title")?.innerText?.trim() || "";
+			const title = metaTitle || domTitle;
+			return {
+				title,
+				romajiTitle: title,
+				anilistId,
+				malId,
+				currentEp: this.getActiveEpisode(),
+				totalEp: document.querySelectorAll(".episode-wrapper .episode-item").length || null
+			};
+		}
+		getActiveEpisode() {
+			return getActiveEpisode();
+		}
+		getShelfAnchor() {
+			const topBarRow = document.querySelector("#home .bar-link")?.closest(".row");
+			if (topBarRow) return {
+				element: topBarRow,
+				position: "after"
+			};
+			const ultimiRow = document.querySelector("#ultimi-episodi")?.closest(".row");
+			if (ultimiRow) return {
+				element: ultimiRow,
+				position: "before"
+			};
+			const container = document.querySelector("#home > .container, .container");
+			if (container) return {
+				element: container,
+				position: "prepend"
+			};
+			return null;
+		}
+		getNavAnchor() {
+			return {
+				desktop: document.getElementById("left-nav") || document.querySelector("nav.navbar .navbar-nav, .nav-left"),
+				mobile: document.querySelector(".nav-top-mobile")
+			};
+		}
+		getActionsAnchor() {
+			const epWrapper = document.querySelector(".episode-wrapper");
+			if (epWrapper) return {
+				element: epWrapper,
+				position: "before"
+			};
+			const overview = document.querySelector(".overview, .content .overview");
+			if (overview) return {
+				element: overview,
+				position: "append"
+			};
+			return null;
+		}
+		getVideoBottomAnchor() {
+			return document.getElementById("video-bottom");
+		}
+		highlightEpisodes(trackedProgress) {
+			if (trackedProgress === void 0 || trackedProgress === null) return;
+			const items = document.querySelectorAll(".episode-wrapper .episode-item");
+			const activeEp = this.getActiveEpisode();
+			items.forEach((item) => {
+				const epNum = parseInt(item.innerText.trim(), 10);
+				if (isNaN(epNum)) return;
+				const isDone = epNum <= trackedProgress;
+				const isCurrent = epNum === activeEp;
+				item.classList.toggle("al-done", isDone);
+				item.classList.toggle("al-current", isCurrent);
+			});
+		}
+		async resolveTargetUrl(media, targetEp = 1) {
+			if (!media?.id) return null;
+			const prefDubInt = (Storage.get("al_pref_language") || "sub") === "dub" ? 1 : 0;
+			const rawMap = Storage.get("al_au_map");
+			const map = rawMap && typeof rawMap === "object" && !Array.isArray(rawMap) ? rawMap : {};
+			const cached = map[media.id];
+			if (cached?.id && cached?.slug) {
+				const mediaSeason = extractSeason(media.title?.romaji || media.title?.english || media.title?.userPreferred || "");
+				const cachedSeason = cached.title ? extractSeason(cached.title) : null;
+				if ((cachedSeason === null || cachedSeason === mediaSeason) && (cached.dub === void 0 || cached.dub === prefDubInt || cached.hasAlternativeDub === false)) return `/anime/${cached.id}-${cached.slug}?ep=${targetEp}`;
+			}
+			const csrf = document.querySelector("meta[name=\"csrf-token\"]")?.content;
+			const candidates = generateSearchCandidates$1(media);
+			for (const query of candidates) try {
+				const res = await fetch("/livesearch", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						"X-CSRF-TOKEN": csrf || "",
+						"X-Requested-With": "XMLHttpRequest"
+					},
+					body: JSON.stringify({ title: query })
+				});
+				if (!res.ok) continue;
+				const records = (await res.json())?.records || [];
+				if (!records.length) continue;
+				const matches = records.filter((r) => r.anilist_id === media.id);
+				let chosen = null;
+				if (matches.length > 0) chosen = matches.find((r) => r.dub === 1 === (prefDubInt === 1)) || matches[0];
+				else {
+					const scored = records.map((r) => ({
+						record: r,
+						score: scoreSearchResult(r, media, prefDubInt === 1)
+					})).sort((a, b) => b.score - a.score);
+					if (scored[0] && scored[0].score >= 50) chosen = scored[0].record;
+				}
+				if (chosen?.id && chosen?.slug) {
+					map[media.id] = {
+						id: chosen.id,
+						slug: chosen.slug,
+						dub: chosen.dub,
+						hasAlternativeDub: records.length > 1,
+						title: chosen.title,
+						updatedAt: Date.now()
+					};
+					Storage.set("al_au_map", map);
+					return `/anime/${chosen.id}-${chosen.slug}?ep=${targetEp}`;
+				}
+			} catch (_) {}
+			return null;
+		}
 	};
+	function sanitizeSaturnCache() {
+		const rawMap = Storage.get("al_as_map");
+		if (!rawMap || typeof rawMap !== "object") return;
+		let changed = false;
+		if (rawMap["107263"]?.slug?.includes("haikyuu") && !rawMap["107263"]?.slug?.includes("quest")) {
+			delete rawMap["107263"];
+			changed = true;
+		}
+		if (rawMap["190327"]?.slug?.includes("stone-ocean")) {
+			delete rawMap["190327"];
+			changed = true;
+		}
+		if (changed) Storage.set("al_as_map", rawMap);
+	}
+	var AnimeSaturnProvider = class extends BaseProvider {
+		constructor() {
+			super("AnimeSaturn");
+			sanitizeSaturnCache();
+		}
+		isHome() {
+			const p = window.location.pathname;
+			return p === "/" || p === "/home" || p === "";
+		}
+		isAnimePage() {
+			const p = window.location.pathname;
+			return p.startsWith("/anime/") && !p.includes("/ep-");
+		}
+		isWatchPage() {
+			const p = window.location.pathname;
+			return /\/ep-\d+/i.test(p);
+		}
+		getActiveEpisode() {
+			const m = window.location.pathname.match(/\/ep-(\d+)/i);
+			if (m && m[1]) return parseInt(m[1], 10);
+			const activeTile = document.querySelector(".ep-tile.is-current");
+			if (activeTile) {
+				const epNum = parseInt(activeTile.innerText.trim(), 10);
+				if (!isNaN(epNum)) return epNum;
+			}
+			const subMatch = (document.querySelector(".player-card__sub, .ept-sub")?.innerText || "").match(/episodio\s+(\d+)/i);
+			if (subMatch && subMatch[1]) return parseInt(subMatch[1], 10);
+			return null;
+		}
+		getAnimeInfo() {
+			const cardTitle = document.querySelector(".player-card__title, .ept-title")?.innerText?.trim();
+			const headTitle = document.querySelector(".ag-head h1, h1")?.innerText?.trim();
+			const title = cleanTitle$1(cardTitle || headTitle || "");
+			let romajiTitle = (document.querySelector(".ag-head")?.querySelector("p.text-ink-dim") || document.querySelector(".ept-jtitle"))?.innerText?.trim() || "";
+			if (!romajiTitle || romajiTitle.toLowerCase().includes("niente trovato")) romajiTitle = title;
+			let anilistId = null;
+			let malId = null;
+			const alLink = document.querySelector("a[href*=\"anilist.co/anime/\"]");
+			if (alLink) {
+				const match = alLink.getAttribute("href")?.match(/anilist\.co\/anime\/(\d+)/i);
+				if (match && match[1]) anilistId = parseInt(match[1], 10);
+			}
+			const malLink = document.querySelector("a[href*=\"myanimelist.net/anime/\"]");
+			if (malLink) {
+				const match = malLink.getAttribute("href")?.match(/myanimelist\.net\/anime\/(\d+)/i);
+				if (match && match[1]) malId = parseInt(match[1], 10);
+			}
+			if (!anilistId) {
+				const mainPoster = document.querySelector(".ag-poster img, .anime-poster-card img");
+				if (mainPoster) {
+					const match = (mainPoster.getAttribute("src") || "").match(/\/b[x]?(\d+)[-_.]/i);
+					if (match && match[1]) anilistId = parseInt(match[1], 10);
+				}
+			}
+			const slugMatch = window.location.pathname.match(/\/anime\/([^/]+)/i);
+			const currentSlug = slugMatch ? slugMatch[1] : null;
+			if ((!anilistId || !malId) && currentSlug) {
+				const rawMap = Storage.get("al_as_map");
+				const map = rawMap && typeof rawMap === "object" && !Array.isArray(rawMap) ? rawMap : {};
+				for (const [id, val] of Object.entries(map)) if (val.slug === currentSlug) {
+					if (!anilistId) anilistId = parseInt(id, 10);
+					if (!malId && val.malId) malId = parseInt(val.malId, 10);
+					break;
+				}
+			}
+			const currentEp = this.getActiveEpisode();
+			let totalEp = document.querySelectorAll(".ep-tile").length || null;
+			if (!totalEp) {
+				const totalMatch = (document.querySelector(".player-card__sub")?.innerText || "").match(/(\d+)\s+episodi/i);
+				if (totalMatch && totalMatch[1]) totalEp = parseInt(totalMatch[1], 10);
+			}
+			return {
+				title,
+				romajiTitle,
+				anilistId,
+				malId,
+				currentEp,
+				totalEp
+			};
+		}
+		async fetchRemoteMetadata() {
+			const slugMatch = window.location.pathname.match(/\/anime\/([^/]+)/i);
+			const currentSlug = slugMatch ? slugMatch[1] : null;
+			if (!currentSlug) return null;
+			try {
+				const res = await fetch(`/anime/${currentSlug}`);
+				if (!res.ok) return null;
+				const html = await res.text();
+				const alMatch = html.match(/anilist\.co\/anime\/(\d+)/i);
+				const malMatch = html.match(/myanimelist\.net\/anime\/(\d+)/i);
+				const anilistId = alMatch && alMatch[1] ? parseInt(alMatch[1], 10) : null;
+				const malId = malMatch && malMatch[1] ? parseInt(malMatch[1], 10) : null;
+				if (anilistId) {
+					const rawMap = Storage.get("al_as_map");
+					const map = rawMap && typeof rawMap === "object" && !Array.isArray(rawMap) ? rawMap : {};
+					map[anilistId] = {
+						slug: currentSlug,
+						malId: malId || void 0,
+						updatedAt: Date.now()
+					};
+					Storage.set("al_as_map", map);
+				}
+				return {
+					anilistId,
+					malId
+				};
+			} catch (_) {
+				return null;
+			}
+		}
+		getShelfAnchor() {
+			const latestSection = document.querySelector("section[data-latest]");
+			if (latestSection) return {
+				element: latestSection,
+				position: "before"
+			};
+			const heroShell = document.querySelector(".hero-shell")?.closest("section");
+			if (heroShell) return {
+				element: heroShell,
+				position: "after"
+			};
+			const container = document.querySelector(".container-page, main");
+			if (container) return {
+				element: container,
+				position: "prepend"
+			};
+			return null;
+		}
+		getNavAnchor() {
+			const headerTools = document.querySelector("header .ml-auto.flex, header [x-show='!mobileSearch'].ml-auto");
+			if (headerTools) return {
+				desktop: headerTools,
+				mobile: headerTools
+			};
+			const nav = document.querySelector("header nav, header .container-page");
+			return {
+				desktop: nav,
+				mobile: nav
+			};
+		}
+		getActionsAnchor() {
+			const epSection = document.querySelector("section[x-data*='epList'], section:has(.ep-tile), .episodes-list, .ag-episodes");
+			if (epSection) return {
+				element: epSection,
+				position: "before"
+			};
+			const toolbar = document.querySelector(".watch-toolbar, .ag-cta");
+			if (toolbar) return {
+				element: toolbar,
+				position: "before"
+			};
+			return null;
+		}
+		getVideoBottomAnchor() {
+			const toolbar = document.querySelector(".watch-toolbar");
+			if (toolbar) return toolbar;
+			return document.querySelector(".player-card");
+		}
+		highlightEpisodes(trackedProgress) {
+			if (trackedProgress === void 0 || trackedProgress === null) return;
+			const tiles = document.querySelectorAll(".ep-tile");
+			const activeEp = this.getActiveEpisode();
+			tiles.forEach((tile) => {
+				let epNum = parseInt(tile.innerText.trim(), 10);
+				if (isNaN(epNum)) {
+					const m = (tile.getAttribute("href") || "").match(/\/ep-(\d+)/i);
+					if (m) epNum = parseInt(m[1], 10);
+				}
+				if (isNaN(epNum)) return;
+				const isDone = epNum <= trackedProgress;
+				const isCurrent = epNum === activeEp;
+				tile.classList.toggle("al-done", isDone);
+				tile.classList.toggle("al-current", isCurrent);
+			});
+		}
+		async resolveTargetUrl(media, targetEp = 1) {
+			if (!media?.id) return null;
+			const isDubPref = (Storage.get("al_pref_language") || "sub") === "dub";
+			const rawMap = Storage.get("al_as_map");
+			const map = rawMap && typeof rawMap === "object" && !Array.isArray(rawMap) ? rawMap : {};
+			const cached = map[media.id];
+			if (cached?.slug) {
+				const mediaSeason = extractSeason(media.title?.romaji || media.title?.english || media.title?.userPreferred || "");
+				const cachedSeason = cached.title ? extractSeason(cached.title) : null;
+				if ((cachedSeason === null || cachedSeason === mediaSeason) && (cached.dub === void 0 || cached.dub === 1 === isDubPref || cached.hasAlternativeDub === false)) return `/anime/${cached.slug}/ep-${targetEp}`;
+			}
+			const candidates = generateSearchCandidates$1(media);
+			for (const query of candidates) try {
+				const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+				if (!res.ok) continue;
+				const results = (await res.json())?.results || [];
+				if (!results.length) continue;
+				results.forEach((r) => {
+					if (!r.anilist_id && r.poster) {
+						const m = r.poster.match(/\/bx?(\d+)[-_.]/i);
+						if (m && m[1]) r.anilist_id = parseInt(m[1], 10);
+					}
+				});
+				const best = results.map((r) => ({
+					result: r,
+					score: scoreSearchResult(r, media, isDubPref)
+				})).sort((a, b) => b.score - a.score)[0];
+				if (best && best.score >= 50 && best.result?.url) {
+					const chosen = best.result;
+					const slug = chosen.url.replace(/^\/anime\//, "").replace(/\/$/, "");
+					const isDub = chosen.title?.includes("(ITA)") || chosen.url?.includes("-ita-") ? 1 : 0;
+					map[media.id] = {
+						slug,
+						dub: isDub,
+						hasAlternativeDub: results.length > 1,
+						title: chosen.title,
+						malId: media.idMal || void 0,
+						updatedAt: Date.now()
+					};
+					Storage.set("al_as_map", map);
+					return `/anime/${slug}/ep-${targetEp}`;
+				}
+			} catch (_) {}
+			return null;
+		}
+	};
+	var currentProvider = null;
+	function getProvider() {
+		if (currentProvider) return currentProvider;
+		const host = window.location.hostname.toLowerCase();
+		if (host.includes("animeunity")) currentProvider = new AnimeUnityProvider();
+		else if (host.includes("animesaturn") || host.includes("saturncdn")) currentProvider = new AnimeSaturnProvider();
+		return currentProvider;
+	}
+	function getCurrentProvider() {
+		return getProvider();
+	}
 	var listeners = new Set();
 	var Settings = {
 		get() {
 			const autoTrack = Storage.get("al_opt_autotrack");
 			const delay = Storage.get("al_opt_autodelay");
-			const preventRewind = Storage.get("al_opt_prevent_rewind");
-			const homeShelf = Storage.get("al_home_shelf_enabled");
-			const homeOnlyUnwatched = Storage.get("al_pref_default_unwatched");
+			const trackTrigger = Storage.get("al_pref_track_trigger");
+			const completionThreshold = Storage.get("al_pref_completion_threshold");
+			const autoResume = Storage.get("al_pref_autoresume");
+			const crossDeviceSync = Storage.get("al_pref_cross_device_sync");
 			const searchAutoSelectDelay = Storage.get("al_pref_search_autoselect");
 			const defaultBuddy = Storage.get("al_pref_default_buddy");
 			const autoSkip = Storage.get("al_opt_autoskip");
 			const skipFallback = Storage.get("al_opt_skip_fallback");
+			const shelfFilterUnwatched = Storage.get("al_shelf_filter_unwatched");
+			const shelfFilterSync = Storage.get("al_shelf_filter_sync");
+			let effectiveTrigger = "completion";
+			if (trackTrigger) effectiveTrigger = trackTrigger;
+			else if (autoTrack === false || autoTrack === "false") effectiveTrigger = "manual";
 			return {
-				autoTrack: autoTrack === true || autoTrack === "true",
+				autoTrack: effectiveTrigger !== "manual",
+				trackTrigger: effectiveTrigger,
+				completionThreshold: completionThreshold !== null && completionThreshold !== void 0 && !isNaN(parseInt(completionThreshold, 10)) ? parseInt(completionThreshold, 10) : 85,
+				autoResume: autoResume !== false && autoResume !== "false",
+				crossDeviceSync: crossDeviceSync !== false && crossDeviceSync !== "false",
 				delay: delay !== null && delay !== void 0 && !isNaN(parseInt(delay, 10)) ? parseInt(delay, 10) : 15,
-				preventRewind: preventRewind !== false && preventRewind !== "false",
+				preventRewind: false,
 				autoSkip: autoSkip === true || autoSkip === "true",
 				skipFallbackDuration: skipFallback !== null && skipFallback !== void 0 && !isNaN(parseInt(skipFallback, 10)) ? parseInt(skipFallback, 10) : 85,
 				language: Storage.get("al_pref_language") || "sub",
-				homeShelf: homeShelf !== false && homeShelf !== "false",
-				homeOnlyUnwatched: homeOnlyUnwatched === true || homeOnlyUnwatched === "true",
+				homeShelf: true,
+				shelfFilterUnwatched: shelfFilterUnwatched === true || shelfFilterUnwatched === "true",
+				shelfFilterSync: shelfFilterSync === true || shelfFilterSync === "true",
 				searchAutoSelectDelay: searchAutoSelectDelay !== null && searchAutoSelectDelay !== void 0 ? parseInt(searchAutoSelectDelay, 10) : 5,
 				defaultBuddy: defaultBuddy ? String(defaultBuddy).trim() : ""
 			};
 		},
 		set(key, val) {
-			if (key === "autoTrack") Storage.set("al_opt_autotrack", String(val));
+			if (key === "autoTrack") {
+				Storage.set("al_opt_autotrack", String(val));
+				if (!val) Storage.set("al_pref_track_trigger", "manual");
+				else if (Storage.get("al_pref_track_trigger") === "manual") Storage.set("al_pref_track_trigger", "completion");
+			} else if (key === "trackTrigger") {
+				Storage.set("al_pref_track_trigger", String(val));
+				Storage.set("al_opt_autotrack", String(val !== "manual"));
+			} else if (key === "completionThreshold") Storage.set("al_pref_completion_threshold", String(val));
+			else if (key === "autoResume") Storage.set("al_pref_autoresume", String(val));
+			else if (key === "crossDeviceSync") Storage.set("al_pref_cross_device_sync", String(val));
 			else if (key === "delay") Storage.set("al_opt_autodelay", String(val));
-			else if (key === "preventRewind") Storage.set("al_opt_prevent_rewind", String(val));
 			else if (key === "autoSkip") Storage.set("al_opt_autoskip", String(val));
 			else if (key === "skipFallbackDuration") Storage.set("al_opt_skip_fallback", String(val));
 			else if (key === "language") {
 				Storage.set("al_pref_language", String(val));
 				Storage.del("al_au_map");
-			} else if (key === "homeShelf") Storage.set("al_home_shelf_enabled", String(val));
-			else if (key === "homeOnlyUnwatched") Storage.set("al_pref_default_unwatched", String(val));
+				Storage.del("al_as_map");
+			} else if (key === "shelfFilterUnwatched") Storage.set("al_shelf_filter_unwatched", String(val));
+			else if (key === "shelfFilterSync") Storage.set("al_shelf_filter_sync", String(val));
 			else if (key === "searchAutoSelectDelay") Storage.set("al_pref_search_autoselect", String(val));
 			else if (key === "defaultBuddy") Storage.set("al_pref_default_buddy", String(val || "").trim());
 			const current = Settings.get();
@@ -824,6 +1361,54 @@
 		subscribe(fn) {
 			listeners.add(fn);
 			return () => listeners.delete(fn);
+		}
+	};
+	var Resume = {
+		extract(notes) {
+			if (!notes || typeof notes !== "string") return null;
+			const match = notes.match(/\[resume:ep=(\d+),t=(\d+),d=(\d+)\]/i);
+			if (!match) return null;
+			const ep = parseInt(match[1], 10);
+			const time = parseInt(match[2], 10);
+			const duration = parseInt(match[3], 10);
+			return {
+				ep,
+				time,
+				duration,
+				percent: duration > 0 ? Math.min(100, Math.max(0, Math.round(time / duration * 100))) : 0
+			};
+		},
+		apply(notes, { ep, time, duration }) {
+			const clean = (notes || "").replace(/\s*\[resume:[^\]]+\]/gi, "").trim();
+			const tag = `[resume:ep=${Math.round(ep)},t=${Math.round(time)},d=${Math.round(duration)}]`;
+			return clean ? `${clean} ${tag}` : tag;
+		},
+		clear(notes) {
+			return (notes || "").replace(/\s*\[resume:[^\]]+\]/gi, "").trim();
+		},
+		formatTime(seconds) {
+			if (!seconds || isNaN(seconds) || seconds <= 0) return "0:00";
+			const s = Math.round(seconds);
+			const hrs = Math.floor(s / 3600);
+			const mins = Math.floor(s % 3600 / 60);
+			const secs = s % 60;
+			if (hrs > 0) return `${hrs}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+			return `${mins}:${String(secs).padStart(2, "0")}`;
+		},
+		getLocal(mediaId) {
+			if (!mediaId) return null;
+			return Storage.get(`al_resume_${mediaId}`) || null;
+		},
+		setLocal(mediaId, data) {
+			if (!mediaId || !data) return;
+			Storage.set(`al_resume_${mediaId}`, {
+				...data,
+				updatedAt: Date.now()
+			});
+		},
+		clearLocal(mediaId) {
+			if (!mediaId) return;
+			Storage.del(`al_resume_${mediaId}`);
 		}
 	};
 	var cache$1 = new Map();
@@ -1123,15 +1708,13 @@
 	function openPreferencesModal({ onSave, viewer } = {}) {
 		const currentViewer = viewer || Buddy.getViewer();
 		const settings = Settings.get();
-		const currentBuddy = settings.defaultBuddy;
-		currentBuddy && Buddy.getAvatar(currentBuddy);
 		const { modal, close } = createModal({
 			id: "al-prefs-overlay",
 			className: "al-prefs-modal",
 			variant: "drawer",
 			icon: SlidersVertical,
 			title: "Preferences",
-			subtitle: "Playback, homepage, and sync settings",
+			subtitle: "Playback, search, and sync settings",
 			onClose: () => {
 				if (typeof onSave === "function") onSave();
 			},
@@ -1155,6 +1738,21 @@
         <div class="al-pref-sub">
           <div class="al-pref-row">
             <span class="al-pref-sub-label">
+              ${iconHtml(Play, {
+				width: 13,
+				height: 13
+			})}
+              <span>Track trigger timing</span>
+            </span>
+            <select class="al-select-xs al-sel-trigger">
+              <option value="completion" ${settings.trackTrigger === "completion" ? "selected" : ""}>At 85% Video Completion</option>
+              <option value="play" ${settings.trackTrigger === "play" ? "selected" : ""}>On Video Start (Play)</option>
+              <option value="delay" ${settings.trackTrigger === "delay" ? "selected" : ""}>Countdown Delay on Load</option>
+            </select>
+          </div>
+
+          <div class="al-pref-row al-row-delay" style="${settings.trackTrigger === "delay" ? "" : "display: none;"}">
+            <span class="al-pref-sub-label">
               ${iconHtml(Clock, {
 				width: 13,
 				height: 13
@@ -1175,9 +1773,20 @@
 				width: 13,
 				height: 13
 			})}
-              <span>Prevent rewind when rewatching</span>
+              <span>Auto-resume playback position</span>
             </span>
-            <input type="checkbox" class="al-checkbox al-chk-rewind" ${settings.preventRewind ? "checked" : ""} />
+            <input type="checkbox" class="al-switch al-toggle-autoresume" ${settings.autoResume ? "checked" : ""} />
+          </label>
+
+          <label class="al-pref-row" style="cursor: pointer;">
+            <span class="al-pref-sub-label">
+              ${iconHtml(Languages, {
+				width: 13,
+				height: 13
+			})}
+              <span>Cross-device sync via AniList notes</span>
+            </span>
+            <input type="checkbox" class="al-switch al-toggle-crossdevicesync" ${settings.crossDeviceSync ? "checked" : ""} />
           </label>
         </div>
       </div>
@@ -1227,8 +1836,8 @@
         </div>
       </div>
 
-      <!-- 3. Homepage Shelf -->
-      <div class="al-pref-group al-pref-collapsible ${settings.homeShelf ? "is-open is-active" : ""}" style="margin-top: 10px;" id="al-pref-sec-shelf">
+      <!-- 3. Navigation & Search Preferences -->
+      <div class="al-pref-group al-pref-collapsible is-open is-active" style="margin-top: 10px;" id="al-pref-sec-search">
         <div class="al-pref-header">
           <div class="al-pref-title-click">
             <span class="al-pref-chevron">${iconHtml(ChevronDown, {
@@ -1236,24 +1845,26 @@
 				height: 14
 			})}</span>
             <div class="al-pref-info">
-              <span class="al-pref-title">Continue Watching shelf</span>
-              <span class="al-pref-desc">Show Continue Watching shelf on homepage</span>
+              <span class="al-pref-title">Search & Matching</span>
+              <span class="al-pref-desc">Streaming language & auto-navigation</span>
             </div>
           </div>
-          <input type="checkbox" class="al-switch al-toggle-homeshelf" ${settings.homeShelf ? "checked" : ""} />
         </div>
 
         <div class="al-pref-sub">
-          <label class="al-pref-row" style="cursor: pointer;">
+          <div class="al-pref-row">
             <span class="al-pref-sub-label">
-              ${iconHtml(Zap, {
+              ${iconHtml(Languages, {
 				width: 13,
 				height: 13
 			})}
-              <span>Default to unwatched only</span>
+              <span>Preferred language</span>
             </span>
-            <input type="checkbox" class="al-checkbox al-chk-unwatched" ${settings.homeOnlyUnwatched ? "checked" : ""} />
-          </label>
+            <select class="al-select-xs al-sel-language">
+              <option value="sub" ${settings.language === "sub" ? "selected" : ""}>SUB (Original)</option>
+              <option value="dub" ${settings.language === "dub" ? "selected" : ""}>ITA (Dubbed)</option>
+            </select>
+          </div>
 
           <div class="al-pref-row">
             <span class="al-pref-sub-label">
@@ -1266,13 +1877,30 @@
             <select class="al-select-xs al-sel-autoselect">
               <option value="5" ${settings.searchAutoSelectDelay === 5 ? "selected" : ""}>5 seconds (Default)</option>
               <option value="10" ${settings.searchAutoSelectDelay === 10 ? "selected" : ""}>10 seconds</option>
-              <option value="0" ${settings.searchAutoSelectDelay === 0 ? "selected" : ""}>Manual (No auto-open)</option>
+              <option value="0" ${settings.searchAutoSelectDelay === 0 ? "selected" : ""}>Manual (Browse results)</option>
             </select>
+          </div>
+
+          <div class="al-pref-row" style="align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 8px; margin-top: 4px;">
+            <span class="al-pref-sub-label">
+              ${iconHtml(RotateCcw, {
+				width: 13,
+				height: 13
+			})}
+              <span>Reset learned anime URLs</span>
+            </span>
+            <button type="button" class="al-btn-pref-action danger al-btn-clear-cache">
+              ${iconHtml(Trash, {
+				width: 11,
+				height: 11
+			})}
+              <span>Clear Cache</span>
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- 3. Sync Together (Watch Buddy) -->
+      <!-- 4. Sync Together (Watch Buddy) -->
       <div class="al-pref-group al-pref-collapsible is-open is-active" style="margin-top: 10px;" id="al-pref-sec-buddy">
         <div class="al-pref-header">
           <div class="al-pref-title-click">
@@ -1329,13 +1957,24 @@
 		autoTrackToggle?.addEventListener("change", (e) => {
 			setAutoTrack(e.target.checked);
 		});
+		const triggerSelect = modal.querySelector(".al-sel-trigger");
+		const delayRow = modal.querySelector(".al-row-delay");
+		if (triggerSelect) triggerSelect.addEventListener("change", (e) => {
+			const mode = e.target.value;
+			Settings.set("trackTrigger", mode);
+			if (delayRow) delayRow.style.display = mode === "delay" ? "" : "none";
+		});
 		const delaySelect = modal.querySelector(".al-sel-delay");
 		if (delaySelect) delaySelect.addEventListener("change", (e) => {
 			Settings.set("delay", parseInt(e.target.value, 10));
 		});
-		const rewindCheckbox = modal.querySelector(".al-chk-rewind");
-		if (rewindCheckbox) rewindCheckbox.addEventListener("change", (e) => {
-			Settings.set("preventRewind", e.target.checked);
+		const autoResumeToggle = modal.querySelector(".al-toggle-autoresume");
+		if (autoResumeToggle) autoResumeToggle.addEventListener("change", (e) => {
+			Settings.set("autoResume", e.target.checked);
+		});
+		const crossDeviceToggle = modal.querySelector(".al-toggle-crossdevicesync");
+		if (crossDeviceToggle) crossDeviceToggle.addEventListener("change", (e) => {
+			Settings.set("crossDeviceSync", e.target.checked);
 		});
 		const skipGroup = modal.querySelector("#al-pref-sec-skipintro");
 		(skipGroup?.querySelector(".al-pref-title-click"))?.addEventListener("click", () => {
@@ -1349,28 +1988,23 @@
 		if (skipFallbackSelect) skipFallbackSelect.addEventListener("change", (e) => {
 			Settings.set("skipFallbackDuration", parseInt(e.target.value, 10));
 		});
-		const homeShelfToggle = modal.querySelector(".al-toggle-homeshelf");
-		const shelfGroup = modal.querySelector("#al-pref-sec-shelf");
-		const shelfHeader = shelfGroup?.querySelector(".al-pref-title-click");
-		const setHomeShelf = (active) => {
-			if (homeShelfToggle) homeShelfToggle.checked = active;
-			Settings.set("homeShelf", active);
-			shelfGroup?.classList.toggle("is-open", active);
-			shelfGroup?.classList.toggle("is-active", active);
-		};
-		shelfHeader?.addEventListener("click", () => {
-			setHomeShelf(!homeShelfToggle?.checked);
+		const searchGroup = modal.querySelector("#al-pref-sec-search");
+		(searchGroup?.querySelector(".al-pref-title-click"))?.addEventListener("click", () => {
+			searchGroup?.classList.toggle("is-open");
 		});
-		homeShelfToggle?.addEventListener("change", (e) => {
-			setHomeShelf(e.target.checked);
-		});
-		const unwatchedCheckbox = modal.querySelector(".al-chk-unwatched");
-		if (unwatchedCheckbox) unwatchedCheckbox.addEventListener("change", (e) => {
-			Settings.set("homeOnlyUnwatched", e.target.checked);
+		const langSelect = modal.querySelector(".al-sel-language");
+		if (langSelect) langSelect.addEventListener("change", (e) => {
+			Settings.set("language", e.target.value);
 		});
 		const autoSelect = modal.querySelector(".al-sel-autoselect");
 		if (autoSelect) autoSelect.addEventListener("change", (e) => {
 			Settings.set("searchAutoSelectDelay", parseInt(e.target.value, 10));
+		});
+		const clearCacheBtn = modal.querySelector(".al-btn-clear-cache");
+		if (clearCacheBtn) clearCacheBtn.addEventListener("click", () => {
+			Storage.del("al_au_map");
+			Storage.del("al_as_map");
+			showToast("⚡ Search cache cleared: mappings reset");
 		});
 		const buddyGroup = modal.querySelector("#al-pref-sec-buddy");
 		(buddyGroup?.querySelector(".al-pref-title-click"))?.addEventListener("click", () => {
@@ -1461,87 +2095,110 @@
 		menu.querySelector(".al-btn-token")?.addEventListener("click", (e) => {
 			e.stopPropagation();
 			menu.classList.remove("show");
-			onChangeToken();
+			onChangeToken?.();
 		});
 		menu.querySelector(".al-btn-logout")?.addEventListener("click", (e) => {
 			e.stopPropagation();
 			menu.classList.remove("show");
-			onLogout();
+			onLogout?.();
 		});
 	}
-	function renderNav(currentUser, callbacks) {
+	function renderNav(currentUser, callbacks, provider = null) {
 		const avatar = currentUser?.avatar?.medium || "https://anilist.co/img/icons/icon.svg";
-		const leftNav = document.querySelector("#left-nav");
+		const navAnchor = provider?.getNavAnchor?.();
+		const leftNav = navAnchor?.desktop || document.querySelector("#left-nav");
 		if (leftNav) {
 			let container = document.getElementById("al-nav-desktop");
+			const isSaturn = leftNav.classList?.contains("flex") || provider?.name === "AnimeSaturn";
 			if (!container) {
-				container = document.createElement("li");
+				container = document.createElement(isSaturn ? "div" : "li");
 				container.id = "al-nav-desktop";
-				container.className = "nav-item position-relative";
-				const nativeLogin = leftNav.querySelector("a[href*=\"/login\"]")?.closest(".nav-item");
-				nativeLogin ? nativeLogin.replaceWith(container) : leftNav.appendChild(container);
+				container.className = isSaturn ? "al-nav-saturn position-relative" : "nav-item position-relative";
+				if (isSaturn) leftNav.prepend(container);
+				else {
+					const nativeLogin = leftNav.querySelector("a[href*=\"/login\"]")?.closest(".nav-item");
+					nativeLogin ? nativeLogin.replaceWith(container) : leftNav.appendChild(container);
+				}
 			}
 			if (!currentUser) {
-				container.innerHTML = `
-        <a class="nav-link text-center pt-3" href="javascript:void(0)" role="button" id="al-nav-login-btn">
-          ${iconHtml(KeyRound, {
+				if (isSaturn) container.innerHTML = `
+          <button type="button" class="btn-icon cursor-pointer" id="al-nav-login-btn" title="Connect AniList" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:9999px;background:rgba(2,169,255,0.15);color:#02a9ff;font-size:12px;font-weight:600;border:none;">
+            ${iconHtml(KeyRound, {
+					width: 14,
+					height: 14
+				})}
+            <span>AniList</span>
+          </button>`;
+				else container.innerHTML = `
+          <a class="nav-link text-center pt-3" href="javascript:void(0)" role="button" id="al-nav-login-btn">
+            ${iconHtml(KeyRound, {
 					width: 18,
 					height: 18,
 					style: "color:var(--al-blue);"
 				})}<br>
-          <span style="color:var(--al-blue);font-weight:600;font-size:11px;">AniList</span>
-        </a>`;
-				const btn = container.querySelector("#al-nav-login-btn") || container.querySelector("a");
+            <span style="color:var(--al-blue);font-weight:600;font-size:11px;">AniList</span>
+          </a>`;
+				const btn = container.querySelector("#al-nav-login-btn") || container.querySelector("a, button");
 				const handleLogin = (e) => {
 					e.preventDefault();
 					e.stopPropagation();
 					callbacks.onLogin?.();
 				};
-				btn.onclick = handleLogin;
-				btn.addEventListener("click", handleLogin, true);
+				if (btn) {
+					btn.onclick = handleLogin;
+					btn.addEventListener("click", handleLogin, true);
+				}
 			} else {
-				container.innerHTML = `
-        <a class="nav-link d-flex align-items-center p-2" href="#" role="button" style="gap:8px;">
-          <img src="${avatar}" class="al-avatar" />
-          <div class="d-none d-lg-flex flex-column text-left">
-            <span class="text-white font-weight-bold small text-truncate" style="max-width:85px;">${currentUser.name}</span>
-            <span class="text-muted" style="font-size:10px;">AniList</span>
-          </div>
-          <i class="fas fa-chevron-down text-muted ml-1" style="font-size:9px;"></i>
-        </a>
-        <div class="dropdown-menu dropdown-menu-right al-dropdown-menu" id="al-nav-dropdown">
-          ${dropdownTpl(currentUser)}
-        </div>`;
+				if (isSaturn) container.innerHTML = `
+          <button type="button" class="btn-icon cursor-pointer al-saturn-nav-avatar" title="AniList: ${currentUser.name}" style="background:none;border:none;padding:0;cursor:pointer;">
+            <img src="${avatar}" class="al-avatar" style="width:28px;height:28px;border-radius:50%;display:block;border:1.5px solid #02a9ff;" />
+          </button>
+          <div class="dropdown-menu dropdown-menu-right al-dropdown-menu" id="al-nav-dropdown" style="right:0;left:auto;">
+            ${dropdownTpl(currentUser)}
+          </div>`;
+				else container.innerHTML = `
+          <a class="nav-link d-flex align-items-center p-2" href="#" role="button" style="gap:8px;">
+            <img src="${avatar}" class="al-avatar" />
+            <div class="d-none d-lg-flex flex-column text-left">
+              <span class="text-white font-weight-bold small text-truncate" style="max-width:85px;">${currentUser.name}</span>
+              <span class="text-muted" style="font-size:10px;">AniList</span>
+            </div>
+            <i class="fas fa-chevron-down text-muted ml-1" style="font-size:9px;"></i>
+          </a>
+          <div class="dropdown-menu dropdown-menu-right al-dropdown-menu" id="al-nav-dropdown">
+            ${dropdownTpl(currentUser)}
+          </div>`;
 				const menu = container.querySelector("#al-nav-dropdown");
 				let closeTimer = null;
 				const openDropdown = () => {
 					if (closeTimer) clearTimeout(closeTimer);
 					closeTimer = null;
-					menu.classList.add("show");
+					menu?.classList.add("show");
 				};
 				const closeDropdownWithDelay = () => {
 					if (closeTimer) clearTimeout(closeTimer);
 					closeTimer = setTimeout(() => {
-						menu.classList.remove("show");
+						menu?.classList.remove("show");
 					}, 220);
 				};
 				container.addEventListener("mouseenter", openDropdown);
 				container.addEventListener("mouseleave", closeDropdownWithDelay);
-				menu.addEventListener("mouseenter", openDropdown);
-				menu.addEventListener("mouseleave", closeDropdownWithDelay);
-				container.querySelector("a").onclick = (e) => {
+				menu?.addEventListener("mouseenter", openDropdown);
+				menu?.addEventListener("mouseleave", closeDropdownWithDelay);
+				const triggerBtn = container.querySelector("a, button");
+				if (triggerBtn) triggerBtn.onclick = (e) => {
 					e.preventDefault();
 					e.stopPropagation();
-					menu.classList.toggle("show");
+					menu?.classList.toggle("show");
 				};
 				document.addEventListener("click", (e) => {
-					if (!container.contains(e.target)) menu.classList.remove("show");
+					if (!container.contains(e.target)) menu?.classList.remove("show");
 				});
-				bindDropdown(menu, callbacks, currentUser);
+				if (menu) bindDropdown(menu, callbacks, currentUser);
 			}
 		}
-		const mobileNav = document.querySelector(".nav-top-mobile");
-		if (mobileNav) {
+		const mobileNav = navAnchor?.mobile || document.querySelector(".nav-top-mobile");
+		if (mobileNav && mobileNav !== leftNav) {
 			let mWidget = document.getElementById("al-nav-mobile");
 			if (!mWidget) {
 				mWidget = document.createElement("div");
@@ -1564,8 +2221,10 @@
 					e.stopPropagation();
 					callbacks.onLogin?.();
 				};
-				mBtn.onclick = handleMLogin;
-				mBtn.addEventListener("click", handleMLogin, true);
+				if (mBtn) {
+					mBtn.onclick = handleMLogin;
+					mBtn.addEventListener("click", handleMLogin, true);
+				}
 			} else {
 				mWidget.innerHTML = `
         <img src="${avatar}" class="al-avatar-mobile" />
@@ -1573,27 +2232,53 @@
           ${dropdownTpl(currentUser)}
         </div>`;
 				const mMenu = mWidget.querySelector("#al-nav-m-dropdown");
-				mWidget.querySelector("img").onclick = (e) => {
+				const mAvatar = mWidget.querySelector("img");
+				if (mAvatar) mAvatar.onclick = (e) => {
 					e.stopPropagation();
-					mMenu.classList.toggle("show");
+					mMenu?.classList.toggle("show");
 				};
-				bindDropdown(mMenu, callbacks, currentUser);
+				if (mMenu) bindDropdown(mMenu, callbacks, currentUser);
 			}
 		}
 	}
-	function renderActions(media, hasToken, actions, { isLoading = false, viewer = null, defaultBuddy = "", buddyData = null } = {}) {
+	function renderActions(media, hasToken, actions, { isLoading = false, viewer = null, defaultBuddy = "", buddyData = null, provider = null, activeEp = 0, trackedProgress = -1, autoTrackState = null } = {}) {
 		document.querySelectorAll(".cover-wrap .actions, .list-btn-mobile, #add-to-fav").forEach((el) => el.remove());
-		const epWrapper = document.querySelector(".episode-wrapper");
-		const overview = document.querySelector(".content .overview") || document.querySelector(".overview");
-		if (!epWrapper && !overview) return;
+		const anchorData = provider?.getActionsAnchor?.();
+		let targetAnchor = null;
+		let insertMode = "before";
+		if (anchorData?.element) {
+			targetAnchor = anchorData.element;
+			insertMode = anchorData.position || "before";
+		} else if (anchorData instanceof HTMLElement) {
+			targetAnchor = anchorData;
+			insertMode = "before";
+		} else {
+			const epWrapper = document.querySelector(".episode-wrapper, section[x-data*='epList'], section:has(.ep-tile)");
+			if (epWrapper) {
+				targetAnchor = epWrapper;
+				insertMode = "before";
+			} else {
+				const overview = document.querySelector(".content .overview, .overview");
+				if (overview) {
+					targetAnchor = overview;
+					insertMode = "append";
+				}
+			}
+		}
+		if (!targetAnchor) return;
 		let bar = document.getElementById("al-control-bar");
 		if (!bar) {
 			bar = document.createElement("div");
 			bar.id = "al-control-bar";
 			bar.className = "al-card";
 		}
-		if (epWrapper && bar.previousElementSibling !== epWrapper) epWrapper.after(bar);
-		else if (!epWrapper && overview && bar.parentElement !== overview) overview.appendChild(bar);
+		if (insertMode === "before") {
+			if (bar.nextElementSibling !== targetAnchor) targetAnchor.before(bar);
+		} else if (insertMode === "after") {
+			if (bar.previousElementSibling !== targetAnchor) targetAnchor.after(bar);
+		} else if (insertMode === "append") {
+			if (bar.parentElement !== targetAnchor) targetAnchor.appendChild(bar);
+		}
 		if (!hasToken) {
 			bar.innerHTML = `
       <div class="al-card-row">
@@ -1655,6 +2340,119 @@
 		const rewatches = entry?.repeat || 0;
 		const isBuddyCompleted = !!buddyData?.isCompleted;
 		const canSyncBuddy = !!(buddyData?.name && (buddyData.progress || 0) > progress) || isBuddyCompleted && entry?.status !== "COMPLETED";
+		let episodeStatusHtml = "";
+		if (activeEp > 0) {
+			if (autoTrackState?.isActive && autoTrackState.targetEp === activeEp) episodeStatusHtml = `
+        <div class="al-ep-chip is-countdown" title="Auto-tracking progress in ${autoTrackState.countdown}s">
+          <div class="al-ep-chip-badge">
+            ${iconHtml(Clock, {
+				width: 12,
+				height: 12,
+				class: "al-pulse"
+			})}
+            <span class="al-ep-chip-num">Ep. ${activeEp}</span>
+            <span class="al-ep-chip-timer">${autoTrackState.countdown}s</span>
+          </div>
+          <div class="al-ep-chip-actions">
+            <button type="button" class="al-ep-mini-btn danger" id="al-ep-cancel" title="Cancel auto-track">
+              ${iconHtml(X, {
+				width: 11,
+				height: 11
+			})}
+            </button>
+            <button type="button" class="al-ep-mini-btn success" id="al-ep-savenow" title="Mark Ep. ${activeEp} as watched now">
+              ${iconHtml(Check, {
+				width: 12,
+				height: 12
+			})}
+            </button>
+          </div>
+        </div>`;
+			else if (trackedProgress > 0 && activeEp === trackedProgress) {
+				const rewindTarget = activeEp - 1;
+				episodeStatusHtml = `
+        <div class="al-ep-chip is-synced" title="Tracked on AniList as Ep. ${activeEp}">
+          <div class="al-ep-chip-badge">
+            ${iconHtml(CheckCheck, {
+					width: 12,
+					height: 12
+				})}
+            <span class="al-ep-chip-num">Ep. ${activeEp}</span>
+            <span class="al-ep-chip-text">Synced</span>
+          </div>
+          <div class="al-ep-chip-actions">
+            <button type="button" class="al-ep-mini-btn rewind" id="al-ep-rewind" title="${rewindTarget > 0 ? `Rewind AniList to Ep. ${rewindTarget}` : "Mark as unwatched"}">
+              ${iconHtml(RotateCcw, {
+					width: 11,
+					height: 11
+				})}
+              <span>${rewindTarget > 0 ? `Ep. ${rewindTarget}` : "Reset"}</span>
+            </button>
+          </div>
+        </div>`;
+			} else if (trackedProgress > 0 && activeEp < trackedProgress) {
+				const rewindTarget = activeEp - 1;
+				episodeStatusHtml = `
+        <div class="al-ep-chip is-watched" title="Episode ${activeEp} already watched (AniList at Ep. ${trackedProgress})">
+          <div class="al-ep-chip-badge">
+            ${iconHtml(Check, {
+					width: 12,
+					height: 12
+				})}
+            <span class="al-ep-chip-num">Ep. ${activeEp}</span>
+            <span class="al-ep-chip-text">Seen</span>
+          </div>
+          <div class="al-ep-chip-actions">
+            <button type="button" class="al-ep-mini-btn rewind" id="al-ep-rewind" title="${rewindTarget > 0 ? `Rewind AniList to Ep. ${rewindTarget}` : "Mark as unwatched"}">
+              ${iconHtml(RotateCcw, {
+					width: 11,
+					height: 11
+				})}
+              <span>${rewindTarget > 0 ? `Ep. ${rewindTarget}` : "Reset"}</span>
+            </button>
+          </div>
+        </div>`;
+			} else {
+				const resume = Resume.extract(entry?.notes) || Resume.getLocal(media.id);
+				if (resume && resume.ep === activeEp && resume.time > 15 && resume.percent < 88) episodeStatusHtml = `
+          <div class="al-ep-chip is-resuming" title="Resume at ${Resume.formatTime(resume.time)} (${resume.percent}%) • Mark Ep. ${activeEp} as watched">
+            <div class="al-ep-chip-badge">
+              ${iconHtml(Play, {
+					width: 12,
+					height: 12
+				})}
+              <span class="al-ep-chip-num">Ep. ${activeEp}</span>
+              <span class="al-ep-chip-text" style="color: #c084fc;">${Resume.formatTime(resume.time)}</span>
+            </div>
+            <div class="al-ep-chip-actions">
+              <button type="button" class="al-ep-mini-btn success" id="al-ep-save" title="Mark Ep. ${activeEp} as watched">
+                ${iconHtml(Check, {
+					width: 12,
+					height: 12
+				})}
+              </button>
+            </div>
+          </div>`;
+				else episodeStatusHtml = `
+          <div class="al-ep-chip is-untracked" title="Mark Ep. ${activeEp} as watched (AniList currently at Ep. ${trackedProgress > 0 ? trackedProgress : 0})">
+            <div class="al-ep-chip-badge">
+              ${iconHtml(Zap, {
+					width: 12,
+					height: 12
+				})}
+              <span class="al-ep-chip-num">Ep. ${activeEp}</span>
+            </div>
+            <div class="al-ep-chip-actions">
+              <button type="button" class="al-ep-mini-btn success" id="al-ep-save" title="Mark Ep. ${activeEp} as watched">
+                ${iconHtml(Check, {
+					width: 12,
+					height: 12
+				})}
+              </button>
+            </div>
+          </div>`;
+			}
+		}
 		bar.innerHTML = `
     <div class="al-card-row">
       <div class="al-left">
@@ -1667,25 +2465,14 @@
 			class: "al-badge-icon"
 		})}
           </a>
+
           ${entry ? `
-            <div class="al-more-wrap">
-              <button type="button" class="al-icon-btn al-more-btn" id="al-bar-more" title="More options">
-                ${iconHtml(Ellipsis, {
-			width: 14,
-			height: 14
-		})}
-              </button>
-              <div class="al-more-menu" id="al-more-menu" style="display: none;">
-                <button type="button" class="al-more-menu-item" id="al-menu-reset" title="Reset progress to Ep. 0 (Haven't watched yet)">
-                  ${iconHtml(RotateCcw, {
-			width: 13,
-			height: 13
-		})}
-                  <span>Reset to Ep. 0</span>
-                </button>
-              </div>
-            </div>
+            <select class="al-select al-status-select" id="al-bar-status" title="Anime status">
+              ${Object.entries(AniListAPI.statuses).map(([k, v]) => `<option value="${k}" ${entry.status === k ? "selected" : ""}>${v}</option>`).join("")}
+            </select>
           ` : ""}
+
+          ${episodeStatusHtml}
         </div>
       </div>
 
@@ -1709,21 +2496,17 @@
 			width: 12,
 			height: 12
 		})}
-                    <span>${isBuddyCompleted ? `${buddyData.name} Completed` : `Ep. ${buddyData.progress}`}</span>
+                    <span>${isBuddyCompleted ? `${buddyData.name} Done` : `Ep. ${buddyData.progress}`}</span>
                   </button>
                 ` : `
                   <span class="al-buddy-tag ${isBuddyCompleted ? "is-completed" : ""}" title="${buddyData.name}: ${isBuddyCompleted ? "Completed" : `Ep. ${buddyData.progress || 0}`}">
-                    ${isBuddyCompleted ? `<span class="al-dot"></span><span>${buddyData.name} Completed</span>` : `<span>Ep. ${buddyData.progress || 0}</span>`}
+                    ${isBuddyCompleted ? `<span class="al-dot"></span><span>${buddyData.name} Done</span>` : `<span>Ep. ${buddyData.progress || 0}</span>`}
                   </span>
                 `}
               ` : ""}
             </div>
 
-            <select class="al-select" id="al-bar-status" title="Anime status">
-              ${Object.entries(AniListAPI.statuses).map(([k, v]) => `<option value="${k}" ${entry.status === k ? "selected" : ""}>${v}</option>`).join("")}
-            </select>
-
-            <select class="al-select" id="al-bar-score" title="Your rating">
+            <select class="al-select al-score-select" id="al-bar-score" title="Your rating">
               <option value="0">Score: −</option>
               ${[
 			1,
@@ -1739,10 +2522,10 @@
 		].map((s) => `<option value="${s}" ${entry.score === s ? "selected" : ""}>★ ${s}/10</option>`).join("")}
             </select>
 
-            <button type="button" class="al-icon-btn danger" id="al-bar-del" title="Remove from AniList library">
+            <button type="button" class="al-icon-btn danger al-bar-del-btn" id="al-bar-del" title="Remove from AniList library">
               ${iconHtml(Trash, {
-			width: 14,
-			height: 14
+			width: 13,
+			height: 13
 		})}
             </button>
           </div>
@@ -1798,22 +2581,16 @@
 		bar.querySelector("#al-bar-buddy-sync")?.addEventListener("click", () => {
 			if (typeof actions.onBuddySync === "function" && buddyData) actions.onBuddySync(buddyData.progress, isBuddyCompleted);
 		});
-		const moreBtn = bar.querySelector("#al-bar-more");
-		const moreMenu = bar.querySelector("#al-more-menu");
-		if (moreBtn && moreMenu) {
-			moreBtn.addEventListener("click", (e) => {
-				e.stopPropagation();
-				const isOpen = moreMenu.style.display !== "none";
-				moreMenu.style.display = isOpen ? "none" : "block";
-			});
-			bar.querySelector("#al-menu-reset")?.addEventListener("click", () => {
-				moreMenu.style.display = "none";
-				if (typeof actions.onResetProgress === "function") actions.onResetProgress();
-			});
-			document.addEventListener("click", (e) => {
-				if (!moreBtn.contains(e.target) && !moreMenu.contains(e.target)) moreMenu.style.display = "none";
-			});
-		}
+		bar.querySelector("#al-ep-cancel")?.addEventListener("click", () => {
+			actions.onCancelCountdown?.();
+		});
+		bar.querySelector("#al-ep-savenow, #al-ep-save")?.addEventListener("click", () => {
+			actions.onSave?.(activeEp);
+		});
+		bar.querySelector("#al-ep-rewind")?.addEventListener("click", () => {
+			const rewindTarget = Math.max(0, activeEp - 1);
+			actions.onRewind?.(rewindTarget, activeEp);
+		});
 		const buddyBox = bar.querySelector("#al-bar-buddy-box");
 		if (buddyBox && entry) {
 			const getElevatedAncestors = () => {
@@ -1845,155 +2622,73 @@
 			});
 		}
 	}
-	function renderVideoBottom({ activeEp, trackedProgress, hasToken, autoTrackState, callbacks, isLoading = false }) {
-		const container = document.getElementById("video-bottom");
-		if (!container) return;
-		document.getElementById("al-video-top-widget")?.remove();
-		document.getElementById("al-vb-buddy-widget")?.remove();
-		let widget = document.getElementById("al-video-bottom-widget");
-		if (!widget) {
-			widget = document.createElement("div");
-			widget.id = "al-video-bottom-widget";
-			const nextBtn = container.querySelector(".float-right, .next");
-			if (nextBtn) container.insertBefore(widget, nextBtn);
-			else container.appendChild(widget);
-		}
-		widget.querySelector(".al-vb-buddy-slot")?.remove();
-		let statusSlot = widget.querySelector(".al-vb-status-slot");
-		if (!statusSlot) {
-			statusSlot = document.createElement("div");
-			statusSlot.className = "al-vb-status-slot";
-			widget.appendChild(statusSlot);
-		}
-		if (!hasToken || !activeEp) {
-			statusSlot.innerHTML = "";
-			return;
-		}
-		if (isLoading) {
-			statusSlot.innerHTML = `<div class="al-skeleton-pill" style="width: 105px; height: 26px; border-radius: 6px; opacity: 0.85;"></div>`;
-			return;
-		}
-		if (autoTrackState?.isActive && autoTrackState.targetEp === activeEp) {
-			statusSlot.innerHTML = `
-      <div class="al-vb-countdown">
-        <button type="button" class="al-vb-btn ghost al-vb-cancel" id="al-vb-cancel" title="Cancel auto-save">
-          ${iconHtml(X, {
-				width: 13,
-				height: 13
-			})}
-        </button>
-        <span class="al-vb-timer">
-          ${iconHtml(Clock, {
-				width: 11,
-				height: 11,
-				class: "al-pulse"
-			})}
-          <span>Ep. ${activeEp} · <strong>${autoTrackState.countdown}s</strong></span>
-        </span>
-        <button type="button" class="al-vb-btn primary-sm al-vb-save" id="al-vb-savenow" title="Save now">
-          ${iconHtml(Check, {
-				width: 13,
-				height: 13
-			})}
-        </button>
-      </div>`;
-			statusSlot.querySelector("#al-vb-cancel")?.addEventListener("click", (e) => {
-				e.stopPropagation();
-				callbacks.onCancel();
-			});
-			statusSlot.querySelector("#al-vb-savenow")?.addEventListener("click", (e) => {
-				e.stopPropagation();
-				callbacks.onSave(activeEp);
-			});
-			return;
-		}
-		if (trackedProgress > 0 && activeEp < trackedProgress && autoTrackState?.preventRewind) {
-			statusSlot.innerHTML = `
-      <div class="al-vb-recap">
-        <span class="al-vb-recap-text">
-          ${iconHtml(Eye, {
-				width: 12,
-				height: 12
-			})}
-          <span>Ep. ${activeEp} · Rewatch</span>
-        </span>
-        <button type="button" class="al-vb-btn ghost-xs" id="al-vb-force" title="Sync AniList progress to Ep. ${activeEp}">
-          ${iconHtml(RefreshCcw, {
-				width: 11,
-				height: 11
-			})}
-        </button>
-      </div>`;
-			statusSlot.querySelector("#al-vb-force")?.addEventListener("click", (e) => {
-				e.stopPropagation();
-				callbacks.onForce(activeEp);
-			});
-			return;
-		}
-		if (trackedProgress > 0 && activeEp === trackedProgress) {
-			statusSlot.innerHTML = `
-      <div class="al-vb-synced">
-        ${iconHtml(CheckCheck, {
-				width: 13,
-				height: 13,
-				class: "al-text-green"
-			})}
-        <span>Ep. ${activeEp} Synced</span>
-      </div>`;
-			return;
-		}
-		if (trackedProgress > 0 && activeEp < trackedProgress) {
-			statusSlot.innerHTML = `
-      <div class="al-vb-synced">
-        ${iconHtml(Check, {
-				width: 13,
-				height: 13,
-				class: "al-text-green"
-			})}
-        <span>Ep. ${activeEp} Watched</span>
-      </div>`;
-			return;
-		}
-		statusSlot.innerHTML = `
-    <button type="button" class="al-vb-mark-btn" id="al-vb-mark" title="Mark episode ${activeEp} as watched on AniList">
-      ${iconHtml(Zap, {
-			width: 12,
-			height: 12
-		})}
-      <span>Mark Ep. ${activeEp}</span>
-    </button>`;
-		statusSlot.querySelector("#al-vb-mark")?.addEventListener("click", (e) => {
-			e.stopPropagation();
-			callbacks.onSave(activeEp);
-		});
+	function cleanTitle(title) {
+		if (!title) return "";
+		return title.replace(/\s*\((ITA|SUB|SUB ITA|DUB|ITA SUB|OVA|TV)\)/gi, "").replace(/\s+(ITA|SUB|DUB)$/gi, "").replace(/\s+\d+(?:st|nd|rd|th)\s+Season/gi, "").replace(/\s+Season\s+\d+/gi, "").replace(/\s+\d+-nensei-hen.*/gi, "").replace(/:\s*2nd\s*&\s*3rd\s*STAGE.*/gi, "").trim();
 	}
-	function getActiveEpisode() {
-		const activeEl = document.querySelector(".episode-wrapper .episode-item.active, .episode-item.active");
-		if (activeEl) {
-			const num = parseInt(activeEl.innerText.trim(), 10);
-			if (!isNaN(num) && num > 0) return num;
+	function generateSearchCandidates(media) {
+		if (!media) return [];
+		const candidates = [];
+		const eng = media.title?.english;
+		const rom = media.title?.romaji;
+		for (const raw of [eng, rom]) {
+			if (!raw) continue;
+			const clean = cleanTitle(raw);
+			if (clean && clean.length >= 3) candidates.push(clean);
+			const parts = raw.split(/[:\-\(\)]+/).map((p) => cleanTitle(p.trim())).filter((p) => p.length >= 3);
+			candidates.push(...parts);
+			const noSeason = clean.split(/\b(?:\d+th|1st|2nd|3rd|\d+)\s+season\b/i)[0].trim();
+			if (noSeason && noSeason.length >= 3) candidates.push(noSeason);
+			const words = clean.split(/\s+/).slice(0, 3).join(" ").trim();
+			if (words.length >= 3) candidates.push(words);
 		}
-		try {
-			const epAttr = document.querySelector("video-player")?.getAttribute("episode");
-			if (epAttr) {
-				const parsed = JSON.parse(epAttr);
-				const num = parseInt(parsed?.number, 10);
-				if (!isNaN(num) && num > 0) return num;
+		return [...new Set(candidates.filter((c) => c && c.length >= 3))];
+	}
+	async function resolveAnimeUnityAnime(media, { preferredDub } = {}) {
+		if (!media?.id) return null;
+		const prefDubInt = (preferredDub || Storage.get("al_pref_language") || "sub") === "dub" ? 1 : 0;
+		const rawMap = Storage.get("al_au_map");
+		const map = rawMap && typeof rawMap === "object" && !Array.isArray(rawMap) ? rawMap : {};
+		const cached = map[media.id];
+		if (cached?.id && cached?.slug) {
+			if (cached.dub === void 0 || cached.dub === prefDubInt || cached.hasAlternativeDub === false) return cached;
+		}
+		const csrf = document.querySelector("meta[name=\"csrf-token\"]")?.content;
+		const candidates = generateSearchCandidates(media);
+		for (const query of candidates) try {
+			const res = await fetch("/livesearch", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"X-CSRF-TOKEN": csrf || "",
+					"X-Requested-With": "XMLHttpRequest"
+				},
+				body: JSON.stringify({ title: query })
+			});
+			if (!res.ok) continue;
+			const records = (await res.json())?.records || [];
+			if (!records.length) continue;
+			const matches = records.filter((r) => r.anilist_id === media.id);
+			if (matches.length > 0) {
+				let selected = matches.find((r) => r.dub === prefDubInt);
+				if (!selected) selected = matches[0];
+				const resolved = {
+					id: selected.id,
+					slug: selected.slug,
+					dub: selected.dub,
+					title: selected.title || selected.title_eng,
+					matchingQuery: query,
+					hasAlternativeDub: matches.length > 1,
+					updatedAt: Date.now()
+				};
+				map[media.id] = resolved;
+				Storage.set("al_au_map", map);
+				return resolved;
 			}
-		} catch (_) {}
-		return 0;
-	}
-	function highlightEpisodes(trackedProgress) {
-		const items = document.querySelectorAll(".episode-wrapper .episode-item");
-		if (!items.length) return;
-		items.forEach((el) => {
-			const num = parseInt(el.innerText.trim(), 10);
-			if (isNaN(num)) return;
-			const isTracked = trackedProgress > 0 && num === trackedProgress;
-			const isDone = trackedProgress > 0 && num < trackedProgress;
-			el.classList.toggle("al-tracked", isTracked);
-			el.classList.toggle("al-done", isDone);
-		});
+		} catch (err) {
+			console.warn("[animeunity-utils] /livesearch error for query:", query, err);
+		}
+		return null;
 	}
 	var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 	async function simulateAgenticSearch(media, { epTarget, autoSelectDelay = 5 } = {}) {
@@ -2031,7 +2726,7 @@
 		} else if (searchBtn) searchBtn.click();
 		else {
 			Logger.warn("Search button/component not found in DOM");
-			showToast(`⚠️ Impossibile aprire la barra di ricerca`, true);
+			showToast(`⚠️ Could not open search bar`, true);
 			return false;
 		}
 		let input = null;
@@ -2042,7 +2737,7 @@
 		}
 		if (!input) {
 			Logger.warn("Search input did not mount within timeout");
-			showToast(`⚠️ Impossibile aprire la casella di ricerca`, true);
+			showToast(`⚠️ Could not open search input`, true);
 			return false;
 		}
 		const backdrop = targetNavSearch?.querySelector(".search-backdrop") || input.closest(".search-backdrop") || document.querySelector(".search-backdrop");
@@ -2065,7 +2760,7 @@
 		}
 		if (!items.length) {
 			Logger.info(`No search results returned for "${query}"`);
-			showToast(`⚠️ Nessun risultato immediato per "${query}"`, true);
+			showToast(`⚠️ No immediate results for "${query}"`, true);
 			return true;
 		}
 		Logger.info(`Search results rendered: ${items.length} items`);
@@ -2174,11 +2869,35 @@
 			isRepeating
 		};
 	}
+	function getEntrySortTier(entry) {
+		const media = entry.media || {};
+		const state = calculateEntryState(entry);
+		const resume = Resume.extract(entry.notes) || Resume.getLocal(media.id);
+		if (Boolean(resume && resume.percent > 0 && resume.percent < 88 && (resume.ep === state.nextToWatch || resume.ep > state.progress))) return 1;
+		if ((media.status === "RELEASING" || Boolean(media.nextAiringEpisode)) && state.hasUnwatchedAired) return 2;
+		if (state.hasUnwatchedAired || state.isRepeating) return 3;
+		return 4;
+	}
+	function compareShelfEntries(a, b) {
+		const tierA = getEntrySortTier(a);
+		const tierB = getEntrySortTier(b);
+		if (tierA !== tierB) return tierA - tierB;
+		if (tierA === 4) {
+			const timeA = a.media?.nextAiringEpisode?.timeUntilAiring;
+			const timeB = b.media?.nextAiringEpisode?.timeUntilAiring;
+			if (timeA && timeB) return timeA - timeB;
+			if (timeA && !timeB) return -1;
+			if (!timeA && timeB) return 1;
+		}
+		const updatedA = a.updatedAt || 0;
+		return (b.updatedAt || 0) - updatedA;
+	}
 	function createCard(entry, buddySync = null, onSyncEntry = null) {
 		const media = entry.media || {};
 		const state = calculateEntryState(entry);
-		const epTarget = state.hasUnwatchedAired ? state.nextToWatch : state.progress || 1;
-		const auUrl = getAnimeUnityUrl(media, { targetEp: epTarget });
+		const resume = Resume.extract(entry.notes) || Resume.getLocal(media.id);
+		const isResumeActive = resume && resume.percent > 0 && resume.percent < 88 && (resume.ep === state.nextToWatch || resume.ep > state.progress);
+		const epTarget = isResumeActive ? resume.ep : state.hasUnwatchedAired ? state.nextToWatch : state.progress || 1;
 		const title = media.title?.english || media.title?.romaji || media.title?.userPreferred || "Untitled";
 		const coverUrl = media.coverImage?.large || media.coverImage?.medium || "";
 		const alUrl = media.siteUrl || `https://anilist.co/anime/${media.id}`;
@@ -2228,7 +2947,7 @@
 			txt.textContent = state.unwatchedCount > 1 ? `+${state.unwatchedCount} eps` : `Caught up`;
 			badge.appendChild(txt);
 			badgeWrap.appendChild(badge);
-		} else if (state.nextAir) {
+		} else if (state.nextAir && state.nextAir.timeUntilAiring > 0) {
 			const badge = document.createElement("span");
 			badge.className = "al-badge al-badge-PAUSED";
 			const dot = document.createElement("span");
@@ -2266,9 +2985,15 @@
 		const progressText = document.createElement("div");
 		progressText.className = "al-card-progress-text";
 		const progressLabel = document.createElement("span");
-		progressLabel.textContent = `Ep. ${state.progress} / ${state.totalEp || state.latestAired || "?"}`;
+		if (isResumeActive) progressLabel.textContent = `Ep. ${resume.ep} • ${Resume.formatTime(resume.time)} / ${Resume.formatTime(resume.duration)}`;
+		else progressLabel.textContent = `Ep. ${state.progress} / ${state.totalEp || state.latestAired || "?"}`;
 		progressText.appendChild(progressLabel);
-		if (state.hasUnwatchedAired || state.isRepeating) {
+		if (isResumeActive) {
+			const resumeTag = document.createElement("span");
+			resumeTag.style.color = "#c084fc";
+			resumeTag.textContent = `${resume.percent}%`;
+			progressText.appendChild(resumeTag);
+		} else if (state.hasUnwatchedAired || state.isRepeating) {
 			const readyTag = document.createElement("span");
 			readyTag.style.color = state.isRepeating ? "#06b6d4" : "#3db4f2";
 			readyTag.textContent = state.isRepeating ? "Rewatching" : "Ready";
@@ -2279,9 +3004,14 @@
 		progressBar.className = "al-card-progress-bar";
 		const progressFill = document.createElement("div");
 		progressFill.className = "al-card-progress-fill";
-		const totalForBar = state.totalEp || state.latestAired || state.progress || 1;
-		const percent = Math.min(100, Math.max(0, Math.round(state.progress / totalForBar * 100)));
-		progressFill.style.width = `${percent}%`;
+		if (isResumeActive) {
+			progressFill.style.width = `${resume.percent}%`;
+			progressFill.style.background = "linear-gradient(90deg, #3db4f2, #a855f7)";
+		} else {
+			const totalForBar = state.totalEp || state.latestAired || state.progress || 1;
+			const percent = Math.min(100, Math.max(0, Math.round(state.progress / totalForBar * 100)));
+			progressFill.style.width = `${percent}%`;
+		}
 		progressBar.appendChild(progressFill);
 		overlay.appendChild(progressBar);
 		coverWrap.appendChild(overlay);
@@ -2289,7 +3019,7 @@
 		const cardBody = document.createElement("div");
 		cardBody.className = "al-card-body";
 		const titleLink = document.createElement("a");
-		titleLink.href = auUrl || "#";
+		titleLink.href = "#";
 		titleLink.className = "al-card-title";
 		titleLink.title = title;
 		titleLink.textContent = title;
@@ -2323,16 +3053,25 @@
 			}
 		}
 		const btn = document.createElement("a");
-		btn.href = auUrl || "#";
+		btn.href = "#";
 		btn.className = "al-card-btn";
-		if (state.hasUnwatchedAired || state.isRepeating) {
+		if (isResumeActive) {
 			btn.classList.add("al-btn-play");
-			if (state.isRepeating) btn.style.background = "#06b6d4";
+			btn.style.background = "linear-gradient(135deg, #0284c7, #9333ea)";
+			btn.title = `Resume Ep. ${resume.ep} (${Resume.formatTime(resume.time)})`;
 			btn.innerHTML = `${iconHtml(Play, {
 				width: 12,
 				height: 12
-			})} Ep. ${state.nextToWatch}`;
-		} else if (state.nextAir) {
+			})} Resume`;
+		} else if (state.hasUnwatchedAired || state.isRepeating) {
+			btn.classList.add("al-btn-play");
+			if (state.isRepeating) btn.style.background = "#06b6d4";
+			btn.title = `Watch Ep. ${state.nextToWatch}`;
+			btn.innerHTML = `${iconHtml(Play, {
+				width: 12,
+				height: 12
+			})} Play`;
+		} else if (state.nextAir && state.nextAir.timeUntilAiring > 0) {
 			btn.classList.add("al-btn-secondary");
 			btn.innerHTML = `${iconHtml(Clock, {
 				width: 12,
@@ -2351,17 +3090,11 @@
 		async function handleCardNavigate(e) {
 			if (e.target.closest(".al-card-al-link, .al-btn-buddy-sync")) return;
 			e.preventDefault();
-			Logger.info(`Card clicked: "${title}" (AniList ID: ${media.id})`);
+			const provider = getCurrentProvider();
+			const siteName = provider?.name || "Site";
+			Logger.info(`Card clicked: "${title}" (AniList ID: ${media.id}) on ${siteName}`);
 			if (epTarget) sessionStorage.setItem("al_target_ep", String(epTarget));
-			const directUrl = getAnimeUnityUrl(media, { targetEp: epTarget });
-			if (directUrl && directUrl.startsWith("/anime/")) {
-				Logger.info(`Level 1 direct cache HIT -> opening ${directUrl}`);
-				showToast(`⚡ Opening ${title}...`);
-				window.location.href = directUrl;
-				return;
-			}
-			Logger.info(`Level 1 direct cache MISS for ID ${media.id}. Opening search modal...`);
-			showToast(`🔍 Searching "${title}" on AnimeUnity...`, false, 2e3);
+			if (isResumeActive && resume?.time > 0) sessionStorage.setItem("al_resume_time", String(resume.time));
 			card.classList.add("al-card-loading");
 			const originalBtnHtml = btn.innerHTML;
 			btn.innerHTML = `${iconHtml(LoaderCircle, {
@@ -2371,15 +3104,27 @@
 			})} Loading...`;
 			btn.style.opacity = "0.75";
 			btn.style.pointerEvents = "none";
-			const settings = Settings.get();
 			try {
-				if (!await simulateAgenticSearch(media, {
-					epTarget,
-					autoSelectDelay: settings.searchAutoSelectDelay
-				})) showToast(`⚠️ Could not find or open search for "${title}"`, true);
+				const targetUrl = await provider?.resolveTargetUrl(media, epTarget);
+				if (targetUrl) {
+					showToast(`⚡ Opening ${title}...`);
+					window.location.href = targetUrl;
+					return;
+				}
+				if (provider?.name === "AnimeUnity") {
+					showToast(`🔍 Searching "${title}" on AnimeUnity...`, false, 2e3);
+					const settings = Settings.get();
+					if (!await simulateAgenticSearch(media, {
+						epTarget,
+						autoSelectDelay: settings.searchAutoSelectDelay
+					})) showToast(`⚠️ Could not find "${title}" on AnimeUnity`, true);
+				} else {
+					showToast(`🔍 Searching "${title}" on AnimeSaturn...`);
+					window.location.href = `/filter?key=${encodeURIComponent(cleanTitle$1(title))}`;
+				}
 			} catch (err) {
 				Logger.error("Search error in handleCardNavigate:", err);
-				showToast(`⚠️ Search error: ${err.message}`, true);
+				showToast(`⚠️ Error: ${err.message}`, true);
 			} finally {
 				card.classList.remove("al-card-loading");
 				btn.innerHTML = originalBtnHtml;
@@ -2391,8 +3136,8 @@
 		return card;
 	}
 	function renderWatchingShelf({ entries = [], viewer = null, onRefresh = null, onLogin = null, syncNotifs = [], onSyncEntry = null } = {}) {
-		scanAnimeUnityPageMap();
-		let unwatchedOnly = Settings.get().homeOnlyUnwatched;
+		let unwatchedOnly = Settings.get().shelfFilterUnwatched;
+		let syncOnly = Settings.get().shelfFilterSync;
 		const shelfContainer = document.createElement("div");
 		shelfContainer.id = "al-home-continue-watching";
 		shelfContainer.className = "al-home-shelf";
@@ -2421,81 +3166,68 @@
 		const prefBtn = document.createElement("button");
 		prefBtn.type = "button";
 		prefBtn.className = "al-shelf-pref-btn";
-		prefBtn.title = "Preferences (Audio & Shelf)";
+		prefBtn.title = "Preferences";
 		prefBtn.innerHTML = iconHtml(SlidersVertical, {
 			width: 14,
 			height: 14
 		});
+		controls.appendChild(prefBtn);
+		const unwatchedEntries = entries.filter((e) => calculateEntryState(e).hasUnwatchedAired);
+		const unwatchedBtn = document.createElement("button");
+		unwatchedBtn.type = "button";
+		unwatchedBtn.className = `al-shelf-chip-btn ${unwatchedOnly ? "is-active" : ""}`;
+		unwatchedBtn.title = "Show only anime with unwatched aired episodes";
+		unwatchedBtn.innerHTML = `
+    ${iconHtml(Zap, {
+			width: 12,
+			height: 12
+		})}
+    <span>Unwatched</span>
+    ${unwatchedEntries.length > 0 ? `<span class="al-chip-count">${unwatchedEntries.length}</span>` : ""}
+  `;
+		unwatchedBtn.addEventListener("click", () => {
+			unwatchedOnly = !unwatchedOnly;
+			Settings.set("shelfFilterUnwatched", unwatchedOnly);
+			unwatchedBtn.classList.toggle("is-active", unwatchedOnly);
+			updateTrack();
+		});
+		controls.appendChild(unwatchedBtn);
+		const syncMap = new Map((syncNotifs || []).map((n) => [n.mediaId, n]));
+		const syncEntries = entries.filter((e) => syncMap.has(e.mediaId) || !!Buddy.extract(e.notes));
+		let syncBtn = null;
+		if (syncEntries.length > 0) {
+			syncBtn = document.createElement("button");
+			syncBtn.type = "button";
+			syncBtn.className = `al-shelf-chip-btn is-sync ${syncOnly ? "is-active" : ""}`;
+			syncBtn.title = "Show only anime with Sync Together friend";
+			syncBtn.innerHTML = `
+      ${iconHtml(Users, {
+				width: 12,
+				height: 12
+			})}
+      <span>Sync</span>
+      <span class="al-chip-count sync-badge">${syncEntries.length}</span>
+    `;
+			syncBtn.addEventListener("click", () => {
+				syncOnly = !syncOnly;
+				Settings.set("shelfFilterSync", syncOnly);
+				syncBtn.classList.toggle("is-active", syncOnly);
+				updateTrack();
+			});
+			controls.appendChild(syncBtn);
+		}
 		prefBtn.addEventListener("click", () => {
 			openPreferencesModal({
 				viewer,
 				onSave: () => {
-					unwatchedOnly = Settings.get().homeOnlyUnwatched;
-					toggleBox.classList.toggle("active", unwatchedOnly);
-					toggleKnob.classList.toggle("active", unwatchedOnly);
+					unwatchedOnly = Settings.get().shelfFilterUnwatched;
+					syncOnly = Settings.get().shelfFilterSync;
+					unwatchedBtn.classList.toggle("is-active", unwatchedOnly);
+					if (syncBtn) syncBtn.classList.toggle("is-active", syncOnly);
 					updateTrack();
 				}
 			});
 		});
-		controls.appendChild(prefBtn);
-		const unwatchedEntries = entries.filter((e) => calculateEntryState(e).hasUnwatchedAired);
-		const filterWrap = document.createElement("div");
-		filterWrap.className = "al-shelf-filter";
-		filterWrap.title = "Toggle: Show only series with unwatched aired episodes";
-		const toggleBox = document.createElement("div");
-		toggleBox.className = `al-shelf-toggle-box ${unwatchedOnly ? "active" : ""}`;
-		const toggleKnob = document.createElement("div");
-		toggleKnob.className = `al-shelf-toggle-knob ${unwatchedOnly ? "active" : ""}`;
-		toggleBox.appendChild(toggleKnob);
-		filterWrap.appendChild(toggleBox);
-		const filterLabel = document.createElement("span");
-		filterLabel.className = "al-shelf-filter-label";
-		filterLabel.innerHTML = `${iconHtml(Zap, {
-			width: 12,
-			height: 12
-		})} Only unwatched`;
-		filterWrap.appendChild(filterLabel);
-		if (unwatchedEntries.length > 0) {
-			const pill = document.createElement("span");
-			pill.className = "al-shelf-unwatched-pill";
-			pill.textContent = String(unwatchedEntries.length);
-			filterWrap.appendChild(pill);
-		}
-		controls.appendChild(filterWrap);
-		const syncMap = new Map((syncNotifs || []).map((n) => [n.mediaId, n]));
-		const syncEntries = entries.filter((e) => syncMap.has(e.mediaId) || !!Buddy.extract(e.notes));
-		let syncOnly = false;
-		if (syncEntries.length > 0) {
-			const syncFilterWrap = document.createElement("div");
-			syncFilterWrap.className = "al-shelf-filter";
-			syncFilterWrap.title = "Toggle: Show only series with Sync Together friend";
-			const syncToggleBox = document.createElement("div");
-			syncToggleBox.className = `al-shelf-toggle-box ${syncOnly ? "active" : ""}`;
-			const syncToggleKnob = document.createElement("div");
-			syncToggleKnob.className = `al-shelf-toggle-knob ${syncOnly ? "active" : ""}`;
-			syncToggleBox.appendChild(syncToggleKnob);
-			syncFilterWrap.appendChild(syncToggleBox);
-			const syncFilterLabel = document.createElement("span");
-			syncFilterLabel.className = "al-shelf-filter-label";
-			syncFilterLabel.innerHTML = `${iconHtml(Users, {
-				width: 12,
-				height: 12
-			})} Sync Together`;
-			syncFilterWrap.appendChild(syncFilterLabel);
-			const syncPill = document.createElement("span");
-			syncPill.className = "al-shelf-unwatched-pill";
-			syncPill.style.background = "rgba(56, 189, 248, 0.2)";
-			syncPill.style.color = "#38bdf8";
-			syncPill.textContent = String(syncEntries.length);
-			syncFilterWrap.appendChild(syncPill);
-			syncFilterWrap.addEventListener("click", () => {
-				syncOnly = !syncOnly;
-				syncToggleBox.classList.toggle("active", syncOnly);
-				syncToggleKnob.classList.toggle("active", syncOnly);
-				updateTrack();
-			});
-			controls.appendChild(syncFilterWrap);
-		}
 		header.appendChild(controls);
 		shelfContainer.appendChild(header);
 		const carouselWrap = document.createElement("div");
@@ -2514,7 +3246,7 @@
 					height: 32
 				})}</div>
         <div class="al-shelf-empty-title">Connect your AniList Account</div>
-        <div class="al-shelf-empty-desc">Sign in with AniList to access your Continue Watching list, release countdowns, and quick episode progress directly on AnimeUnity.</div>
+        <div class="al-shelf-empty-desc">Sign in with AniList to access your Continue Watching list, release countdowns, and quick episode progress.</div>
         <button type="button" class="al-btn primary al-home-auth-btn" style="margin-top: 6px;">Connect AniList</button>
       `;
 				const authBtn = empty.querySelector(".al-home-auth-btn");
@@ -2542,31 +3274,26 @@
 				track.appendChild(empty);
 				return;
 			}
-			let visibleEntries = entries;
+			let visibleEntries = [...entries];
 			if (unwatchedOnly) visibleEntries = visibleEntries.filter((e) => calculateEntryState(e).hasUnwatchedAired);
 			if (syncOnly) visibleEntries = visibleEntries.filter((e) => syncMap.has(e.mediaId) || !!Buddy.extract(e.notes));
+			visibleEntries.sort(compareShelfEntries);
 			if (!visibleEntries.length) {
 				const empty = document.createElement("div");
 				empty.className = "al-shelf-empty";
 				empty.style.width = "100%";
 				empty.innerHTML = `
-        <div class="al-shelf-empty-title">${unwatchedOnly ? "All Caught Up! 🎉" : "No Matching Anime"}</div>
-        <div class="al-shelf-empty-desc">${unwatchedOnly ? "You have no unwatched aired episodes in your Watching list." : "No anime in your Watching list match the active filters."}</div>
+        <div class="al-shelf-empty-title">All Caught Up</div>
+        <div class="al-shelf-empty-desc">${unwatchedOnly && syncOnly ? "No series with unwatched aired episodes and Sync Together friend." : unwatchedOnly ? "You are caught up on all airing anime! No unwatched episodes available." : "No series with a Sync Together friend found in your watching list."}</div>
       `;
 				track.appendChild(empty);
 				return;
 			}
 			visibleEntries.forEach((entry) => {
-				const buddySync = syncMap.get(entry.mediaId);
-				track.appendChild(createCard(entry, buddySync, onSyncEntry));
+				const card = createCard(entry, syncMap.get(entry.mediaId) || null, onSyncEntry);
+				track.appendChild(card);
 			});
 		}
-		filterWrap.addEventListener("click", () => {
-			unwatchedOnly = !unwatchedOnly;
-			toggleBox.classList.toggle("active", unwatchedOnly);
-			toggleKnob.classList.toggle("active", unwatchedOnly);
-			updateTrack();
-		});
 		updateTrack();
 		carouselWrap.appendChild(track);
 		shelfContainer.appendChild(carouselWrap);
@@ -2665,9 +3392,88 @@
 		let lastReportedDur = 0;
 		let hasAutoSkipped = false;
 		let lastSkipTime = 0;
+		let pendingResumeSeek = null;
+		let activeResumeTarget = null;
+		let hasConfirmedResume = false;
+		let lastBroadcastTime = 0;
+		let lastReadyNotice = 0;
+		function broadcastPlaybackState(force = false) {
+			const now = Date.now();
+			if (!force && now - lastBroadcastTime < 750) return;
+			lastBroadcastTime = now;
+			const pos = getPos();
+			const dur = getDuration();
+			const video = document.querySelector("video");
+			const jw = getPlayer();
+			const vds = getVidstack();
+			let isPaused = true;
+			let isEnded = false;
+			if (jw && typeof jw.getState === "function") {
+				isPaused = jw.getState() === "paused" || jw.getState() === "idle";
+				isEnded = jw.getState() === "complete";
+			} else if (vds && typeof vds.paused !== "undefined") {
+				isPaused = vds.paused;
+				isEnded = vds.ended;
+			} else if (video) {
+				isPaused = video.paused;
+				isEnded = video.ended;
+			}
+			try {
+				window.top.postMessage({
+					type: "AL_PLAYBACK_STATE",
+					currentTime: pos,
+					duration: dur,
+					isPaused,
+					isEnded
+				}, "*");
+			} catch (_) {}
+		}
+		function handlePlayResumeGuard() {
+			if (activeResumeTarget !== null && activeResumeTarget > 10) {
+				const target = activeResumeTarget;
+				setTimeout(() => {
+					if (getPos() < 5) {
+						Logger.info(`↺ Anti-reset guard: restoring playhead to ${target}s`);
+						seekTo(target);
+					}
+				}, 350);
+			}
+		}
+		function applyResumeSeek(target) {
+			if (typeof target !== "number" || target <= 0) return;
+			hasConfirmedResume = false;
+			activeResumeTarget = target;
+			const dur = getDuration();
+			if (dur > 0 && target < dur - 5) {
+				seekTo(target);
+				Logger.info(`↺ Applying seekTo ${target}s`);
+				let checks = 0;
+				const guardInterval = setInterval(() => {
+					checks++;
+					const currentPos = getPos();
+					if (currentPos < 3 && checks <= 6) seekTo(target);
+					else if (currentPos >= target - 5 || checks > 8) {
+						clearInterval(guardInterval);
+						if (!hasConfirmedResume) {
+							hasConfirmedResume = true;
+							try {
+								window.top.postMessage({
+									type: "AL_RESUME_CONFIRMED",
+									time: target
+								}, "*");
+							} catch (_) {}
+						}
+					}
+				}, 400);
+				pendingResumeSeek = null;
+			} else pendingResumeSeek = target;
+		}
 		function getPlayer() {
 			const uWin = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
 			return typeof uWin.jwplayer === "function" ? uWin.jwplayer() : null;
+		}
+		function getVidstack() {
+			return document.querySelector("media-player");
 		}
 		function getPos() {
 			const jw = getPlayer();
@@ -2675,6 +3481,8 @@
 				const p = jw.getPosition();
 				if (typeof p === "number" && !isNaN(p)) return p;
 			}
+			const vds = getVidstack();
+			if (vds && typeof vds.currentTime === "number" && !isNaN(vds.currentTime)) return vds.currentTime;
 			return document.querySelector("video")?.currentTime || 0;
 		}
 		function getDuration() {
@@ -2683,42 +3491,94 @@
 				const d = jw.getDuration();
 				if (typeof d === "number" && !isNaN(d) && d > 0) return d;
 			}
+			const vds = getVidstack();
+			if (vds && typeof vds.duration === "number" && !isNaN(vds.duration) && vds.duration > 0) return vds.duration;
 			return document.querySelector("video")?.duration || 0;
 		}
 		function notifyReady() {
 			const dur = getDuration();
-			if (dur > 0 && Math.round(dur) !== Math.round(lastReportedDur)) {
-				lastReportedDur = dur;
-				try {
-					window.top.postMessage({
-						type: "AU_FRAME_READY",
-						duration: dur
-					}, "*");
-				} catch (_) {}
+			if (dur > 0) {
+				const now = Date.now();
+				if (Math.round(dur) !== Math.round(lastReportedDur)) {
+					lastReportedDur = dur;
+					try {
+						window.top.postMessage({
+							type: "AU_FRAME_READY",
+							duration: dur
+						}, "*");
+					} catch (_) {}
+				}
+				if (now - lastReadyNotice > 1e3) {
+					lastReadyNotice = now;
+					try {
+						window.top.postMessage({
+							type: "AL_PLAYER_READY",
+							duration: dur
+						}, "*");
+					} catch (_) {}
+				}
+				if (pendingResumeSeek !== null) applyResumeSeek(pendingResumeSeek);
 			}
 		}
 		function bindMediaEvents() {
 			const video = document.querySelector("video");
 			if (video && !video.__au_skip_bound) {
 				video.__au_skip_bound = true;
-				video.addEventListener("timeupdate", checkTime);
+				video.addEventListener("timeupdate", () => {
+					checkTime();
+					broadcastPlaybackState();
+				});
+				video.addEventListener("play", () => {
+					handlePlayResumeGuard();
+					broadcastPlaybackState(true);
+				});
+				video.addEventListener("pause", () => broadcastPlaybackState(true));
+				video.addEventListener("ended", () => broadcastPlaybackState(true));
+				video.addEventListener("canplay", () => notifyReady());
+				video.addEventListener("playing", () => notifyReady());
 				video.addEventListener("loadedmetadata", () => {
 					notifyReady();
 					computeAdjustedOp();
+					broadcastPlaybackState(true);
 				});
 				video.addEventListener("durationchange", () => {
 					notifyReady();
 					computeAdjustedOp();
+					broadcastPlaybackState(true);
 				});
 			}
 			const jw = getPlayer();
 			if (jw && typeof jw.on === "function" && !jw.__au_skip_bound) {
 				jw.__au_skip_bound = true;
-				jw.on("time", checkTime);
+				jw.on("time", () => {
+					checkTime();
+					broadcastPlaybackState();
+				});
+				jw.on("play", () => {
+					handlePlayResumeGuard();
+					notifyReady();
+					broadcastPlaybackState(true);
+				});
+				jw.on("pause", () => broadcastPlaybackState(true));
+				jw.on("complete", () => broadcastPlaybackState(true));
+				jw.on("ready", () => notifyReady());
+				jw.on("firstFrame", () => notifyReady());
 				jw.on("meta", () => {
 					notifyReady();
 					computeAdjustedOp();
+					broadcastPlaybackState(true);
 				});
+			}
+			const vds = getVidstack();
+			if (vds && !vds.__au_skip_bound) {
+				vds.__au_skip_bound = true;
+				vds.addEventListener("can-play", () => notifyReady());
+				vds.addEventListener("play", () => {
+					handlePlayResumeGuard();
+					broadcastPlaybackState(true);
+				});
+				vds.addEventListener("pause", () => broadcastPlaybackState(true));
+				vds.addEventListener("ended", () => broadcastPlaybackState(true));
 			}
 		}
 		function computeAdjustedOp() {
@@ -2738,12 +3598,19 @@
 			};
 		}
 		function seekTo(target) {
+			if (typeof target !== "number" || isNaN(target) || target <= 0) return;
 			const jw = getPlayer();
-			if (jw && typeof jw.seek === "function") jw.seek(target);
-			else {
-				const v = document.querySelector("video");
-				if (v) v.currentTime = target;
-			}
+			if (jw && typeof jw.seek === "function") try {
+				jw.seek(target);
+			} catch (_) {}
+			const vds = getVidstack();
+			if (vds && typeof vds.currentTime !== "undefined") try {
+				vds.currentTime = target;
+			} catch (_) {}
+			const v = document.querySelector("video");
+			if (v) try {
+				v.currentTime = target;
+			} catch (_) {}
 		}
 		function skipIntro(isAuto = false) {
 			if (!currentOp) return;
@@ -2800,12 +3667,13 @@
 					}
 				}, true);
 			});
-			const target = document.querySelector(".jw-wrapper, .jwplayer, #player") || document.body;
+			const target = document.querySelector(".jw-wrapper, .jwplayer, #player, .player, .video-container, video")?.parentElement || document.body;
 			if (window.getComputedStyle(target).position === "static") target.style.position = "relative";
 			target.appendChild(btn);
 		}
 		function checkTime() {
 			bindMediaEvents();
+			if (activeResumeTarget !== null && getPos() >= activeResumeTarget - 3) activeResumeTarget = null;
 			if (getDuration() > 0 && Math.round(getDuration()) !== Math.round(lastReportedDur)) notifyReady();
 			if (!rawOp) {
 				if (btn && isBtnVisible) {
@@ -2852,6 +3720,7 @@
 				computeAdjustedOp();
 				checkTime();
 			} else if (e.data?.type === "AU_TRIGGER_SKIP") handleSkipAction();
+			else if (e.data?.type === "AL_RESUME_SEEK") applyResumeSeek(e.data.target);
 		});
 		window.addEventListener("keydown", (e) => {
 			if (e.key === "s" || e.key === "S") {
@@ -2864,6 +3733,191 @@
 		setInterval(checkTime, 250);
 		notifyReady();
 	}
+	function requestJson(url, options = {}) {
+		return new Promise((resolve) => {
+			if (typeof GM_xmlhttpRequest === "function") GM_xmlhttpRequest({
+				method: options.method || "GET",
+				url,
+				headers: options.headers || {},
+				data: options.body || null,
+				timeout: 8e3,
+				onload: (res) => {
+					if (res.status >= 200 && res.status < 300) try {
+						resolve(JSON.parse(res.responseText));
+					} catch (_) {
+						resolve(null);
+					}
+					else resolve(null);
+				},
+				onerror: () => resolve(null),
+				ontimeout: () => resolve(null)
+			});
+			else fetch(url, options).then((r) => r.ok ? r.json() : null).then(resolve).catch(() => resolve(null));
+		});
+	}
+	function requestText(url, options = {}) {
+		return new Promise((resolve) => {
+			if (typeof GM_xmlhttpRequest === "function") GM_xmlhttpRequest({
+				method: options.method || "GET",
+				url,
+				headers: options.headers || {},
+				data: options.body || null,
+				timeout: 8e3,
+				onload: (res) => {
+					if (res.status >= 200 && res.status < 400) resolve(res.responseText || "");
+					else resolve(null);
+				},
+				onerror: () => resolve(null),
+				ontimeout: () => resolve(null)
+			});
+			else fetch(url, options).then((r) => r.ok ? r.text() : null).then(resolve).catch(() => resolve(null));
+		});
+	}
+	async function resolveSaturnUrl(media, targetEp = 1) {
+		const asBase = Storage.get("al_as_base") || "https://www.animesaturn.net";
+		if (!media?.id) return asBase;
+		const isDubPref = (Storage.get("al_pref_language") || "sub") === "dub";
+		const rawMap = Storage.get("al_as_map");
+		const map = rawMap && typeof rawMap === "object" && !Array.isArray(rawMap) ? rawMap : {};
+		const cached = map[media.id];
+		if (cached?.slug) {
+			const mediaSeason = extractSeason(media.title?.romaji || media.title?.english || media.title?.userPreferred || "");
+			const cachedSeason = cached.title ? extractSeason(cached.title) : null;
+			if ((cachedSeason === null || cachedSeason === mediaSeason) && (cached.dub === void 0 || cached.dub === 1 === isDubPref || cached.hasAlternativeDub === false)) return `${asBase}/anime/${cached.slug}/ep-${targetEp}`;
+		}
+		const candidates = generateSearchCandidates$1(media);
+		for (const query of candidates) try {
+			const results = (await requestJson(`${asBase}/api/search?q=${encodeURIComponent(query)}`))?.results || [];
+			if (!results.length) continue;
+			const best = results.map((r) => ({
+				result: r,
+				score: scoreSearchResult(r, media, isDubPref)
+			})).sort((a, b) => b.score - a.score)[0];
+			if (best && best.score >= 50 && best.result?.url) {
+				const chosen = best.result;
+				const slug = chosen.url.replace(/^\/anime\//, "").replace(/\/$/, "");
+				const isDub = chosen.title?.includes("(ITA)") || chosen.url?.includes("-ita-") ? 1 : 0;
+				map[media.id] = {
+					slug,
+					dub: isDub,
+					hasAlternativeDub: results.length > 1,
+					title: chosen.title,
+					updatedAt: Date.now()
+				};
+				Storage.set("al_as_map", map);
+				return `${asBase}/anime/${slug}/ep-${targetEp}`;
+			}
+		} catch (_) {}
+		const title = media.title?.english || media.title?.romaji || media.title?.userPreferred || "";
+		return `${asBase}/filter?key=${encodeURIComponent(cleanTitle$1(title))}`;
+	}
+	async function resolveUnityUrl(media, targetEp = 1) {
+		const auBase = Storage.get("al_au_base") || "https://www.animeunity.co";
+		if (!media?.id) return auBase;
+		const prefDubInt = (Storage.get("al_pref_language") || "sub") === "dub" ? 1 : 0;
+		const rawMap = Storage.get("al_au_map");
+		const map = rawMap && typeof rawMap === "object" && !Array.isArray(rawMap) ? rawMap : {};
+		const cached = map[media.id];
+		if (cached?.id && cached?.slug) {
+			if (cached.dub === void 0 || cached.dub === prefDubInt || cached.hasAlternativeDub === false) return `${auBase}/anime/${cached.id}-${cached.slug}?ep=${targetEp}`;
+		}
+		const candidates = generateSearchCandidates$1(media);
+		for (const query of candidates) try {
+			const html = await requestText(`${auBase}/archivio?title=${encodeURIComponent(query)}`);
+			if (!html) continue;
+			const m = html.match(/<archivio\s+records="([^"]+)"/i);
+			if (!m || !m[1]) continue;
+			const rawJson = m[1].replace(/&quot;/g, "\"");
+			const records = JSON.parse(rawJson);
+			if (!Array.isArray(records) || !records.length) continue;
+			const matches = records.filter((r) => r.anilist_id === media.id);
+			let chosen = null;
+			if (matches.length > 0) chosen = matches.find((r) => r.dub === 1 === (prefDubInt === 1)) || matches[0];
+			else {
+				const scored = records.map((r) => ({
+					record: r,
+					score: scoreSearchResult(r, media, prefDubInt === 1)
+				})).sort((a, b) => b.score - a.score);
+				if (scored[0] && scored[0].score >= 50) chosen = scored[0].record;
+			}
+			if (chosen?.id && chosen?.slug) {
+				map[media.id] = {
+					id: chosen.id,
+					slug: chosen.slug,
+					dub: chosen.dub,
+					hasAlternativeDub: records.length > 1,
+					title: chosen.title,
+					updatedAt: Date.now()
+				};
+				Storage.set("al_au_map", map);
+				return `${auBase}/anime/${chosen.id}-${chosen.slug}?ep=${targetEp}`;
+			}
+		} catch (_) {}
+		const title = media.title?.english || media.title?.romaji || media.title?.userPreferred || "";
+		return `${auBase}/archivio?title=${encodeURIComponent(cleanTitle$1(title))}`;
+	}
+	function renderCrossSwitch({ media, activeEp = 0, provider = null } = {}) {
+		const isUnity = provider?.name === "AnimeUnity";
+		const targetSiteName = isUnity ? "AnimeSaturn" : "AnimeUnity";
+		const targetIcon = isUnity ? Globe : Tv;
+		const targetEp = activeEp > 0 ? activeEp : 1;
+		let container = null;
+		if (isUnity) container = document.getElementById("video-top");
+		else container = document.querySelector(".watch-toolbar") || document.querySelector(".player-card") || document.querySelector(".ag-cta");
+		const existing = document.getElementById("al-cross-switch-btn");
+		if (!container || !media) {
+			existing?.remove();
+			return;
+		}
+		let btn = existing;
+		if (!btn) {
+			btn = document.createElement("button");
+			btn.type = "button";
+			btn.id = "al-cross-switch-btn";
+			btn.className = `al-cross-switch-btn ${isUnity ? "for-saturn" : "for-unity"}`;
+			container.appendChild(btn);
+		} else btn.className = `al-cross-switch-btn ${isUnity ? "for-saturn" : "for-unity"}`;
+		btn.title = `Switch to ${targetSiteName} · Open Ep. ${targetEp}`;
+		btn.innerHTML = `
+    <span class="al-switch-icon">${iconHtml(targetIcon, {
+			width: 13,
+			height: 13
+		})}</span>
+    <span class="al-switch-label">${targetSiteName}</span>
+    <span class="al-switch-ep">Ep. ${targetEp}</span>
+    ${iconHtml(ExternalLink, {
+			width: 11,
+			height: 11,
+			class: "al-switch-ext"
+		})}
+  `;
+		btn.onclick = async (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			btn.classList.add("is-loading");
+			btn.innerHTML = `${iconHtml(LoaderCircle, {
+				width: 12,
+				height: 12,
+				class: "al-spin"
+			})} <span>Opening ${targetSiteName}...</span>`;
+			showToast(`⚡ Switching to ${targetSiteName} (Ep. ${targetEp})...`, false, 2500);
+			try {
+				const url = isUnity ? await resolveSaturnUrl(media, targetEp) : await resolveUnityUrl(media, targetEp);
+				if (url) {
+					window.location.href = url;
+					return;
+				}
+			} catch (err) {
+				Logger.error("Cross switch error:", err);
+			}
+			const auBase = Storage.get("al_au_base") || "https://www.animeunity.co";
+			const asBase = Storage.get("al_as_base") || "https://www.animesaturn.net";
+			const title = media.title?.english || media.title?.romaji || media.title?.userPreferred || "";
+			if (isUnity) window.location.href = `${asBase}/filter?key=${encodeURIComponent(cleanTitle$1(title))}`;
+			else window.location.href = `${auBase}/archivio?title=${encodeURIComponent(cleanTitle$1(title))}`;
+		};
+	}
+	var provider = null;
 	var currentUser = null;
 	var currentMedia = null;
 	var currentTitle = "";
@@ -2880,12 +3934,11 @@
 		isActive: false,
 		countdown: 0,
 		targetEp: 0,
-		preventRewind: true
+		preventRewind: false
 	};
 	var cancelledEps = new Set();
 	var isHome = () => {
-		const p = window.location.pathname;
-		return p === "/" || p === "/home" || p === "";
+		return provider ? provider.isHome() : false;
 	};
 	function cancelAutoTrack() {
 		if (autoTrackTimer) clearTimeout(autoTrackTimer);
@@ -2896,17 +3949,115 @@
 		autoTrackState.countdown = 0;
 		autoTrackState.targetEp = 0;
 	}
+	var lastNotesSyncTime = 0;
+	var lastSyncedResumeTime = 0;
+	var hasTriggeredPlayTrack = false;
+	var pendingResumeTarget = null;
+	var pendingResumeEp = null;
+	function prepareResumeTarget(force = false) {
+		if (!Settings.get().autoResume) {
+			pendingResumeTarget = null;
+			pendingResumeEp = null;
+			return;
+		}
+		const activeEp = provider?.getActiveEpisode?.() || 1;
+		const sessionTime = sessionStorage.getItem("al_resume_time");
+		const sessionTargetEp = sessionStorage.getItem("al_target_ep");
+		let targetTime = null;
+		if (sessionTime) {
+			const parsedTime = parseInt(sessionTime, 10);
+			const parsedEp = sessionTargetEp ? parseInt(sessionTargetEp, 10) : null;
+			if (!parsedEp || parsedEp === activeEp) targetTime = parsedTime;
+		}
+		if (!targetTime && currentMedia) {
+			const resume = Resume.extract(currentMedia?.mediaListEntry?.notes) || Resume.getLocal(currentMedia?.id);
+			if (resume && resume.ep === activeEp && resume.time > 15 && resume.percent < 88) targetTime = resume.time;
+		}
+		if (targetTime && targetTime > 0) {
+			pendingResumeTarget = targetTime;
+			pendingResumeEp = activeEp;
+		} else if (force) {
+			pendingResumeTarget = null;
+			pendingResumeEp = null;
+		}
+	}
+	function dispatchResumeSeek(targetWindow = null) {
+		if (!pendingResumeTarget || !Settings.get().autoResume) return;
+		const payload = {
+			type: "AL_RESUME_SEEK",
+			target: pendingResumeTarget
+		};
+		if (targetWindow) try {
+			targetWindow.postMessage(payload, "*");
+		} catch (_) {}
+		else document.querySelectorAll("iframe").forEach((frame) => {
+			try {
+				frame.contentWindow?.postMessage(payload, "*");
+			} catch (_) {}
+		});
+	}
+	async function syncResumeToNotes(mediaId, ep, currentTime, duration) {
+		if (!currentMedia?.mediaListEntry || !Settings.get().crossDeviceSync) return;
+		const curNotes = currentMedia.mediaListEntry.notes || "";
+		const updated = Resume.apply(curNotes, {
+			ep,
+			time: currentTime,
+			duration
+		});
+		if (updated === curNotes) return;
+		currentMedia.mediaListEntry.notes = updated;
+		try {
+			await AniListAPI.saveEntry({
+				mediaId,
+				notes: updated
+			});
+		} catch (_) {}
+	}
+	function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
+		if (!currentMedia || isHome()) return;
+		const activeEp = provider?.getActiveEpisode?.() || 1;
+		const settings = Settings.get();
+		const percent = duration > 0 ? currentTime / duration * 100 : 0;
+		if (currentTime > 10 && percent < 92) Resume.setLocal(currentMedia.id, {
+			ep: activeEp,
+			time: Math.round(currentTime),
+			duration: Math.round(duration),
+			percent: Math.round(percent)
+		});
+		if (settings.autoTrack && settings.trackTrigger === "play" && !isPaused && currentTime > 3 && !hasTriggeredPlayTrack && activeEp > trackedProgress && !cancelledEps.has(activeEp)) {
+			hasTriggeredPlayTrack = true;
+			App.setProgress(activeEp);
+			return;
+		}
+		const threshold = settings.completionThreshold || 85;
+		if (settings.autoTrack && settings.trackTrigger === "completion" && (percent >= threshold || isEnded) && activeEp > trackedProgress && !cancelledEps.has(activeEp)) {
+			cancelledEps.add(activeEp);
+			Resume.clearLocal(currentMedia.id);
+			App.setProgress(activeEp);
+			return;
+		}
+		if (settings.crossDeviceSync && currentUser?.id && currentTime > 15 && percent < 85) {
+			const now = Date.now();
+			const timeDiff = Math.abs(currentTime - lastSyncedResumeTime);
+			if (isPaused || now - lastNotesSyncTime >= 6e4 && timeDiff >= 15) {
+				lastNotesSyncTime = now;
+				lastSyncedResumeTime = currentTime;
+				syncResumeToNotes(currentMedia.id, activeEp, currentTime, duration);
+			}
+		}
+	}
 	function handleActiveEpisodeChange(newActiveEp) {
 		if (!newActiveEp || newActiveEp === lastActiveEp) return;
 		lastActiveEp = newActiveEp;
 		cancelAutoTrack();
-		const malId = currentMedia?.idMal || getAnimeMetadata(void 0, { onResolved: (m) => {
-			if (m?.malId) checkSkipIntro(m.malId, newActiveEp);
-		} }).malId;
+		hasTriggeredPlayTrack = false;
+		const info = provider?.getAnimeInfo() || {};
+		const malId = currentMedia?.idMal || info.malId;
 		if (malId) checkSkipIntro(malId, newActiveEp);
+		prepareResumeTarget(true);
+		dispatchResumeSeek();
 		const settings = Settings.get();
-		autoTrackState.preventRewind = settings.preventRewind;
-		if (settings.autoTrack && currentMedia && newActiveEp > trackedProgress && !cancelledEps.has(newActiveEp)) {
+		if (settings.autoTrack && settings.trackTrigger === "delay" && currentMedia && newActiveEp > trackedProgress && !cancelledEps.has(newActiveEp)) {
 			if (settings.delay === 0) {
 				App.setProgress(newActiveEp);
 				return;
@@ -2926,9 +4077,41 @@
 			}, settings.delay * 1e3);
 		} else App.render();
 	}
-	async function findMediaByTitle(title) {
+	async function findMediaByTitle(title, expectedTotalEp = null) {
 		if (!title) return null;
-		const cleaned = cleanTitle(title);
+		const cleaned = cleanTitle$1(title);
+		const targetSeason = extractSeason(title);
+		const candidates = (await AniListAPI.searchMedia(cleaned) || (cleaned !== title ? await AniListAPI.searchMedia(title) : null))?.Page?.media || [];
+		if (candidates.length > 0) {
+			const scored = candidates.map((m) => {
+				let score = 0;
+				const mTitle = m.title?.romaji || m.title?.english || m.title?.userPreferred || "";
+				if (extractSeason(mTitle) === targetSeason) score += 100;
+				else score -= 100;
+				if (expectedTotalEp && m.episodes) {
+					if (m.episodes === expectedTotalEp) score += 40;
+					else if (Math.abs(m.episodes - expectedTotalEp) <= 2) score += 15;
+					else if (m.episodes <= 3 && expectedTotalEp > 10) score -= 60;
+				}
+				if (m.format === "TV") score += 30;
+				else if (m.format === "OVA" || m.format === "SPECIAL") score -= 50;
+				const lowerM = mTitle.toLowerCase();
+				const lowerQ = cleaned.toLowerCase();
+				for (const word of [
+					"quest",
+					"picture drama",
+					"recap",
+					"special",
+					"drama cd"
+				]) if (lowerM.includes(word) && !lowerQ.includes(word)) score -= 80;
+				return {
+					media: m,
+					score
+				};
+			}).sort((a, b) => b.score - a.score);
+			if (scored[0] && scored[0].score > 0) return scored[0].media;
+			return candidates[0];
+		}
 		let res = await AniListAPI.getMedia(cleaned);
 		if (!res?.Media && cleaned !== title) res = await AniListAPI.getMedia(title);
 		return res?.Media || null;
@@ -2939,24 +4122,18 @@
 			if (existing !== shelfElement) existing.replaceWith(shelfElement);
 			return;
 		}
+		const anchor = provider?.getShelfAnchor?.();
+		if (!anchor || !anchor.element) return;
 		const shelfRow = document.createElement("div");
 		shelfRow.className = "row al-home-shelf-row";
 		const shelfCol = document.createElement("div");
 		shelfCol.className = "col-12";
 		shelfCol.appendChild(shelfElement);
 		shelfRow.appendChild(shelfCol);
-		const topBarRow = document.querySelector("#home .bar-link")?.closest(".row");
-		if (topBarRow) {
-			topBarRow.after(shelfRow);
-			return;
-		}
-		const ultimiRow = document.querySelector("#ultimi-episodi")?.closest(".row");
-		if (ultimiRow) {
-			ultimiRow.before(shelfRow);
-			return;
-		}
-		const container = document.querySelector("#home > .container, .container");
-		if (container) container.prepend(shelfRow);
+		if (anchor.position === "after") anchor.element.after(shelfRow);
+		else if (anchor.position === "before") anchor.element.before(shelfRow);
+		else if (anchor.position === "prepend") anchor.element.prepend(shelfRow);
+		else anchor.element.appendChild(shelfRow);
 	}
 	async function computeHomeSyncNotifs() {
 		if (!homeEntries || !homeEntries.length) {
@@ -2986,7 +4163,6 @@
 				const isAhead = buddyProgress > myProgress;
 				const media = entry.media || {};
 				const title = media.title?.english || media.title?.romaji || "Untitled";
-				const auUrl = getAnimeUnityUrl(media, { targetEp: buddyProgress || myProgress || 1 });
 				notifs.push({
 					mediaId: entry.mediaId,
 					buddy: buddyName,
@@ -2996,8 +4172,7 @@
 					isAhead,
 					isBuddyCompleted: !!isBuddyCompleted,
 					canSync: isAhead || isBuddyCompleted && entry.status !== "COMPLETED",
-					title,
-					auUrl
+					title
 				});
 			}
 		}
@@ -3037,12 +4212,6 @@
 			if (existing) existing.closest(".al-home-shelf-row")?.remove() || existing.remove();
 			return;
 		}
-		if (!Settings.get().homeShelf) {
-			const existing = document.getElementById("al-home-continue-watching");
-			if (existing) existing.closest(".al-home-shelf-row")?.remove() || existing.remove();
-			return;
-		}
-		if (!document.querySelector("#home .container, .container")) return;
 		if (homeEntries === null && homeFetching) {
 			if (!document.getElementById("al-home-continue-watching")) {
 				const skeleton = document.createElement("div");
@@ -3127,11 +4296,8 @@
 			const isRewatching = prevStatus === "REPEATING";
 			let targetStatus;
 			if (isCompleted) targetStatus = "COMPLETED";
-			else if (isReset) {
-				if (prevStatus === "COMPLETED" || isRewatching) targetStatus = "REPEATING";
-				else targetStatus = "CURRENT";
-			} else if (prevStatus === "COMPLETED" || isRewatching) targetStatus = "REPEATING";
-			else targetStatus = "CURRENT";
+			else if (isReset) targetStatus = prevStatus === "COMPLETED" || isRewatching ? "REPEATING" : "CURRENT";
+			else targetStatus = prevStatus === "COMPLETED" || isRewatching ? "REPEATING" : "CURRENT";
 			const params = {
 				mediaId: id,
 				progress: newProgress,
@@ -3142,26 +4308,27 @@
 				if (!entry?.completedAt?.year) params.completedAt = getTodayDate();
 				if (isRewatching) params.repeat = (entry?.repeat || 0) + 1;
 			}
+			if (entry?.notes && entry.notes.includes("[resume:")) {
+				const cleared = Resume.clear(entry.notes);
+				params.notes = cleared;
+				if (entry) entry.notes = cleared;
+			}
+			Resume.clearLocal(id);
 			if ((await AniListAPI.saveEntry(params))?.SaveMediaListEntry) {
 				cancelledEps.delete(newProgress);
-				showToast(isReset ? `Progress reset to Ep. 0 (${AniListAPI.statuses[targetStatus] || targetStatus})` : isCompleted ? isRewatching ? `🎉 Rewatch completed (${(entry?.repeat || 0) + 1}×)!` : "🎉 Completed on AniList!" : `Episode ${newProgress} saved`);
+				showToast(isReset ? `Progress reset to Ep. 0 (${AniListAPI.statuses[targetStatus] || targetStatus})` : trackedProgress > 0 && newProgress < trackedProgress ? `↺ Rewound to Ep. ${newProgress}` : isCompleted ? isRewatching ? `🎉 Rewatch completed (${(entry?.repeat || 0) + 1}×)!` : "🎉 Completed on AniList!" : `Episode ${newProgress} saved`);
 				if (isSinglePage) App.sync();
 				else await loadHomeWatching();
 			}
 		},
 		render() {
-			const openAuth = () => openTokenModal(async () => {
-				await App.loadUser();
-				if (isHome()) await loadHomeWatching();
-				else App.sync();
-			});
 			const hasToken = !!Storage.get("anilist_token");
-			const activeEp = getActiveEpisode();
+			const activeEp = provider?.getActiveEpisode?.() || 0;
 			renderNav(currentUser, {
 				onLogin: openAuth,
 				onLogout: () => App.logout(),
 				onChangeToken: openAuth
-			});
+			}, provider);
 			if (isHome()) {
 				renderHome();
 				return;
@@ -3211,41 +4378,37 @@
 						showToast("Anime removed");
 						App.sync();
 					}
+				},
+				onSave: (ep) => {
+					cancelAutoTrack();
+					App.setProgress(ep);
+				},
+				onCancelCountdown: () => {
+					if (autoTrackState.targetEp) cancelledEps.add(autoTrackState.targetEp);
+					cancelAutoTrack();
+					App.render();
+				},
+				onRewind: (rewindTarget, currentActiveEp) => {
+					cancelAutoTrack();
+					if (currentActiveEp) cancelledEps.add(currentActiveEp);
+					App.setProgress(rewindTarget);
 				}
 			}, {
 				isLoading: isMediaLoading,
 				viewer: currentUser,
 				defaultBuddy: Settings.get().defaultBuddy,
-				buddyData: currentBuddyData
-			});
-			renderVideoBottom({
+				buddyData: currentBuddyData,
+				provider,
 				activeEp,
 				trackedProgress,
-				total: currentMedia?.episodes || 0,
-				hasToken,
-				autoTrackState,
-				isLoading: isMediaLoading,
-				callbacks: {
-					onSave: (ep) => {
-						cancelAutoTrack();
-						App.setProgress(ep);
-					},
-					onCancel: () => {
-						if (autoTrackState.targetEp) cancelledEps.add(autoTrackState.targetEp);
-						cancelAutoTrack();
-						App.render();
-					},
-					onForce: (ep) => {
-						cancelAutoTrack();
-						App.setProgress(ep);
-					},
-					onReset: () => {
-						cancelAutoTrack();
-						App.setProgress(0);
-					}
-				}
+				autoTrackState
 			});
-			highlightEpisodes(trackedProgress);
+			provider?.highlightEpisodes(trackedProgress);
+			renderCrossSwitch({
+				media: currentMedia,
+				activeEp,
+				provider
+			});
 		},
 		async sync() {
 			if (isHome()) return;
@@ -3259,22 +4422,42 @@
 			try {
 				isMediaLoading = true;
 				App.render();
-				const meta = extractPageMetadata();
-				if (meta.anilistId) currentMedia = (await AniListAPI.getMediaById(meta.anilistId))?.Media || null;
-				if (!currentMedia && !meta.anilistId && meta.romajiTitle) currentMedia = await findMediaByTitle(meta.romajiTitle);
-				if (!currentMedia && !meta.anilistId && currentTitle) currentMedia = await findMediaByTitle(currentTitle);
+				const info = provider?.getAnimeInfo() || {};
+				if (info.anilistId) currentMedia = (await AniListAPI.getMediaById(info.anilistId))?.Media || null;
+				if (!currentMedia && info.malId) currentMedia = (await AniListAPI.getMediaByMalId(info.malId))?.Media || null;
+				if (!currentMedia && typeof provider?.fetchRemoteMetadata === "function") {
+					const remote = await provider.fetchRemoteMetadata();
+					if (remote?.anilistId) currentMedia = (await AniListAPI.getMediaById(remote.anilistId))?.Media || null;
+					else if (remote?.malId) currentMedia = (await AniListAPI.getMediaByMalId(remote.malId))?.Media || null;
+				}
+				if (!currentMedia && info.romajiTitle) currentMedia = await findMediaByTitle(info.romajiTitle, info.totalEp);
+				if (!currentMedia && info.title) currentMedia = await findMediaByTitle(info.title, info.totalEp);
+				if (!currentMedia && currentTitle) currentMedia = await findMediaByTitle(currentTitle, info.totalEp);
 				if (currentMedia?.id) {
-					const match = window.location.pathname.match(/\/anime\/(\d+)(?:-([^\/]+))?/i);
-					if (match && match[1]) {
-						const rawMap = Storage.get("al_au_map");
-						const map = rawMap && typeof rawMap === "object" && !Array.isArray(rawMap) ? rawMap : {};
-						map[currentMedia.id] = {
-							id: parseInt(match[1], 10),
-							slug: match[2] || "",
-							updatedAt: Date.now()
-						};
-						Storage.set("al_au_map", map);
-						Logger.info(`Auto-learned mapping: AniList ${currentMedia.id} -> AU /anime/${match[1]}-${match[2]}`);
+					if (provider?.name === "AnimeUnity") {
+						const match = window.location.pathname.match(/\/anime\/(\d+)(?:-([^/]+))?/i);
+						if (match && match[1]) {
+							const rawMap = Storage.get("al_au_map");
+							const map = rawMap && typeof rawMap === "object" && !Array.isArray(rawMap) ? rawMap : {};
+							map[currentMedia.id] = {
+								id: parseInt(match[1], 10),
+								slug: match[2] || "",
+								updatedAt: Date.now()
+							};
+							Storage.set("al_au_map", map);
+						}
+					} else if (provider?.name === "AnimeSaturn") {
+						const match = window.location.pathname.match(/\/anime\/([^/]+)/i);
+						if (match && match[1]) {
+							const rawMap = Storage.get("al_as_map");
+							const map = rawMap && typeof rawMap === "object" && !Array.isArray(rawMap) ? rawMap : {};
+							map[currentMedia.id] = {
+								slug: match[1],
+								malId: currentMedia.idMal || void 0,
+								updatedAt: Date.now()
+							};
+							Storage.set("al_as_map", map);
+						}
 					}
 				}
 				trackedProgress = currentMedia?.mediaListEntry ? currentMedia.mediaListEntry.progress : -1;
@@ -3292,11 +4475,12 @@
 					};
 				} else currentBuddyData = null;
 				if (!isHome()) {
-					const ep = getActiveEpisode() || 1;
-					const malId = currentMedia?.idMal || getAnimeMetadata(void 0, { onResolved: (m) => {
-						if (m?.malId) checkSkipIntro(m.malId, ep);
-					} }).malId;
+					if (provider?.name === "AnimeUnity") autoSelectTargetEpisode(currentMedia, trackedProgress);
+					const ep = provider?.getActiveEpisode?.() || 1;
+					const malId = currentMedia?.idMal || info.malId;
 					if (malId) checkSkipIntro(malId, ep);
+					prepareResumeTarget();
+					dispatchResumeSeek();
 				}
 			} catch (err) {
 				Logger.warn("Error during AniList sync:", err);
@@ -3308,8 +4492,34 @@
 		init() {
 			initSkipIntroTop();
 			App.loadUser();
+			prepareResumeTarget();
+			window.addEventListener("message", (e) => {
+				if (e.data?.type === "AL_PLAYBACK_STATE") handlePlaybackState(e.data);
+				else if (e.data?.type === "AL_PLAYER_READY" || e.data?.type === "AU_FRAME_READY") {
+					if (!pendingResumeTarget) prepareResumeTarget();
+					if (pendingResumeTarget) dispatchResumeSeek(e.source);
+				} else if (e.data?.type === "AL_RESUME_CONFIRMED") {
+					const activeEp = pendingResumeEp || provider?.getActiveEpisode?.() || 1;
+					const resumeTime = e.data.time || pendingResumeTarget;
+					pendingResumeTarget = null;
+					pendingResumeEp = null;
+					sessionStorage.removeItem("al_resume_time");
+					sessionStorage.removeItem("al_target_ep");
+					if (resumeTime) showToast(`↺ Resumed Ep. ${activeEp} at ${Resume.formatTime(resumeTime)}`, false, 2500);
+				}
+			});
+			const handlePageExit = () => {
+				if (currentMedia && currentUser?.id) {
+					const local = Resume.getLocal(currentMedia.id);
+					if (local && local.time > 15 && local.percent < 85) syncResumeToNotes(currentMedia.id, local.ep, local.time, local.duration);
+				}
+			};
+			document.addEventListener("visibilitychange", () => {
+				if (document.hidden) handlePageExit();
+			});
+			window.addEventListener("beforeunload", handlePageExit);
+			window.addEventListener("pagehide", handlePageExit);
 			Settings.subscribe((settings) => {
-				autoTrackState.preventRewind = settings.preventRewind;
 				if (!settings.autoTrack) cancelAutoTrack();
 				App.render();
 			});
@@ -3317,41 +4527,44 @@
 				document.querySelectorAll("#al-nav-dropdown, #al-nav-m-dropdown").forEach((d) => {
 					if (!d.contains(e.target) && !e.target.closest("#al-nav-desktop, #al-nav-mobile")) d.classList.remove("show");
 				});
-				if (e.target.closest(".episode-wrapper .episode-item")) setTimeout(() => {
-					const ep = getActiveEpisode();
+				if (e.target.closest(".episode-wrapper .episode-item, .ep-tile, a[href*='/ep-'], #video-bottom a.prev, #video-bottom a.next, .wt-btn")) setTimeout(() => {
+					const ep = provider?.getActiveEpisode?.();
 					if (ep) handleActiveEpisodeChange(ep);
-				}, 80);
-				if (e.target.closest("#video-bottom a.prev, #video-bottom a.next")) setTimeout(() => {
-					const ep = getActiveEpisode();
-					if (ep) handleActiveEpisodeChange(ep);
-				}, 150);
+				}, 100);
 			});
+			let lastPath = window.location.pathname;
 			setInterval(() => {
-				scanAnimeUnityPageMap();
+				if (window.location.pathname !== lastPath) {
+					lastPath = window.location.pathname;
+					if (isHome()) loadHomeWatching();
+					else App.sync();
+				}
 				if (isHome()) {
 					if (currentUser?.id && homeEntries === null && !homeFetching) loadHomeWatching();
 					else if (!document.getElementById("al-home-continue-watching")) renderHome();
 				} else {
 					const shelf = document.getElementById("al-home-continue-watching");
 					if (shelf) shelf.closest(".al-home-shelf-row")?.remove() || shelf.remove();
-					const titleEl = document.querySelector("#anime .title, h1.title");
-					if (titleEl && titleEl.innerText.trim() !== currentTitle) {
-						currentTitle = titleEl.innerText.trim();
+					const info = provider?.getAnimeInfo() || {};
+					if (info.title && info.title !== currentTitle) {
+						currentTitle = info.title;
 						App.sync();
 					}
-					const ep = getActiveEpisode();
+					const ep = provider?.getActiveEpisode?.();
 					if (ep && ep !== lastActiveEp) handleActiveEpisodeChange(ep);
-					highlightEpisodes(trackedProgress);
+					provider?.highlightEpisodes(trackedProgress);
 				}
-				if (!isHome()) {
-					const needsVideoBottom = document.getElementById("video-bottom") && !document.getElementById("al-video-bottom-widget");
-					if (!document.getElementById("al-nav-desktop") || needsVideoBottom) App.render();
-				} else if (!document.getElementById("al-nav-desktop")) App.render();
-			}, 600);
+				const hasNav = document.getElementById("al-nav-desktop");
+				const hasBar = document.getElementById("al-control-bar");
+				if (!hasNav || !isHome() && !hasBar) App.render();
+			}, 700);
 		}
 	};
-	if (window.location.hostname.includes("vixcloud")) initPlayer();
+	if (window.location.hostname.includes("vixcloud") || window.location.hostname.includes("saturncdn")) initPlayer();
 	else {
+		provider = getProvider();
+		if (provider?.name === "AnimeUnity") Storage.set("al_au_base", window.location.origin);
+		else if (provider?.name === "AnimeSaturn") Storage.set("al_as_base", window.location.origin);
 		currentUser = Buddy.getViewer();
 		handleUrlToken();
 		App.init();

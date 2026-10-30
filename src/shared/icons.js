@@ -31,7 +31,11 @@ import {
   Calendar,
   MoreHorizontal,
   FastForward,
-  SkipForward
+  SkipForward,
+  Languages,
+  Globe,
+  Tv,
+  ArrowRightLeft
 } from "lucide";
 
 export function iconHtml(iconNode, attrs = { width: 12, height: 12 }) {
@@ -72,7 +76,11 @@ export {
   Calendar,
   MoreHorizontal,
   FastForward,
-  SkipForward
+  SkipForward,
+  Languages,
+  Globe,
+  Tv,
+  ArrowRightLeft
 };
 
 

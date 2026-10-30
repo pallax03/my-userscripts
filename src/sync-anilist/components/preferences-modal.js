@@ -3,22 +3,25 @@ import {
   iconHtml,
   Sliders,
   Clock,
-  RotateCcw,
   Check,
-  Zap,
   ChevronDown,
   Users,
-  Trash2,
   Search,
   FastForward,
-  SkipForward
+  SkipForward,
+  Languages,
+  RotateCcw,
+  Trash2,
+  Play
 } from "../../shared/icons.js";
 import { Settings } from "../settings.js";
+import { Storage } from "../../shared/storage.js";
+import { showToast } from "../../shared/toast.js";
 import { Buddy } from "../buddy.js";
 import { initBuddyPicker } from "./buddy-picker.js";
 
 /**
- * Opens unified preferences modal for playback, homepage shelf, and sync buddy
+ * Opens unified preferences modal for playback, search, and sync buddy
  * @param {Object} [options]
  * @param {Function} [options.onSave]
  * @param {Object} [options.viewer]
@@ -26,8 +29,6 @@ import { initBuddyPicker } from "./buddy-picker.js";
 export function openPreferencesModal({ onSave, viewer } = {}) {
   const currentViewer = viewer || Buddy.getViewer();
   const settings = Settings.get();
-  const currentBuddy = settings.defaultBuddy;
-  const buddyAvatar = currentBuddy ? Buddy.getAvatar(currentBuddy) : null;
 
   const { modal, close } = createModal({
     id: "al-prefs-overlay",
@@ -35,7 +36,7 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
     variant: "drawer",
     icon: Sliders,
     title: "Preferences",
-    subtitle: "Playback, homepage, and sync settings",
+    subtitle: "Playback, search, and sync settings",
     onClose: () => {
       if (typeof onSave === "function") onSave();
     },
@@ -56,6 +57,18 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
         <div class="al-pref-sub">
           <div class="al-pref-row">
             <span class="al-pref-sub-label">
+              ${iconHtml(Play, { width: 13, height: 13 })}
+              <span>Track trigger timing</span>
+            </span>
+            <select class="al-select-xs al-sel-trigger">
+              <option value="completion" ${settings.trackTrigger === "completion" ? "selected" : ""}>At 85% Video Completion</option>
+              <option value="play" ${settings.trackTrigger === "play" ? "selected" : ""}>On Video Start (Play)</option>
+              <option value="delay" ${settings.trackTrigger === "delay" ? "selected" : ""}>Countdown Delay on Load</option>
+            </select>
+          </div>
+
+          <div class="al-pref-row al-row-delay" style="${settings.trackTrigger === "delay" ? "" : "display: none;"}">
+            <span class="al-pref-sub-label">
               ${iconHtml(Clock, { width: 13, height: 13 })}
               <span>Grace delay before saving</span>
             </span>
@@ -70,9 +83,17 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
           <label class="al-pref-row" style="cursor: pointer;">
             <span class="al-pref-sub-label">
               ${iconHtml(RotateCcw, { width: 13, height: 13 })}
-              <span>Prevent rewind when rewatching</span>
+              <span>Auto-resume playback position</span>
             </span>
-            <input type="checkbox" class="al-checkbox al-chk-rewind" ${settings.preventRewind ? "checked" : ""} />
+            <input type="checkbox" class="al-switch al-toggle-autoresume" ${settings.autoResume ? "checked" : ""} />
+          </label>
+
+          <label class="al-pref-row" style="cursor: pointer;">
+            <span class="al-pref-sub-label">
+              ${iconHtml(Languages, { width: 13, height: 13 })}
+              <span>Cross-device sync via AniList notes</span>
+            </span>
+            <input type="checkbox" class="al-switch al-toggle-crossdevicesync" ${settings.crossDeviceSync ? "checked" : ""} />
           </label>
         </div>
       </div>
@@ -113,27 +134,29 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
         </div>
       </div>
 
-      <!-- 3. Homepage Shelf -->
-      <div class="al-pref-group al-pref-collapsible ${settings.homeShelf ? "is-open is-active" : ""}" style="margin-top: 10px;" id="al-pref-sec-shelf">
+      <!-- 3. Navigation & Search Preferences -->
+      <div class="al-pref-group al-pref-collapsible is-open is-active" style="margin-top: 10px;" id="al-pref-sec-search">
         <div class="al-pref-header">
           <div class="al-pref-title-click">
             <span class="al-pref-chevron">${iconHtml(ChevronDown, { width: 14, height: 14 })}</span>
             <div class="al-pref-info">
-              <span class="al-pref-title">Continue Watching shelf</span>
-              <span class="al-pref-desc">Show Continue Watching shelf on homepage</span>
+              <span class="al-pref-title">Search & Matching</span>
+              <span class="al-pref-desc">Streaming language & auto-navigation</span>
             </div>
           </div>
-          <input type="checkbox" class="al-switch al-toggle-homeshelf" ${settings.homeShelf ? "checked" : ""} />
         </div>
 
         <div class="al-pref-sub">
-          <label class="al-pref-row" style="cursor: pointer;">
+          <div class="al-pref-row">
             <span class="al-pref-sub-label">
-              ${iconHtml(Zap, { width: 13, height: 13 })}
-              <span>Default to unwatched only</span>
+              ${iconHtml(Languages, { width: 13, height: 13 })}
+              <span>Preferred language</span>
             </span>
-            <input type="checkbox" class="al-checkbox al-chk-unwatched" ${settings.homeOnlyUnwatched ? "checked" : ""} />
-          </label>
+            <select class="al-select-xs al-sel-language">
+              <option value="sub" ${settings.language === "sub" ? "selected" : ""}>SUB (Original)</option>
+              <option value="dub" ${settings.language === "dub" ? "selected" : ""}>ITA (Dubbed)</option>
+            </select>
+          </div>
 
           <div class="al-pref-row">
             <span class="al-pref-sub-label">
@@ -143,13 +166,24 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
             <select class="al-select-xs al-sel-autoselect">
               <option value="5" ${settings.searchAutoSelectDelay === 5 ? "selected" : ""}>5 seconds (Default)</option>
               <option value="10" ${settings.searchAutoSelectDelay === 10 ? "selected" : ""}>10 seconds</option>
-              <option value="0" ${settings.searchAutoSelectDelay === 0 ? "selected" : ""}>Manual (No auto-open)</option>
+              <option value="0" ${settings.searchAutoSelectDelay === 0 ? "selected" : ""}>Manual (Browse results)</option>
             </select>
+          </div>
+
+          <div class="al-pref-row" style="align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 8px; margin-top: 4px;">
+            <span class="al-pref-sub-label">
+              ${iconHtml(RotateCcw, { width: 13, height: 13 })}
+              <span>Reset learned anime URLs</span>
+            </span>
+            <button type="button" class="al-btn-pref-action danger al-btn-clear-cache">
+              ${iconHtml(Trash2, { width: 11, height: 11 })}
+              <span>Clear Cache</span>
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- 3. Sync Together (Watch Buddy) -->
+      <!-- 4. Sync Together (Watch Buddy) -->
       <div class="al-pref-group al-pref-collapsible is-open is-active" style="margin-top: 10px;" id="al-pref-sec-buddy">
         <div class="al-pref-header">
           <div class="al-pref-title-click">
@@ -208,6 +242,18 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
     setAutoTrack(e.target.checked);
   });
 
+  const triggerSelect = modal.querySelector(".al-sel-trigger");
+  const delayRow = modal.querySelector(".al-row-delay");
+  if (triggerSelect) {
+    triggerSelect.addEventListener("change", (e) => {
+      const mode = e.target.value;
+      Settings.set("trackTrigger", mode);
+      if (delayRow) {
+        delayRow.style.display = mode === "delay" ? "" : "none";
+      }
+    });
+  }
+
   const delaySelect = modal.querySelector(".al-sel-delay");
   if (delaySelect) {
     delaySelect.addEventListener("change", (e) => {
@@ -215,10 +261,17 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
     });
   }
 
-  const rewindCheckbox = modal.querySelector(".al-chk-rewind");
-  if (rewindCheckbox) {
-    rewindCheckbox.addEventListener("change", (e) => {
-      Settings.set("preventRewind", e.target.checked);
+  const autoResumeToggle = modal.querySelector(".al-toggle-autoresume");
+  if (autoResumeToggle) {
+    autoResumeToggle.addEventListener("change", (e) => {
+      Settings.set("autoResume", e.target.checked);
+    });
+  }
+
+  const crossDeviceToggle = modal.querySelector(".al-toggle-crossdevicesync");
+  if (crossDeviceToggle) {
+    crossDeviceToggle.addEventListener("change", (e) => {
+      Settings.set("crossDeviceSync", e.target.checked);
     });
   }
 
@@ -243,30 +296,17 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
     });
   }
 
-  // 2. Home Shelf boolean switch + expansion
-  const homeShelfToggle = modal.querySelector(".al-toggle-homeshelf");
-  const shelfGroup = modal.querySelector("#al-pref-sec-shelf");
-  const shelfHeader = shelfGroup?.querySelector(".al-pref-title-click");
-
-  const setHomeShelf = (active) => {
-    if (homeShelfToggle) homeShelfToggle.checked = active;
-    Settings.set("homeShelf", active);
-    shelfGroup?.classList.toggle("is-open", active);
-    shelfGroup?.classList.toggle("is-active", active);
-  };
-
-  shelfHeader?.addEventListener("click", () => {
-    setHomeShelf(!homeShelfToggle?.checked);
+  // 3. Search & Language settings
+  const searchGroup = modal.querySelector("#al-pref-sec-search");
+  const searchHeader = searchGroup?.querySelector(".al-pref-title-click");
+  searchHeader?.addEventListener("click", () => {
+    searchGroup?.classList.toggle("is-open");
   });
 
-  homeShelfToggle?.addEventListener("change", (e) => {
-    setHomeShelf(e.target.checked);
-  });
-
-  const unwatchedCheckbox = modal.querySelector(".al-chk-unwatched");
-  if (unwatchedCheckbox) {
-    unwatchedCheckbox.addEventListener("change", (e) => {
-      Settings.set("homeOnlyUnwatched", e.target.checked);
+  const langSelect = modal.querySelector(".al-sel-language");
+  if (langSelect) {
+    langSelect.addEventListener("change", (e) => {
+      Settings.set("language", e.target.value);
     });
   }
 
@@ -277,14 +317,23 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
     });
   }
 
-  // 3. Sync Together collapsible header
+  const clearCacheBtn = modal.querySelector(".al-btn-clear-cache");
+  if (clearCacheBtn) {
+    clearCacheBtn.addEventListener("click", () => {
+      Storage.del("al_au_map");
+      Storage.del("al_as_map");
+      showToast("⚡ Search cache cleared: mappings reset");
+    });
+  }
+
+  // 4. Sync Together collapsible header
   const buddyGroup = modal.querySelector("#al-pref-sec-buddy");
   const buddyHeader = buddyGroup?.querySelector(".al-pref-title-click");
   buddyHeader?.addEventListener("click", () => {
     buddyGroup?.classList.toggle("is-open");
   });
 
-  // 4. Bind Sync Together Default Buddy Picker using shared component
+  // Bind Default Buddy Picker
   const buddyBox = modal.querySelector("#al-pref-buddy-box");
   initBuddyPicker(buddyBox, {
     selectedBuddy: Settings.get().defaultBuddy,
