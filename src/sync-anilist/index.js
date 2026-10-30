@@ -60,10 +60,18 @@ let lastSyncedResumeTime = 0;
 let hasTriggeredPlayTrack = false;
 let pendingResumeTarget = null;
 let pendingResumeEp = null;
-let hasDispatchedResumeThisEp = false;
+let resumedEpKey = null;
+
+function getResumeKey(activeEp) {
+  const ep = activeEp || provider?.getActiveEpisode?.() || 1;
+  const mediaId = currentMedia?.id || "media";
+  return `${mediaId}_ep${ep}`;
+}
 
 function prepareResumeTarget(force = false) {
-  if (hasDispatchedResumeThisEp && !force) return;
+  const activeEp = provider?.getActiveEpisode?.() || 1;
+  const currentKey = getResumeKey(activeEp);
+  if (resumedEpKey === currentKey && !force) return;
   const settings = Settings.get();
   if (!settings.autoResume) {
     pendingResumeTarget = null;
@@ -71,7 +79,6 @@ function prepareResumeTarget(force = false) {
     return;
   }
 
-  const activeEp = provider?.getActiveEpisode?.() || 1;
   const sessionTime = sessionStorage.getItem("al_resume_time");
   const sessionTargetEp = sessionStorage.getItem("al_target_ep");
   let targetTime = null;
@@ -101,7 +108,8 @@ function prepareResumeTarget(force = false) {
 }
 
 function dispatchResumeSeek(targetWindow = null) {
-  if (!pendingResumeTarget || !Settings.get().autoResume) return;
+  const activeEp = pendingResumeEp || provider?.getActiveEpisode?.() || 1;
+  if (!pendingResumeTarget || !Settings.get().autoResume || resumedEpKey === getResumeKey(activeEp)) return;
 
   const payload = { type: "AL_RESUME_SEEK", target: pendingResumeTarget };
 
@@ -199,7 +207,7 @@ function handleActiveEpisodeChange(newActiveEp) {
   lastActiveEp = newActiveEp;
   cancelAutoTrack();
   hasTriggeredPlayTrack = false;
-  hasDispatchedResumeThisEp = false;
+  resumedEpKey = null;
 
   const info = provider?.getAnimeInfo() || {};
   const malId = currentMedia?.idMal || info.malId;
@@ -209,7 +217,6 @@ function handleActiveEpisodeChange(newActiveEp) {
 
   prepareResumeTarget(true);
   if (pendingResumeTarget) {
-    hasDispatchedResumeThisEp = true;
     dispatchResumeSeek();
   }
 
@@ -749,10 +756,9 @@ export const App = {
         if (malId) {
           checkSkipIntro(malId, ep);
         }
-        if (!hasDispatchedResumeThisEp) {
+        if (resumedEpKey !== getResumeKey(ep)) {
           prepareResumeTarget();
           if (pendingResumeTarget) {
-            hasDispatchedResumeThisEp = true;
             dispatchResumeSeek();
           }
         }
@@ -774,18 +780,20 @@ export const App = {
       if (e.data?.type === "AL_PLAYBACK_STATE") {
         handlePlaybackState(e.data);
       } else if (e.data?.type === "AL_PLAYER_READY" || e.data?.type === "AU_FRAME_READY") {
-        if (!hasDispatchedResumeThisEp) {
+        const ep = provider?.getActiveEpisode?.() || 1;
+        if (resumedEpKey !== getResumeKey(ep)) {
           if (!pendingResumeTarget) {
             prepareResumeTarget();
           }
           if (pendingResumeTarget) {
-            hasDispatchedResumeThisEp = true;
             dispatchResumeSeek(e.source);
           }
         }
       } else if (e.data?.type === "AL_RESUME_CONFIRMED") {
-        hasDispatchedResumeThisEp = true;
         const activeEp = pendingResumeEp || provider?.getActiveEpisode?.() || 1;
+        const currentKey = getResumeKey(activeEp);
+        if (resumedEpKey === currentKey) return;
+        resumedEpKey = currentKey;
         const resumeTime = e.data.time || pendingResumeTarget;
         pendingResumeTarget = null;
         pendingResumeEp = null;

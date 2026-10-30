@@ -3419,6 +3419,19 @@
 		let activeGuardInterval = null;
 		let hasReportedPlayerReady = false;
 		let lastBroadcastTime = 0;
+		let isProgrammaticSeek = false;
+		let programmaticSeekTimeout = null;
+		function markProgrammaticSeek(durationMs = 600) {
+			isProgrammaticSeek = true;
+			if (programmaticSeekTimeout) clearTimeout(programmaticSeekTimeout);
+			programmaticSeekTimeout = setTimeout(() => {
+				isProgrammaticSeek = false;
+				programmaticSeekTimeout = null;
+			}, durationMs);
+		}
+		function handleSeeking() {
+			if (!isProgrammaticSeek) cancelActiveResume();
+		}
 		function cancelActiveResume() {
 			activeResumeTarget = null;
 			pendingResumeSeek = null;
@@ -3495,6 +3508,9 @@
 								}, "*");
 							} catch (_) {}
 						}
+						setTimeout(() => {
+							activeResumeTarget = null;
+						}, 1500);
 					}
 				}, 400);
 				pendingResumeSeek = null;
@@ -3532,6 +3548,7 @@
 			if (dur > 0) {
 				if (Math.round(dur) !== Math.round(lastReportedDur)) {
 					lastReportedDur = dur;
+					hasReportedPlayerReady = false;
 					try {
 						window.top.postMessage({
 							type: "AU_FRAME_READY",
@@ -3563,7 +3580,7 @@
 					handlePlayResumeGuard();
 					broadcastPlaybackState(true);
 				});
-				video.addEventListener("seeking", cancelActiveResume);
+				video.addEventListener("seeking", handleSeeking);
 				video.addEventListener("pause", () => broadcastPlaybackState(true));
 				video.addEventListener("ended", () => broadcastPlaybackState(true));
 				video.addEventListener("canplay", () => notifyReady());
@@ -3591,7 +3608,7 @@
 					notifyReady();
 					broadcastPlaybackState(true);
 				});
-				jw.on("seek", cancelActiveResume);
+				jw.on("seek", handleSeeking);
 				jw.on("pause", () => broadcastPlaybackState(true));
 				jw.on("complete", () => broadcastPlaybackState(true));
 				jw.on("ready", () => notifyReady());
@@ -3610,7 +3627,7 @@
 					handlePlayResumeGuard();
 					broadcastPlaybackState(true);
 				});
-				vds.addEventListener("seeking", cancelActiveResume);
+				vds.addEventListener("seeking", handleSeeking);
 				vds.addEventListener("pause", () => broadcastPlaybackState(true));
 				vds.addEventListener("ended", () => broadcastPlaybackState(true));
 			}
@@ -3633,6 +3650,7 @@
 		}
 		function seekTo(target) {
 			if (typeof target !== "number" || isNaN(target) || target <= 0) return;
+			markProgrammaticSeek(600);
 			const jw = getPlayer();
 			if (jw && typeof jw.seek === "function") try {
 				jw.seek(target);
@@ -3989,15 +4007,20 @@
 	var hasTriggeredPlayTrack = false;
 	var pendingResumeTarget = null;
 	var pendingResumeEp = null;
-	var hasDispatchedResumeThisEp = false;
+	var resumedEpKey = null;
+	function getResumeKey(activeEp) {
+		const ep = activeEp || provider?.getActiveEpisode?.() || 1;
+		return `${currentMedia?.id || "media"}_ep${ep}`;
+	}
 	function prepareResumeTarget(force = false) {
-		if (hasDispatchedResumeThisEp && !force) return;
+		const activeEp = provider?.getActiveEpisode?.() || 1;
+		const currentKey = getResumeKey(activeEp);
+		if (resumedEpKey === currentKey && !force) return;
 		if (!Settings.get().autoResume) {
 			pendingResumeTarget = null;
 			pendingResumeEp = null;
 			return;
 		}
-		const activeEp = provider?.getActiveEpisode?.() || 1;
 		const sessionTime = sessionStorage.getItem("al_resume_time");
 		const sessionTargetEp = sessionStorage.getItem("al_target_ep");
 		let targetTime = null;
@@ -4019,7 +4042,8 @@
 		}
 	}
 	function dispatchResumeSeek(targetWindow = null) {
-		if (!pendingResumeTarget || !Settings.get().autoResume) return;
+		const activeEp = pendingResumeEp || provider?.getActiveEpisode?.() || 1;
+		if (!pendingResumeTarget || !Settings.get().autoResume || resumedEpKey === getResumeKey(activeEp)) return;
 		const payload = {
 			type: "AL_RESUME_SEEK",
 			target: pendingResumeTarget
@@ -4088,15 +4112,12 @@
 		lastActiveEp = newActiveEp;
 		cancelAutoTrack();
 		hasTriggeredPlayTrack = false;
-		hasDispatchedResumeThisEp = false;
+		resumedEpKey = null;
 		const info = provider?.getAnimeInfo() || {};
 		const malId = currentMedia?.idMal || info.malId;
 		if (malId) checkSkipIntro(malId, newActiveEp);
 		prepareResumeTarget(true);
-		if (pendingResumeTarget) {
-			hasDispatchedResumeThisEp = true;
-			dispatchResumeSeek();
-		}
+		if (pendingResumeTarget) dispatchResumeSeek();
 		const settings = Settings.get();
 		if (settings.autoTrack && settings.trackTrigger === "delay" && currentMedia && newActiveEp > trackedProgress && !cancelledEps.has(newActiveEp)) {
 			if (settings.delay === 0) {
@@ -4520,12 +4541,9 @@
 					const ep = provider?.getActiveEpisode?.() || 1;
 					const malId = currentMedia?.idMal || info.malId;
 					if (malId) checkSkipIntro(malId, ep);
-					if (!hasDispatchedResumeThisEp) {
+					if (resumedEpKey !== getResumeKey(ep)) {
 						prepareResumeTarget();
-						if (pendingResumeTarget) {
-							hasDispatchedResumeThisEp = true;
-							dispatchResumeSeek();
-						}
+						if (pendingResumeTarget) dispatchResumeSeek();
 					}
 				}
 			} catch (err) {
@@ -4542,16 +4560,16 @@
 			window.addEventListener("message", (e) => {
 				if (e.data?.type === "AL_PLAYBACK_STATE") handlePlaybackState(e.data);
 				else if (e.data?.type === "AL_PLAYER_READY" || e.data?.type === "AU_FRAME_READY") {
-					if (!hasDispatchedResumeThisEp) {
+					const ep = provider?.getActiveEpisode?.() || 1;
+					if (resumedEpKey !== getResumeKey(ep)) {
 						if (!pendingResumeTarget) prepareResumeTarget();
-						if (pendingResumeTarget) {
-							hasDispatchedResumeThisEp = true;
-							dispatchResumeSeek(e.source);
-						}
+						if (pendingResumeTarget) dispatchResumeSeek(e.source);
 					}
 				} else if (e.data?.type === "AL_RESUME_CONFIRMED") {
-					hasDispatchedResumeThisEp = true;
 					const activeEp = pendingResumeEp || provider?.getActiveEpisode?.() || 1;
+					const currentKey = getResumeKey(activeEp);
+					if (resumedEpKey === currentKey) return;
+					resumedEpKey = currentKey;
 					const resumeTime = e.data.time || pendingResumeTarget;
 					pendingResumeTarget = null;
 					pendingResumeEp = null;

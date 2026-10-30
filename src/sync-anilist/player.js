@@ -16,6 +16,23 @@ export function initPlayer() {
   let activeGuardInterval = null;
   let hasReportedPlayerReady = false;
   let lastBroadcastTime = 0;
+  let isProgrammaticSeek = false;
+  let programmaticSeekTimeout = null;
+
+  function markProgrammaticSeek(durationMs = 600) {
+    isProgrammaticSeek = true;
+    if (programmaticSeekTimeout) clearTimeout(programmaticSeekTimeout);
+    programmaticSeekTimeout = setTimeout(() => {
+      isProgrammaticSeek = false;
+      programmaticSeekTimeout = null;
+    }, durationMs);
+  }
+
+  function handleSeeking() {
+    if (!isProgrammaticSeek) {
+      cancelActiveResume();
+    }
+  }
 
   function cancelActiveResume() {
     activeResumeTarget = null;
@@ -105,6 +122,9 @@ export function initPlayer() {
               window.top.postMessage({ type: "AL_RESUME_CONFIRMED", time: target }, "*");
             } catch (_) {}
           }
+          setTimeout(() => {
+            activeResumeTarget = null;
+          }, 1500);
         }
       }, 400);
 
@@ -154,6 +174,7 @@ export function initPlayer() {
     if (dur > 0) {
       if (Math.round(dur) !== Math.round(lastReportedDur)) {
         lastReportedDur = dur;
+        hasReportedPlayerReady = false;
         try {
           window.top.postMessage({ type: "AU_FRAME_READY", duration: dur }, "*");
         } catch (_) {}
@@ -183,7 +204,7 @@ export function initPlayer() {
         handlePlayResumeGuard();
         broadcastPlaybackState(true);
       });
-      video.addEventListener("seeking", cancelActiveResume);
+      video.addEventListener("seeking", handleSeeking);
       video.addEventListener("pause", () => broadcastPlaybackState(true));
       video.addEventListener("ended", () => broadcastPlaybackState(true));
       video.addEventListener("canplay", () => notifyReady());
@@ -212,7 +233,7 @@ export function initPlayer() {
         notifyReady();
         broadcastPlaybackState(true);
       });
-      jw.on("seek", cancelActiveResume);
+      jw.on("seek", handleSeeking);
       jw.on("pause", () => broadcastPlaybackState(true));
       jw.on("complete", () => broadcastPlaybackState(true));
       jw.on("ready", () => notifyReady());
@@ -232,7 +253,7 @@ export function initPlayer() {
         handlePlayResumeGuard();
         broadcastPlaybackState(true);
       });
-      vds.addEventListener("seeking", cancelActiveResume);
+      vds.addEventListener("seeking", handleSeeking);
       vds.addEventListener("pause", () => broadcastPlaybackState(true));
       vds.addEventListener("ended", () => broadcastPlaybackState(true));
     }
@@ -262,6 +283,7 @@ export function initPlayer() {
 
   function seekTo(target) {
     if (typeof target !== "number" || isNaN(target) || target <= 0) return;
+    markProgrammaticSeek(600);
     const jw = getPlayer();
     if (jw && typeof jw.seek === "function") {
       try {
