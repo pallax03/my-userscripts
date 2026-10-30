@@ -25,9 +25,26 @@
 - **🏠 Homepage Continue Watching Shelf**:
   - Mounted directly above the latest releases on both AnimeUnity and AnimeSaturn.
   - Shows currently tracked series with progress bars and airing status.
+  - **4-Tier Intelligent Sorting Hierarchy**:
+    1. **Active Resume**: Series paused mid-episode (`time > 0` & `percent < 88%`), letting you resume right where you left off.
+    2. **Simulcast In Progress**: Currently airing shows with a new episode released and ready to watch.
+    3. **Backlog & Rewatch**: Completed series or shows with remaining episodes to catch up on.
+    4. **Caught Up / Waiting**: Shows where you are caught up, sub-sorted by next episode broadcast time (`timeUntilAiring`).
   - **Smart Episode Detection**: Calculates if new episodes have aired (`⚡ Ep. X ready`) vs caught up (`🕒 Ep. X in [time]`).
   - **Persistent Filters**: Quick toggles for **"Only unwatched"** and **"Sync Together"** that immediately persist in storage as your default preference.
-  - **1-Click Episode Playback**: Clicking an anime resolves the episode URL via the active site's search API and navigates directly to it.
+  - **1-Click Episode Playback**: Clicking an anime resolves the episode URL via the active site's search API and navigates directly to it with resume timestamp support.
+
+- **⏱️ Smart Resume & Cross-Device Cloud Sync**:
+  - Seamlessly records playback progress into your AniList entry notes (`Resume: Ep. X (mm:ss)`) with instant local storage caching.
+  - **Single-Shot Handshake**: Coordinated message protocol (`AL_RESUME_SEEK` -> `AL_RESUME_CONFIRMED`) ensures playhead restores exactly once per episode without looping or duplicate toasts.
+  - **Manual Scrub & Skip Protection**: Programmatic seek detection distinguishes automatic resume from user timeline scrubbing and keyboard skips (`S`), ensuring manual scrubbing is never reverted.
+  - **HLS Anti-Reset Guard**: Protects against video player engines (Vixcloud/Saturncdn) resetting `currentTime` to 0:00 on initial stream buffer play.
+
+- **🎯 Exact Franchise & Subtitle Matching**:
+  - Intelligent subtitle extraction prioritizes distinct chapter titles (e.g. *"Steel Ball Run"*) over generic franchise prefixes (*"JoJo no Kimyou na Bouken"*).
+  - Heavy score penalties (-150) prevent cross-season/chapter confusion (e.g. Steel Ball Run vs Stone Ocean).
+  - Automatic `-100` penalty for specials, recaps, and picture dramas (e.g. Haikyuu Quest).
+  - Automatic `anilist_id` extraction from poster images (`bx190327...`) for guaranteed +200 matches.
 
 - **📺 Streamlined Anime Control Pillow**:
   - Positioned directly above the episode selector on both AnimeUnity and AnimeSaturn.
@@ -40,7 +57,7 @@
   - Real-time library status, rating, and Sync Together buddy selector.
 
 - **🔄 Cross-Provider Quick Switch**:
-  - Live shortcut button in the player header (**`#video-top`** on AnimeUnity, **`.watch-toolbar`** on AnimeSaturn).
+  - Live shortcut button centered in the player header (**`#video-top`** on AnimeUnity, **`.watch-toolbar`** on AnimeSaturn).
   - Instantly jump to the opposite streaming provider for the current anime and active episode (`AnimeSaturn · Ep. X ↗` / `AnimeUnity · Ep. X ↗`) if video fails or is unavailable on one of them.
   - Automatically checks learned local cache or queries the target search API with fallback to the direct search page.
 

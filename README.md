@@ -21,7 +21,7 @@ Click **Install** to add the script directly into your browser extension, or ope
 
 | Script | Target Site | Documentation & Screenshots | Install Link |
 | :--- | :--- | :--- | :--- |
-| **`sync-anilist.user.js`** | `animeunity.so` | [📖 Read Guide & Screenshots](src/sync-anilist/README.md) | [👉 Install (Raw)](https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/sync-anilist.user.js) |
+| **`sync-anilist.user.js`** | `animeunity.so`<br>`animesaturn.cx` | [📖 Read Guide & Screenshots](src/sync-anilist/README.md) | [👉 Install (Raw)](https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/sync-anilist.user.js) |
 | **`import-friend-anilist.user.js`** | `anilist.co` | [📖 Read Guide & Screenshots](src/import-friend-anilist/README.md) | [👉 Install (Raw)](https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/import-friend-anilist.user.js) |
 
 *Note: AniList OAuth tokens are securely stored and shared across scripts via GM storage.*
