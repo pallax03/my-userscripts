@@ -79,6 +79,14 @@ function prepareResumeTarget(force = false) {
     return;
   }
 
+  // Resume is strictly allowed ONLY for the next episode in sequence
+  const nextToWatch = (trackedProgress > 0 ? trackedProgress : 0) + 1;
+  if (trackedProgress >= 0 && activeEp !== nextToWatch) {
+    pendingResumeTarget = null;
+    pendingResumeEp = null;
+    return;
+  }
+
   const sessionTime = sessionStorage.getItem("al_resume_time");
   const sessionTargetEp = sessionStorage.getItem("al_target_ep");
   let targetTime = null;
@@ -146,9 +154,11 @@ function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
   const activeEp = provider?.getActiveEpisode?.() || 1;
   const settings = Settings.get();
   const percent = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const nextToWatch = (trackedProgress > 0 ? trackedProgress : 0) + 1;
+  const isNextEp = trackedProgress < 0 || activeEp === nextToWatch;
 
-  // 1. Fast local cache update
-  if (currentTime > 5 && percent < 92) {
+  // 1. Fast local cache update (strictly ONLY for next episode to watch)
+  if (isNextEp && currentTime > 5 && percent < 92) {
     Resume.setLocal(currentMedia.id, {
       ep: activeEp,
       time: Math.round(currentTime),
@@ -157,9 +167,9 @@ function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
     });
   }
 
-  // 2. Refresh UI on pause & sync resume to notes
+  // 2. Refresh UI on pause & sync resume to notes (strictly ONLY for next episode)
   if (isPaused) {
-    if (settings.autoResume && currentUser?.id && currentTime > 5 && percent < 88) {
+    if (isNextEp && settings.autoResume && currentUser?.id && currentTime > 5 && percent < 88) {
       syncResumeToNotes(currentMedia.id, activeEp, currentTime, duration);
     }
     App.render();

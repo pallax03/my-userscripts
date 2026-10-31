@@ -2352,8 +2352,9 @@
 		const canSyncBuddy = !!(buddyData?.name && (buddyData.progress || 0) > progress) || isBuddyCompleted && entry?.status !== "COMPLETED";
 		let episodeStatusHtml = "";
 		if (activeEp > 0) {
+			const isNextEp = activeEp === (trackedProgress > 0 ? trackedProgress : 0) + 1;
 			const resume = Resume.extract(entry?.notes) || Resume.getLocal(media.id);
-			const isResuming = resume && resume.ep === activeEp && resume.time > 5 && resume.percent < 88;
+			const isResuming = isNextEp && resume && resume.ep === activeEp && resume.time > 5 && resume.percent < 88;
 			if (autoTrackState?.isActive && autoTrackState.targetEp === activeEp) episodeStatusHtml = `
         <div class="al-ep-chip is-countdown" title="Auto-tracking progress in ${autoTrackState.countdown}s">
           <div class="al-ep-chip-badge">
@@ -2373,25 +2374,6 @@
 			})}
             </button>
             <button type="button" class="al-ep-mini-btn success" id="al-ep-savenow" title="Mark Ep. ${activeEp} as watched now">
-              ${iconHtml(Check, {
-				width: 12,
-				height: 12
-			})}
-            </button>
-          </div>
-        </div>`;
-			else if (isResuming) episodeStatusHtml = `
-        <div class="al-ep-chip is-resuming" title="Resume at ${Resume.formatTime(resume.time)} (${resume.percent}%) • Mark Ep. ${activeEp} as watched">
-          <div class="al-ep-chip-badge">
-            ${iconHtml(Play, {
-				width: 12,
-				height: 12
-			})}
-            <span class="al-ep-chip-num">Ep. ${activeEp}</span>
-            <span class="al-ep-chip-text" style="color: #c084fc;">${Resume.formatTime(resume.time)}</span>
-          </div>
-          <div class="al-ep-chip-actions">
-            <button type="button" class="al-ep-mini-btn success" id="al-ep-save" title="Mark Ep. ${activeEp} as watched">
               ${iconHtml(Check, {
 				width: 12,
 				height: 12
@@ -2441,7 +2423,26 @@
             </button>
           </div>
         </div>`;
-			} else episodeStatusHtml = `
+			} else if (isResuming) episodeStatusHtml = `
+        <div class="al-ep-chip is-resuming" title="Resume at ${Resume.formatTime(resume.time)} (${resume.percent}%) • Mark Ep. ${activeEp} as watched">
+          <div class="al-ep-chip-badge">
+            ${iconHtml(Play, {
+				width: 12,
+				height: 12
+			})}
+            <span class="al-ep-chip-num">Ep. ${activeEp}</span>
+            <span class="al-ep-chip-text" style="color: #c084fc;">${Resume.formatTime(resume.time)}</span>
+          </div>
+          <div class="al-ep-chip-actions">
+            <button type="button" class="al-ep-mini-btn success" id="al-ep-save" title="Mark Ep. ${activeEp} as watched">
+              ${iconHtml(Check, {
+				width: 12,
+				height: 12
+			})}
+            </button>
+          </div>
+        </div>`;
+			else episodeStatusHtml = `
         <div class="al-ep-chip is-untracked" title="Mark Ep. ${activeEp} as watched (AniList currently at Ep. ${trackedProgress > 0 ? trackedProgress : 0})">
           <div class="al-ep-chip-badge">
             ${iconHtml(Zap, {
@@ -4734,6 +4735,12 @@
 			pendingResumeEp = null;
 			return;
 		}
+		const nextToWatch = (trackedProgress > 0 ? trackedProgress : 0) + 1;
+		if (trackedProgress >= 0 && activeEp !== nextToWatch) {
+			pendingResumeTarget = null;
+			pendingResumeEp = null;
+			return;
+		}
 		const sessionTime = sessionStorage.getItem("al_resume_time");
 		const sessionTargetEp = sessionStorage.getItem("al_target_ep");
 		let targetTime = null;
@@ -4792,14 +4799,16 @@
 		const activeEp = provider?.getActiveEpisode?.() || 1;
 		const settings = Settings.get();
 		const percent = duration > 0 ? currentTime / duration * 100 : 0;
-		if (currentTime > 5 && percent < 92) Resume.setLocal(currentMedia.id, {
+		const nextToWatch = (trackedProgress > 0 ? trackedProgress : 0) + 1;
+		const isNextEp = trackedProgress < 0 || activeEp === nextToWatch;
+		if (isNextEp && currentTime > 5 && percent < 92) Resume.setLocal(currentMedia.id, {
 			ep: activeEp,
 			time: Math.round(currentTime),
 			duration: Math.round(duration),
 			percent: Math.round(percent)
 		});
 		if (isPaused) {
-			if (settings.autoResume && currentUser?.id && currentTime > 5 && percent < 88) syncResumeToNotes(currentMedia.id, activeEp, currentTime, duration);
+			if (isNextEp && settings.autoResume && currentUser?.id && currentTime > 5 && percent < 88) syncResumeToNotes(currentMedia.id, activeEp, currentTime, duration);
 			App.render();
 		}
 		const threshold = settings.completionThreshold || 85;
