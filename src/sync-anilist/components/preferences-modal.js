@@ -9,6 +9,7 @@ import {
   Search,
   FastForward,
   SkipForward,
+  ThumbsUp,
   Languages,
   RotateCcw,
   Trash2,
@@ -54,23 +55,11 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
           <input type="checkbox" class="al-switch al-toggle-autotrack" ${settings.autoTrack ? "checked" : ""} />
         </div>
 
-        <div class="al-pref-sub">
-          <div class="al-pref-row">
-            <span class="al-pref-sub-label">
-              ${iconHtml(Play, { width: 13, height: 13 })}
-              <span>Track trigger timing</span>
-            </span>
-            <select class="al-select-xs al-sel-trigger">
-              <option value="completion" ${settings.trackTrigger === "completion" ? "selected" : ""}>At 85% Video Completion</option>
-              <option value="play" ${settings.trackTrigger === "play" ? "selected" : ""}>On Video Start (Play)</option>
-              <option value="delay" ${settings.trackTrigger === "delay" ? "selected" : ""}>Countdown Delay on Load</option>
-            </select>
-          </div>
-
-          <div class="al-pref-row al-row-delay" style="${settings.trackTrigger === "delay" ? "" : "display: none;"}">
+        <div class="al-pref-sub" style="${settings.autoTrack ? "" : "display: none;"}">
+          <div class="al-pref-row al-row-delay">
             <span class="al-pref-sub-label">
               ${iconHtml(Clock, { width: 13, height: 13 })}
-              <span>Grace delay before saving</span>
+              <span>Countdown before tracking</span>
             </span>
             <select class="al-select-xs al-sel-delay">
               <option value="0" ${settings.delay === 0 ? "selected" : ""}>Instant (0s)</option>
@@ -86,14 +75,6 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
               <span>Auto-resume playback position</span>
             </span>
             <input type="checkbox" class="al-switch al-toggle-autoresume" ${settings.autoResume ? "checked" : ""} />
-          </label>
-
-          <label class="al-pref-row" style="cursor: pointer;">
-            <span class="al-pref-sub-label">
-              ${iconHtml(Languages, { width: 13, height: 13 })}
-              <span>Cross-device sync via AniList notes</span>
-            </span>
-            <input type="checkbox" class="al-switch al-toggle-crossdevicesync" ${settings.crossDeviceSync ? "checked" : ""} />
           </label>
         </div>
       </div>
@@ -117,6 +98,14 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
               <span>Auto-skip opening intro</span>
             </span>
             <input type="checkbox" class="al-switch al-toggle-autoskip" ${settings.autoSkip ? "checked" : ""} />
+          </label>
+
+          <label class="al-pref-row" style="cursor: pointer;">
+            <span class="al-pref-sub-label">
+              ${iconHtml(ThumbsUp, { width: 13, height: 13 })}
+              <span>Community voting & contribute</span>
+            </span>
+            <input type="checkbox" class="al-switch al-toggle-community-aniskip" ${settings.communityAniSkip ? "checked" : ""} />
           </label>
 
           <div class="al-pref-row">
@@ -242,18 +231,6 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
     setAutoTrack(e.target.checked);
   });
 
-  const triggerSelect = modal.querySelector(".al-sel-trigger");
-  const delayRow = modal.querySelector(".al-row-delay");
-  if (triggerSelect) {
-    triggerSelect.addEventListener("change", (e) => {
-      const mode = e.target.value;
-      Settings.set("trackTrigger", mode);
-      if (delayRow) {
-        delayRow.style.display = mode === "delay" ? "" : "none";
-      }
-    });
-  }
-
   const delaySelect = modal.querySelector(".al-sel-delay");
   if (delaySelect) {
     delaySelect.addEventListener("change", (e) => {
@@ -268,13 +245,6 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
     });
   }
 
-  const crossDeviceToggle = modal.querySelector(".al-toggle-crossdevicesync");
-  if (crossDeviceToggle) {
-    crossDeviceToggle.addEventListener("change", (e) => {
-      Settings.set("crossDeviceSync", e.target.checked);
-    });
-  }
-
   // 2. Skip Intro (AniSkip) collapsible header & controls
   const skipGroup = modal.querySelector("#al-pref-sec-skipintro");
   const skipHeader = skipGroup?.querySelector(".al-pref-title-click");
@@ -286,6 +256,13 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
   if (autoSkipToggle) {
     autoSkipToggle.addEventListener("change", (e) => {
       Settings.set("autoSkip", e.target.checked);
+    });
+  }
+
+  const communityToggle = modal.querySelector(".al-toggle-community-aniskip");
+  if (communityToggle) {
+    communityToggle.addEventListener("change", (e) => {
+      Settings.set("communityAniSkip", e.target.checked);
     });
   }
 

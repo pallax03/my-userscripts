@@ -163,6 +163,9 @@ export function renderActions(
   // Compact, symbolic episode controller chip placed directly next to the anime title
   let episodeStatusHtml = "";
   if (activeEp > 0) {
+    const resume = Resume.extract(entry?.notes) || Resume.getLocal(media.id);
+    const isResuming = resume && resume.ep === activeEp && resume.time > 5 && resume.percent < 88;
+
     if (autoTrackState?.isActive && autoTrackState.targetEp === activeEp) {
       // 1. Countdown active
       episodeStatusHtml = `
@@ -181,15 +184,29 @@ export function renderActions(
             </button>
           </div>
         </div>`;
+    } else if (isResuming) {
+      // 2. Intra-episode Resume active (paused midway)
+      episodeStatusHtml = `
+        <div class="al-ep-chip is-resuming" title="Resume at ${Resume.formatTime(resume.time)} (${resume.percent}%) • Mark Ep. ${activeEp} as watched">
+          <div class="al-ep-chip-badge">
+            ${iconHtml(Play, { width: 12, height: 12 })}
+            <span class="al-ep-chip-num">Ep. ${activeEp}</span>
+            <span class="al-ep-chip-text" style="color: #c084fc;">${Resume.formatTime(resume.time)}</span>
+          </div>
+          <div class="al-ep-chip-actions">
+            <button type="button" class="al-ep-mini-btn success" id="al-ep-save" title="Mark Ep. ${activeEp} as watched">
+              ${iconHtml(Check, { width: 12, height: 12 })}
+            </button>
+          </div>
+        </div>`;
     } else if (trackedProgress > 0 && activeEp === trackedProgress) {
-      // 2. Synced with AniList
+      // 3. Synced with AniList
       const rewindTarget = activeEp - 1;
       episodeStatusHtml = `
         <div class="al-ep-chip is-synced" title="Tracked on AniList as Ep. ${activeEp}">
           <div class="al-ep-chip-badge">
             ${iconHtml(CheckCheck, { width: 12, height: 12 })}
             <span class="al-ep-chip-num">Ep. ${activeEp}</span>
-            <span class="al-ep-chip-text">Synced</span>
           </div>
           <div class="al-ep-chip-actions">
             <button type="button" class="al-ep-mini-btn rewind" id="al-ep-rewind" title="${rewindTarget > 0 ? `Rewind AniList to Ep. ${rewindTarget}` : "Mark as unwatched"}">
@@ -199,14 +216,13 @@ export function renderActions(
           </div>
         </div>`;
     } else if (trackedProgress > 0 && activeEp < trackedProgress) {
-      // 3. Already Watched in the past
+      // 4. Already Watched in the past
       const rewindTarget = activeEp - 1;
       episodeStatusHtml = `
         <div class="al-ep-chip is-watched" title="Episode ${activeEp} already watched (AniList at Ep. ${trackedProgress})">
           <div class="al-ep-chip-badge">
             ${iconHtml(Check, { width: 12, height: 12 })}
             <span class="al-ep-chip-num">Ep. ${activeEp}</span>
-            <span class="al-ep-chip-text">Seen</span>
           </div>
           <div class="al-ep-chip-actions">
             <button type="button" class="al-ep-mini-btn rewind" id="al-ep-rewind" title="${rewindTarget > 0 ? `Rewind AniList to Ep. ${rewindTarget}` : "Mark as unwatched"}">
@@ -216,38 +232,19 @@ export function renderActions(
           </div>
         </div>`;
     } else {
-      const resume = Resume.extract(entry?.notes) || Resume.getLocal(media.id);
-      const isResuming = resume && resume.ep === activeEp && resume.time > 15 && resume.percent < 88;
-
-      if (isResuming) {
-        episodeStatusHtml = `
-          <div class="al-ep-chip is-resuming" title="Resume at ${Resume.formatTime(resume.time)} (${resume.percent}%) • Mark Ep. ${activeEp} as watched">
-            <div class="al-ep-chip-badge">
-              ${iconHtml(Play, { width: 12, height: 12 })}
-              <span class="al-ep-chip-num">Ep. ${activeEp}</span>
-              <span class="al-ep-chip-text" style="color: #c084fc;">${Resume.formatTime(resume.time)}</span>
-            </div>
-            <div class="al-ep-chip-actions">
-              <button type="button" class="al-ep-mini-btn success" id="al-ep-save" title="Mark Ep. ${activeEp} as watched">
-                ${iconHtml(Check, { width: 12, height: 12 })}
-              </button>
-            </div>
-          </div>`;
-      } else {
-        // 4. Untracked / Future episode: single prominent checkmark tick to mark watched
-        episodeStatusHtml = `
-          <div class="al-ep-chip is-untracked" title="Mark Ep. ${activeEp} as watched (AniList currently at Ep. ${trackedProgress > 0 ? trackedProgress : 0})">
-            <div class="al-ep-chip-badge">
-              ${iconHtml(Zap, { width: 12, height: 12 })}
-              <span class="al-ep-chip-num">Ep. ${activeEp}</span>
-            </div>
-            <div class="al-ep-chip-actions">
-              <button type="button" class="al-ep-mini-btn success" id="al-ep-save" title="Mark Ep. ${activeEp} as watched">
-                ${iconHtml(Check, { width: 12, height: 12 })}
-              </button>
-            </div>
-          </div>`;
-      }
+      // 5. Untracked / Future episode: single prominent checkmark tick to mark watched
+      episodeStatusHtml = `
+        <div class="al-ep-chip is-untracked" title="Mark Ep. ${activeEp} as watched (AniList currently at Ep. ${trackedProgress > 0 ? trackedProgress : 0})">
+          <div class="al-ep-chip-badge">
+            ${iconHtml(Zap, { width: 12, height: 12 })}
+            <span class="al-ep-chip-num">Ep. ${activeEp}</span>
+          </div>
+          <div class="al-ep-chip-actions">
+            <button type="button" class="al-ep-mini-btn success" id="al-ep-save" title="Mark Ep. ${activeEp} as watched">
+              ${iconHtml(Check, { width: 12, height: 12 })}
+            </button>
+          </div>
+        </div>`;
     }
   }
 

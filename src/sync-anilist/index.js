@@ -93,7 +93,7 @@ function prepareResumeTarget(force = false) {
 
   if (!targetTime && currentMedia) {
     const resume = Resume.extract(currentMedia?.mediaListEntry?.notes) || Resume.getLocal(currentMedia?.id);
-    if (resume && resume.ep === activeEp && resume.time > 15 && resume.percent < 88) {
+    if (resume && resume.ep === activeEp && resume.time > 5 && resume.percent < 88) {
       targetTime = resume.time;
     }
   }
@@ -148,7 +148,7 @@ function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
   const percent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   // 1. Fast local cache update
-  if (currentTime > 10 && percent < 92) {
+  if (currentTime > 5 && percent < 92) {
     Resume.setLocal(currentMedia.id, {
       ep: activeEp,
       time: Math.round(currentTime),
@@ -157,26 +157,18 @@ function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
     });
   }
 
-  // 2. Trigger: On Video Start (Play) mode
-  if (
-    settings.autoTrack &&
-    settings.trackTrigger === "play" &&
-    !isPaused &&
-    currentTime > 3 &&
-    !hasTriggeredPlayTrack &&
-    activeEp > trackedProgress &&
-    !cancelledEps.has(activeEp)
-  ) {
-    hasTriggeredPlayTrack = true;
-    App.setProgress(activeEp);
-    return;
+  // 2. Refresh UI on pause & sync resume to notes
+  if (isPaused) {
+    if (settings.autoResume && currentUser?.id && currentTime > 5 && percent < 88) {
+      syncResumeToNotes(currentMedia.id, activeEp, currentTime, duration);
+    }
+    App.render();
   }
 
   // 3. Trigger: Video Completion (>= 85% or isEnded)
   const threshold = settings.completionThreshold || 85;
   if (
     settings.autoTrack &&
-    settings.trackTrigger === "completion" &&
     (percent >= threshold || isEnded) &&
     activeEp > trackedProgress &&
     !cancelledEps.has(activeEp)
@@ -187,14 +179,11 @@ function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
     return;
   }
 
-  // 4. Cloud Sync to AniList notes (throttled)
-  if (settings.crossDeviceSync && currentUser?.id && currentTime > 15 && percent < 85) {
+  // 4. Cloud Sync to notes (periodic while playing)
+  if (settings.autoResume && currentUser?.id && currentTime > 15 && percent < 85) {
     const now = Date.now();
     const timeDiff = Math.abs(currentTime - lastSyncedResumeTime);
-    // Sync on pause or every 60 seconds of continuous playback
-    const shouldSync = isPaused || (now - lastNotesSyncTime >= 60000 && timeDiff >= 15);
-
-    if (shouldSync) {
+    if (now - lastNotesSyncTime >= 60000 && timeDiff >= 15) {
       lastNotesSyncTime = now;
       lastSyncedResumeTime = currentTime;
       syncResumeToNotes(currentMedia.id, activeEp, currentTime, duration);

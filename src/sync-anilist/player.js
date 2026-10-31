@@ -18,6 +18,8 @@ export function initPlayer() {
   let lastBroadcastTime = 0;
   let isProgrammaticSeek = false;
   let programmaticSeekTimeout = null;
+  let isAniSkipDockOpen = false;
+  let dockSyncInterval = null;
 
   function markProgrammaticSeek(durationMs = 600) {
     isProgrammaticSeek = true;
@@ -45,7 +47,8 @@ export function initPlayer() {
 
   function broadcastPlaybackState(force = false) {
     const now = Date.now();
-    if (!force && now - lastBroadcastTime < 750) return;
+    const minInterval = isAniSkipDockOpen ? 200 : 750;
+    if (!force && now - lastBroadcastTime < minInterval) return;
     lastBroadcastTime = now;
 
     const pos = getPos();
@@ -204,7 +207,11 @@ export function initPlayer() {
         handlePlayResumeGuard();
         broadcastPlaybackState(true);
       });
-      video.addEventListener("seeking", handleSeeking);
+      video.addEventListener("seeking", () => {
+        handleSeeking();
+        broadcastPlaybackState(true);
+      });
+      video.addEventListener("seeked", () => broadcastPlaybackState(true));
       video.addEventListener("pause", () => broadcastPlaybackState(true));
       video.addEventListener("ended", () => broadcastPlaybackState(true));
       video.addEventListener("canplay", () => notifyReady());
@@ -233,7 +240,11 @@ export function initPlayer() {
         notifyReady();
         broadcastPlaybackState(true);
       });
-      jw.on("seek", handleSeeking);
+      jw.on("seek", () => {
+        handleSeeking();
+        broadcastPlaybackState(true);
+      });
+      jw.on("seeked", () => broadcastPlaybackState(true));
       jw.on("pause", () => broadcastPlaybackState(true));
       jw.on("complete", () => broadcastPlaybackState(true));
       jw.on("ready", () => notifyReady());
@@ -253,7 +264,11 @@ export function initPlayer() {
         handlePlayResumeGuard();
         broadcastPlaybackState(true);
       });
-      vds.addEventListener("seeking", handleSeeking);
+      vds.addEventListener("seeking", () => {
+        handleSeeking();
+        broadcastPlaybackState(true);
+      });
+      vds.addEventListener("seeked", () => broadcastPlaybackState(true));
       vds.addEventListener("pause", () => broadcastPlaybackState(true));
       vds.addEventListener("ended", () => broadcastPlaybackState(true));
     }
@@ -282,7 +297,7 @@ export function initPlayer() {
   }
 
   function seekTo(target) {
-    if (typeof target !== "number" || isNaN(target) || target <= 0) return;
+    if (typeof target !== "number" || isNaN(target) || target < 0) return;
     markProgrammaticSeek(600);
     const jw = getPlayer();
     if (jw && typeof jw.seek === "function") {
@@ -302,6 +317,7 @@ export function initPlayer() {
         v.currentTime = target;
       } catch (_) {}
     }
+    broadcastPlaybackState(true);
   }
 
   function skipIntro(isAuto = false) {
@@ -446,19 +462,70 @@ export function initPlayer() {
       checkTime();
     } else if (e.data?.type === "AU_TRIGGER_SKIP") {
       handleSkipAction();
+    } else if (e.data?.type === "AU_SEEK_PLAYER") {
+      if (typeof e.data.time === "number" && !isNaN(e.data.time)) {
+        seekTo(e.data.time);
+      }
     } else if (e.data?.type === "AL_RESUME_SEEK") {
       applyResumeSeek(e.data.target);
+    } else if (e.data?.type === "AU_ANISKIP_DOCK_STATE") {
+      isAniSkipDockOpen = !!e.data.open;
+      if (isAniSkipDockOpen) {
+        broadcastPlaybackState(true);
+        if (!dockSyncInterval) {
+          dockSyncInterval = setInterval(() => {
+            if (isAniSkipDockOpen) broadcastPlaybackState();
+          }, 200);
+        }
+      } else {
+        if (dockSyncInterval) {
+          clearInterval(dockSyncInterval);
+          dockSyncInterval = null;
+        }
+      }
+    } else if (e.data?.type === "AU_REQUEST_CURRENT_TIME") {
+      broadcastPlaybackState(true);
     }
   });
 
   window.addEventListener(
     "keydown",
     (e) => {
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select") return;
+
+      const keyLower = e.key?.toLowerCase();
+      const isStart = keyLower === "i" || e.key === "[" || e.code === "BracketLeft";
+      const isEnd = keyLower === "o" || e.key === "]" || e.code === "BracketRight";
+      const isArrow = e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown";
+
+      if (isAniSkipDockOpen && isArrow) {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+          window.top.postMessage({ type: "AU_ANISKIP_ARROW", key: e.key }, "*");
+        } catch (_) {}
+        return;
+      }
+
       if (e.key === "s" || e.key === "S") {
-        const tag = document.activeElement?.tagName?.toLowerCase();
-        if (tag === "input" || tag === "textarea" || tag === "select") return;
         e.preventDefault();
         handleSkipAction();
+      } else if (isStart || isEnd) {
+        const pos = getPos();
+        const dur = getDuration();
+        try {
+          window.top.postMessage(
+            {
+              type: "AU_ANISKIP_HOTKEY",
+              action: isStart ? "start" : "end",
+              key: e.key,
+              currentTime: pos,
+              duration: dur
+            },
+            "*"
+          );
+        } catch (_) {}
       }
     },
     true

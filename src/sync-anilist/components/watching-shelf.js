@@ -86,7 +86,7 @@ export function getEntrySortTier(entry) {
     resume &&
     resume.percent > 0 &&
     resume.percent < 88 &&
-    (resume.ep === state.nextToWatch || resume.ep > state.progress)
+    resume.ep === state.nextToWatch
   );
 
   // 1. First priority: Intra-episode resume pending
@@ -144,8 +144,13 @@ function createCard(entry, buddySync = null, onSyncEntry = null) {
   const media = entry.media || {};
   const state = calculateEntryState(entry);
   const resume = Resume.extract(entry.notes) || Resume.getLocal(media.id);
-  const isResumeActive = resume && resume.percent > 0 && resume.percent < 88 && (resume.ep === state.nextToWatch || resume.ep > state.progress);
-  const epTarget = isResumeActive ? resume.ep : (state.hasUnwatchedAired ? state.nextToWatch : (state.progress || 1));
+  const isResumeActive = Boolean(
+    resume &&
+    resume.percent > 0 &&
+    resume.percent < 88 &&
+    resume.ep === state.nextToWatch
+  );
+  const epTarget = state.hasUnwatchedAired ? state.nextToWatch : (state.progress || 1);
   const title = media.title?.english || media.title?.romaji || media.title?.userPreferred || "Untitled";
   const coverUrl = media.coverImage?.large || media.coverImage?.medium || "";
   const alUrl = media.siteUrl || `https://anilist.co/anime/${media.id}`;
