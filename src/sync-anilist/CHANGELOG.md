@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.6.0](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.5.0...sync-anilist-v1.6.0) (2026-10-31)
+
+
+### Features
+
+* **sync-anilist:** add AniSkip community voting, contribution dock, and resume enhancements ([1ea99f4](https://github.com/pallax03/my-userscripts/commit/1ea99f479a486714d1324f02411e725f76c539dd))
+
+
+### Bug Fixes
+
+* **sync-anilist:** restrict resume and continue watching strictly to next unwatched episode ([d852179](https://github.com/pallax03/my-userscripts/commit/d852179d76013089a25f71978635863ad8f7abc7))
+
 ## [1.5.0](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.4.0...sync-anilist-v1.5.0) (2026-10-30)
 
 
