@@ -18,25 +18,17 @@ export const Settings = {
     const shelfFilterUnwatched = Storage.get("al_shelf_filter_unwatched");
     const shelfFilterSync = Storage.get("al_shelf_filter_sync");
 
-    // Determine track trigger: defaults to "delay" (countdown delay)
-    let effectiveTrigger = "delay";
-    if (trackTrigger && trackTrigger !== "play" && trackTrigger !== "manual") {
-      effectiveTrigger = trackTrigger;
-    } else if (autoTrack === false || autoTrack === "false" || trackTrigger === "manual") {
-      effectiveTrigger = "manual";
-    }
-
     const isAutoResumeActive = autoResume !== false && autoResume !== "false";
 
     return {
-      autoTrack: effectiveTrigger !== "manual",
-      trackTrigger: effectiveTrigger,
+      autoTrack: true, // Fixed at 85% Video Completion
+      trackTrigger: "completion",
       completionThreshold: completionThreshold !== null && completionThreshold !== undefined && !isNaN(parseInt(completionThreshold, 10))
         ? parseInt(completionThreshold, 10)
         : 85,
       autoResume: isAutoResumeActive,
       crossDeviceSync: isAutoResumeActive,
-      delay: delay !== null && delay !== undefined && !isNaN(parseInt(delay, 10)) ? parseInt(delay, 10) : 15,
+      delay: 0,
       preventRewind: false, // Standardized: always false
       autoSkip: autoSkip === true || autoSkip === "true",
       communityAniSkip: communityAniSkip !== false && communityAniSkip !== "false",
@@ -58,7 +50,7 @@ export const Settings = {
     if (key === "autoTrack") {
       Storage.set("al_opt_autotrack", String(val));
       if (!val) Storage.set("al_pref_track_trigger", "manual");
-      else if (Storage.get("al_pref_track_trigger") === "manual" || !Storage.get("al_pref_track_trigger")) Storage.set("al_pref_track_trigger", "delay");
+      else if (Storage.get("al_pref_track_trigger") === "manual" || !Storage.get("al_pref_track_trigger")) Storage.set("al_pref_track_trigger", "completion");
     }
     else if (key === "trackTrigger") {
       Storage.set("al_pref_track_trigger", String(val));

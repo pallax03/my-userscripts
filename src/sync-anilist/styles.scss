@@ -2257,6 +2257,12 @@ video-player,
   .al-pref-group {
     overflow: visible !important;
 
+    &:not(:has(.al-pref-sub)) {
+      .al-pref-header {
+        border-bottom: none !important;
+      }
+    }
+
     .al-pref-sub {
       overflow: visible !important;
     }

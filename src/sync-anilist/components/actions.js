@@ -10,8 +10,6 @@ import {
   Calendar,
   Check,
   CheckCheck,
-  Clock,
-  X,
   Zap,
   Play
 } from "../../shared/icons.js";
@@ -164,30 +162,30 @@ export function renderActions(
   let episodeStatusHtml = "";
   if (activeEp > 0) {
     const nextToWatch = (trackedProgress > 0 ? trackedProgress : 0) + 1;
+    const isPastEp = trackedProgress > 0 && activeEp < trackedProgress;
+    const isCurrentTrackedEp = trackedProgress > 0 && activeEp === trackedProgress;
     const isNextEp = activeEp === nextToWatch;
     const resume = Resume.extract(entry?.notes) || Resume.getLocal(media.id);
-    const isResuming = isNextEp && resume && resume.ep === activeEp && resume.time > 5 && resume.percent < 88;
+    const hasValidResume = resume && resume.ep === activeEp && resume.time > 5 && resume.percent < 88;
+    const isResuming = !isPastEp && (isNextEp || isCurrentTrackedEp) && hasValidResume;
 
-    if (autoTrackState?.isActive && autoTrackState.targetEp === activeEp) {
-      // 1. Countdown active
+    if (isResuming) {
+      // 1. Intra-episode Resume active (paused midway)
       episodeStatusHtml = `
-        <div class="al-ep-chip is-countdown" title="Auto-tracking progress in ${autoTrackState.countdown}s">
+        <div class="al-ep-chip is-resuming" title="Resume at ${Resume.formatTime(resume.time)} (${resume.percent}%) • Mark Ep. ${activeEp} as watched">
           <div class="al-ep-chip-badge">
-            ${iconHtml(Clock, { width: 12, height: 12, class: "al-pulse" })}
+            ${iconHtml(Play, { width: 12, height: 12 })}
             <span class="al-ep-chip-num">Ep. ${activeEp}</span>
-            <span class="al-ep-chip-timer">${autoTrackState.countdown}s</span>
+            <span class="al-ep-chip-text" style="color: #c084fc;">${Resume.formatTime(resume.time)}</span>
           </div>
           <div class="al-ep-chip-actions">
-            <button type="button" class="al-ep-mini-btn danger" id="al-ep-cancel" title="Cancel auto-track">
-              ${iconHtml(X, { width: 11, height: 11 })}
-            </button>
-            <button type="button" class="al-ep-mini-btn success" id="al-ep-savenow" title="Mark Ep. ${activeEp} as watched now">
+            <button type="button" class="al-ep-mini-btn success" id="al-ep-save" title="Mark Ep. ${activeEp} as watched">
               ${iconHtml(Check, { width: 12, height: 12 })}
             </button>
           </div>
         </div>`;
-    } else if (trackedProgress > 0 && activeEp === trackedProgress) {
-      // 2. Synced with AniList
+    } else if (isCurrentTrackedEp) {
+      // 2. Synced with AniList (completed/tracked, no active midway resume point)
       const rewindTarget = activeEp - 1;
       episodeStatusHtml = `
         <div class="al-ep-chip is-synced" title="Tracked on AniList as Ep. ${activeEp}">
@@ -202,8 +200,8 @@ export function renderActions(
             </button>
           </div>
         </div>`;
-    } else if (trackedProgress > 0 && activeEp < trackedProgress) {
-      // 3. Already Watched in the past (re-watching an old episode)
+    } else if (isPastEp) {
+      // 4. Already Watched in the past (re-watching an old episode)
       const rewindTarget = activeEp - 1;
       episodeStatusHtml = `
         <div class="al-ep-chip is-watched" title="Episode ${activeEp} already watched (AniList at Ep. ${trackedProgress})">
@@ -215,21 +213,6 @@ export function renderActions(
             <button type="button" class="al-ep-mini-btn rewind" id="al-ep-rewind" title="${rewindTarget > 0 ? `Rewind AniList to Ep. ${rewindTarget}` : "Mark as unwatched"}">
               ${iconHtml(RotateCcw, { width: 11, height: 11 })}
               <span>${rewindTarget > 0 ? `Ep. ${rewindTarget}` : "Reset"}</span>
-            </button>
-          </div>
-        </div>`;
-    } else if (isResuming) {
-      // 4. Intra-episode Resume active ONLY for the next episode (paused midway)
-      episodeStatusHtml = `
-        <div class="al-ep-chip is-resuming" title="Resume at ${Resume.formatTime(resume.time)} (${resume.percent}%) • Mark Ep. ${activeEp} as watched">
-          <div class="al-ep-chip-badge">
-            ${iconHtml(Play, { width: 12, height: 12 })}
-            <span class="al-ep-chip-num">Ep. ${activeEp}</span>
-            <span class="al-ep-chip-text" style="color: #c084fc;">${Resume.formatTime(resume.time)}</span>
-          </div>
-          <div class="al-ep-chip-actions">
-            <button type="button" class="al-ep-mini-btn success" id="al-ep-save" title="Mark Ep. ${activeEp} as watched">
-              ${iconHtml(Check, { width: 12, height: 12 })}
             </button>
           </div>
         </div>`;
@@ -351,11 +334,7 @@ export function renderActions(
   });
 
   // Episode Controller Action Listeners
-  bar.querySelector("#al-ep-cancel")?.addEventListener("click", () => {
-    actions.onCancelCountdown?.();
-  });
-
-  bar.querySelector("#al-ep-savenow, #al-ep-save")?.addEventListener("click", () => {
+  bar.querySelector("#al-ep-save")?.addEventListener("click", () => {
     actions.onSave?.(activeEp);
   });
 

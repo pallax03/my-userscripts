@@ -68,6 +68,19 @@ function getResumeKey(activeEp) {
   return `${mediaId}_ep${ep}`;
 }
 
+function isEpisodeEligibleForResume(ep) {
+  if (ep <= 0) return false;
+  if (trackedProgress < 0) return true;
+  const nextToWatch = (trackedProgress > 0 ? trackedProgress : 0) + 1;
+  // Strictly disallow past re-watched episodes (ep < trackedProgress)
+  if (trackedProgress > 0 && ep < trackedProgress) return false;
+  // Allow next unwatched episode
+  if (ep === nextToWatch) return true;
+  // Allow the current tracked episode if user is actively watching it
+  if (ep === trackedProgress) return true;
+  return false;
+}
+
 function prepareResumeTarget(force = false) {
   const activeEp = provider?.getActiveEpisode?.() || 1;
   const currentKey = getResumeKey(activeEp);
@@ -79,9 +92,8 @@ function prepareResumeTarget(force = false) {
     return;
   }
 
-  // Resume is strictly allowed ONLY for the next episode in sequence
-  const nextToWatch = (trackedProgress > 0 ? trackedProgress : 0) + 1;
-  if (trackedProgress >= 0 && activeEp !== nextToWatch) {
+  // Resume is strictly disallowed for past re-watched episodes
+  if (!isEpisodeEligibleForResume(activeEp)) {
     pendingResumeTarget = null;
     pendingResumeEp = null;
     return;
@@ -154,11 +166,10 @@ function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
   const activeEp = provider?.getActiveEpisode?.() || 1;
   const settings = Settings.get();
   const percent = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const nextToWatch = (trackedProgress > 0 ? trackedProgress : 0) + 1;
-  const isNextEp = trackedProgress < 0 || activeEp === nextToWatch;
+  const isEligible = isEpisodeEligibleForResume(activeEp);
 
-  // 1. Fast local cache update (strictly ONLY for next episode to watch)
-  if (isNextEp && currentTime > 5 && percent < 92) {
+  // 1. Fast local cache update (strictly ONLY for eligible episodes, never past episodes)
+  if (isEligible && currentTime > 5 && percent < 92) {
     Resume.setLocal(currentMedia.id, {
       ep: activeEp,
       time: Math.round(currentTime),
@@ -167,9 +178,9 @@ function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
     });
   }
 
-  // 2. Refresh UI on pause & sync resume to notes (strictly ONLY for next episode)
+  // 2. Refresh UI on pause & sync resume to notes (strictly ONLY for eligible episodes)
   if (isPaused) {
-    if (isNextEp && settings.autoResume && currentUser?.id && currentTime > 5 && percent < 88) {
+    if (isEligible && settings.autoResume && currentUser?.id && currentTime > 5 && percent < 88) {
       syncResumeToNotes(currentMedia.id, activeEp, currentTime, duration);
     }
     App.render();
@@ -190,7 +201,7 @@ function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
   }
 
   // 4. Cloud Sync to notes (periodic while playing)
-  if (settings.autoResume && currentUser?.id && currentTime > 15 && percent < 85) {
+  if (isEligible && settings.autoResume && currentUser?.id && currentTime > 15 && percent < 85) {
     const now = Date.now();
     const timeDiff = Math.abs(currentTime - lastSyncedResumeTime);
     if (now - lastNotesSyncTime >= 60000 && timeDiff >= 15) {
@@ -220,40 +231,7 @@ function handleActiveEpisodeChange(newActiveEp) {
     dispatchResumeSeek();
   }
 
-  const settings = Settings.get();
-
-  if (
-    settings.autoTrack &&
-    settings.trackTrigger === "delay" &&
-    currentMedia &&
-    newActiveEp > trackedProgress &&
-    !cancelledEps.has(newActiveEp)
-  ) {
-    if (settings.delay === 0) {
-      App.setProgress(newActiveEp);
-      return;
-    }
-
-    autoTrackState.isActive = true;
-    autoTrackState.targetEp = newActiveEp;
-    autoTrackState.countdown = settings.delay;
-    App.render();
-
-    countdownInterval = setInterval(() => {
-      autoTrackState.countdown -= 1;
-      if (autoTrackState.countdown <= 0) {
-        clearInterval(countdownInterval);
-      }
-      App.render();
-    }, 1000);
-
-    autoTrackTimer = setTimeout(() => {
-      cancelAutoTrack();
-      App.setProgress(newActiveEp);
-    }, settings.delay * 1000);
-  } else {
-    App.render();
-  }
+  App.render();
 }
 
 async function findMediaByTitle(title, expectedTotalEp = null) {
@@ -883,6 +861,28 @@ export const App = {
         renderAutoSkipButton(provider);
       }
 
+      function monitorTopLevelVideo() {
+        const video = document.querySelector("video");
+        if (video && !video.__au_top_bound) {
+          video.__au_top_bound = true;
+          const broadcast = () => {
+            handlePlaybackState({
+              currentTime: video.currentTime || 0,
+              duration: video.duration || 0,
+              isPaused: video.paused,
+              isEnded: video.ended
+            });
+          };
+          video.addEventListener("pause", () => {
+            broadcast();
+            setTimeout(broadcast, 100);
+          });
+          video.addEventListener("seeked", broadcast);
+          video.addEventListener("timeupdate", broadcast);
+        }
+      }
+      monitorTopLevelVideo();
+
       const hasNav = document.getElementById("al-nav-desktop");
       const hasBar = document.getElementById("al-control-bar");
       if (!hasNav || (!isHome() && !hasBar)) {
@@ -892,7 +892,7 @@ export const App = {
   }
 };
 
-const isPlayerFrame = window.location.hostname.includes("vixcloud") || window.location.hostname.includes("saturncdn");
+const isPlayerFrame = window.self !== window.top || window.location.hostname.includes("vixcloud") || window.location.hostname.includes("saturncdn");
 
 if (isPlayerFrame) {
   initPlayer();

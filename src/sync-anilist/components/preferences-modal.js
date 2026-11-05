@@ -42,40 +42,17 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
       if (typeof onSave === "function") onSave();
     },
     body: `
-      <!-- 1. Playback & Auto-Track -->
-      <div class="al-pref-group al-pref-collapsible ${settings.autoTrack ? "is-open is-active" : ""}" id="al-pref-sec-autotrack">
+      <!-- 1. Playback & Auto-Resume -->
+      <div class="al-pref-group ${settings.autoResume ? "is-active" : ""}" id="al-pref-sec-autoresume">
         <div class="al-pref-header">
           <div class="al-pref-title-click">
-            <span class="al-pref-chevron">${iconHtml(ChevronDown, { width: 14, height: 14 })}</span>
+            <span class="al-pref-icon" style="color: #3db4f2; display: flex; align-items: center;">${iconHtml(RotateCcw, { width: 16, height: 16 })}</span>
             <div class="al-pref-info">
-              <span class="al-pref-title">Auto-track episodes</span>
-              <span class="al-pref-desc">Sync episode progress to AniList automatically</span>
+              <span class="al-pref-title">Auto-resume playback</span>
+              <span class="al-pref-desc">Restore playback minute automatically (progress tracks at 85% completion)</span>
             </div>
           </div>
-          <input type="checkbox" class="al-switch al-toggle-autotrack" ${settings.autoTrack ? "checked" : ""} />
-        </div>
-
-        <div class="al-pref-sub" style="${settings.autoTrack ? "" : "display: none;"}">
-          <div class="al-pref-row al-row-delay">
-            <span class="al-pref-sub-label">
-              ${iconHtml(Clock, { width: 13, height: 13 })}
-              <span>Countdown before tracking</span>
-            </span>
-            <select class="al-select-xs al-sel-delay">
-              <option value="0" ${settings.delay === 0 ? "selected" : ""}>Instant (0s)</option>
-              <option value="10" ${settings.delay === 10 ? "selected" : ""}>10 seconds</option>
-              <option value="15" ${settings.delay === 15 ? "selected" : ""}>15 seconds</option>
-              <option value="30" ${settings.delay === 30 ? "selected" : ""}>30 seconds</option>
-            </select>
-          </div>
-
-          <label class="al-pref-row" style="cursor: pointer;">
-            <span class="al-pref-sub-label">
-              ${iconHtml(RotateCcw, { width: 13, height: 13 })}
-              <span>Auto-resume playback position</span>
-            </span>
-            <input type="checkbox" class="al-switch al-toggle-autoresume" ${settings.autoResume ? "checked" : ""} />
-          </label>
+          <input type="checkbox" class="al-switch al-toggle-autoresume" ${settings.autoResume ? "checked" : ""} />
         </div>
       </div>
 
@@ -211,39 +188,24 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
     ]
   });
 
-  // 1. Auto-track boolean switch + expansion
-  const autoTrackToggle = modal.querySelector(".al-toggle-autotrack");
-  const autoTrackGroup = modal.querySelector("#al-pref-sec-autotrack");
-  const autoTrackHeader = autoTrackGroup?.querySelector(".al-pref-title-click");
+  // 1. Auto-resume switch
+  const autoResumeToggle = modal.querySelector(".al-toggle-autoresume");
+  const autoResumeGroup = modal.querySelector("#al-pref-sec-autoresume");
+  const autoResumeHeader = autoResumeGroup?.querySelector(".al-pref-title-click");
 
-  const setAutoTrack = (active) => {
-    if (autoTrackToggle) autoTrackToggle.checked = active;
-    Settings.set("autoTrack", active);
-    autoTrackGroup?.classList.toggle("is-open", active);
-    autoTrackGroup?.classList.toggle("is-active", active);
+  const setAutoResume = (active) => {
+    if (autoResumeToggle) autoResumeToggle.checked = active;
+    Settings.set("autoResume", active);
+    autoResumeGroup?.classList.toggle("is-active", active);
   };
 
-  autoTrackHeader?.addEventListener("click", () => {
-    setAutoTrack(!autoTrackToggle?.checked);
+  autoResumeHeader?.addEventListener("click", () => {
+    setAutoResume(!autoResumeToggle?.checked);
   });
 
-  autoTrackToggle?.addEventListener("change", (e) => {
-    setAutoTrack(e.target.checked);
+  autoResumeToggle?.addEventListener("change", (e) => {
+    setAutoResume(e.target.checked);
   });
-
-  const delaySelect = modal.querySelector(".al-sel-delay");
-  if (delaySelect) {
-    delaySelect.addEventListener("change", (e) => {
-      Settings.set("delay", parseInt(e.target.value, 10));
-    });
-  }
-
-  const autoResumeToggle = modal.querySelector(".al-toggle-autoresume");
-  if (autoResumeToggle) {
-    autoResumeToggle.addEventListener("change", (e) => {
-      Settings.set("autoResume", e.target.checked);
-    });
-  }
 
   // 2. Skip Intro (AniSkip) collapsible header & controls
   const skipGroup = modal.querySelector("#al-pref-sec-skipintro");

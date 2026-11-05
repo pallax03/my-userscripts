@@ -86,7 +86,7 @@ export function getEntrySortTier(entry) {
     resume &&
     resume.percent > 0 &&
     resume.percent < 88 &&
-    resume.ep === state.nextToWatch
+    (resume.ep === state.nextToWatch || resume.ep === state.progress)
   );
 
   // 1. First priority: Intra-episode resume pending
@@ -148,7 +148,7 @@ function createCard(entry, buddySync = null, onSyncEntry = null) {
     resume &&
     resume.percent > 0 &&
     resume.percent < 88 &&
-    resume.ep === state.nextToWatch
+    (resume.ep === state.nextToWatch || resume.ep === state.progress)
   );
   const epTarget = state.hasUnwatchedAired ? state.nextToWatch : (state.progress || 1);
   const title = media.title?.english || media.title?.romaji || media.title?.userPreferred || "Untitled";

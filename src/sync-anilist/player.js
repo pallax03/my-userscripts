@@ -61,11 +61,12 @@ export function initPlayer() {
     let isEnded = false;
 
     if (jw && typeof jw.getState === "function") {
-      isPaused = jw.getState() === "paused" || jw.getState() === "idle";
-      isEnded = jw.getState() === "complete";
+      const st = jw.getState();
+      isPaused = st === "paused" || st === "idle" || Boolean(video && video.paused);
+      isEnded = st === "complete" || Boolean(video && video.ended);
     } else if (vds && typeof vds.paused !== "undefined") {
-      isPaused = vds.paused;
-      isEnded = vds.ended;
+      isPaused = Boolean(vds.paused || (video && video.paused));
+      isEnded = Boolean(vds.ended || (video && video.ended));
     } else if (video) {
       isPaused = video.paused;
       isEnded = video.ended;
@@ -212,7 +213,10 @@ export function initPlayer() {
         broadcastPlaybackState(true);
       });
       video.addEventListener("seeked", () => broadcastPlaybackState(true));
-      video.addEventListener("pause", () => broadcastPlaybackState(true));
+      video.addEventListener("pause", () => {
+        broadcastPlaybackState(true);
+        setTimeout(() => broadcastPlaybackState(true), 100);
+      });
       video.addEventListener("ended", () => broadcastPlaybackState(true));
       video.addEventListener("canplay", () => notifyReady());
       video.addEventListener("playing", () => notifyReady());
@@ -245,7 +249,10 @@ export function initPlayer() {
         broadcastPlaybackState(true);
       });
       jw.on("seeked", () => broadcastPlaybackState(true));
-      jw.on("pause", () => broadcastPlaybackState(true));
+      jw.on("pause", () => {
+        broadcastPlaybackState(true);
+        setTimeout(() => broadcastPlaybackState(true), 100);
+      });
       jw.on("complete", () => broadcastPlaybackState(true));
       jw.on("ready", () => notifyReady());
       jw.on("firstFrame", () => notifyReady());
@@ -269,7 +276,10 @@ export function initPlayer() {
         broadcastPlaybackState(true);
       });
       vds.addEventListener("seeked", () => broadcastPlaybackState(true));
-      vds.addEventListener("pause", () => broadcastPlaybackState(true));
+      vds.addEventListener("pause", () => {
+        broadcastPlaybackState(true);
+        setTimeout(() => broadcastPlaybackState(true), 100);
+      });
       vds.addEventListener("ended", () => broadcastPlaybackState(true));
     }
   }
