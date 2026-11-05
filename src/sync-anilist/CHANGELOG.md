@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.6.0...sync-anilist-v1.7.0) (2026-11-05)
+
+
+### Features
+
+* **sync-anilist:** lock tracking to 85% completion and unify auto-resume preferences ([bb399a8](https://github.com/pallax03/my-userscripts/commit/bb399a84c5cc0ae859e901e364a26c1b68410f80))
+
 ## [1.6.0](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.5.0...sync-anilist-v1.6.0) (2026-10-31)
 
 
