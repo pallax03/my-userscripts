@@ -1,4 +1,5 @@
 import { getEpisodesList } from "./metadata.js";
+import { ANIMEUNITY_SELECTORS, getEpisodeItems, getEpisodeNumber } from "./dom.js";
 
 /**
  * Resolves the currently active episode number on AnimeUnity.
@@ -7,7 +8,7 @@ import { getEpisodesList } from "./metadata.js";
  */
 export function getCurrentEpisode() {
   // 1. Live player header (#video-top .title: "Episodio 4")
-  const topTitle = document.querySelector("#video-top .title, #video-top span");
+  const topTitle = document.querySelector(`${ANIMEUNITY_SELECTORS.playerTop} .title, ${ANIMEUNITY_SELECTORS.playerTop} [data-episode-number], ${ANIMEUNITY_SELECTORS.playerTop} span`);
   if (topTitle) {
     const m = topTitle.textContent.match(/\d+/);
     if (m) {
@@ -29,18 +30,15 @@ export function getCurrentEpisode() {
   }
 
   // 3. Active element in episode list (.episode-wrapper .episode-item.active)
-  const activeItem = document.querySelector(".episode-wrapper .episode-item.active, .episode-item.active");
+  const activeItem = document.querySelector(ANIMEUNITY_SELECTORS.episodeActive);
   if (activeItem) {
-    const m = activeItem.textContent.match(/\d+/);
-    if (m) {
-      const num = parseInt(m[0], 10);
-      if (!isNaN(num) && num > 0) return num;
-    }
+    const num = getEpisodeNumber(activeItem);
+    if (num > 0) return num;
   }
 
   // 4. Initial server-rendered attribute fallback
   try {
-    const player = document.querySelector("video-player");
+    const player = document.querySelector(ANIMEUNITY_SELECTORS.player);
     const epAttr = player?.getAttribute("episode");
     if (epAttr) {
       const parsed = JSON.parse(epAttr);

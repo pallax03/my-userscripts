@@ -1,6 +1,7 @@
 import { BaseProvider, cleanTitle, generateSearchCandidates, extractSeason, scoreSearchResult } from "./base.js";
 import { Storage } from "../../shared/storage.js";
 import { getAnimeMetadata, getAnimeKey } from "../../shared/animeunity/metadata.js";
+import { ANIMEUNITY_SELECTORS, getEpisodeItems, getEpisodeNumber } from "../../shared/animeunity/dom.js";
 import { getActiveEpisode } from "../components/episodes.js";
 
 export class AnimeUnityProvider extends BaseProvider {
@@ -23,13 +24,13 @@ export class AnimeUnityProvider extends BaseProvider {
 
   getAnimeInfo() {
     const { malId, anilistId, title: metaTitle } = getAnimeMetadata();
-    const domTitleEl = document.querySelector("#anime .title, h1.title");
+    const domTitleEl = document.querySelector(ANIMEUNITY_SELECTORS.title);
     const domTitle = domTitleEl?.innerText?.trim() || "";
 
     const title = metaTitle || domTitle;
     const currentEp = this.getActiveEpisode();
 
-    const epElements = document.querySelectorAll(".episode-wrapper .episode-item");
+    const epElements = getEpisodeItems();
     const totalEp = epElements.length || null;
 
     return {
@@ -69,7 +70,7 @@ export class AnimeUnityProvider extends BaseProvider {
   }
 
   getActionsAnchor() {
-    const epWrapper = document.querySelector(".episode-wrapper");
+    const epWrapper = document.querySelector(ANIMEUNITY_SELECTORS.episodeContainer);
     if (epWrapper) return { element: epWrapper, position: "before" };
     const overview = document.querySelector(".overview, .content .overview");
     if (overview) return { element: overview, position: "append" };
@@ -77,16 +78,16 @@ export class AnimeUnityProvider extends BaseProvider {
   }
 
   getVideoBottomAnchor() {
-    return document.getElementById("video-bottom");
+    return document.querySelector(ANIMEUNITY_SELECTORS.playerBottom);
   }
 
   highlightEpisodes(trackedProgress) {
     if (trackedProgress === undefined || trackedProgress === null) return;
-    const items = document.querySelectorAll(".episode-wrapper .episode-item");
+    const items = getEpisodeItems();
     const activeEp = this.getActiveEpisode();
 
     items.forEach((item) => {
-      const epNum = parseInt(item.innerText.trim(), 10);
+      const epNum = getEpisodeNumber(item);
       if (isNaN(epNum)) return;
 
       const isDone = epNum <= trackedProgress;

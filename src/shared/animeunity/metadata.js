@@ -4,9 +4,10 @@
  * and background HTML prefetching during SPA navigations.
  */
 
+import { ANIMEUNITY_SELECTORS, getAnimeId } from "./dom.js";
+
 export function getAnimeKey(pathname = window.location.pathname) {
-  const m = pathname.match(/\/anime\/(\d+)/i);
-  return m ? m[1] : null;
+  return getAnimeId(pathname);
 }
 
 const inFlightFetches = new Set();
@@ -40,8 +41,8 @@ export function getAnimeMetadata(customKey, { onResolved } = {}) {
 
   // 2. DOM custom element attribute before Vue unmounts
   try {
-    const el = document.querySelector("video-player[anime], [anime]");
-    const raw = el?.getAttribute("anime");
+    const el = document.querySelector(`:is(${ANIMEUNITY_SELECTORS.player})[anime], [data-anime], [anime]`);
+    const raw = el?.getAttribute("data-anime") || el?.getAttribute("anime");
     if (raw) {
       const obj = JSON.parse(raw);
       if (obj.mal_id && !malId) {
@@ -141,8 +142,8 @@ export function getEpisodesList(customKey) {
   } catch (_) {}
 
   try {
-    const el = document.querySelector("video-player[episodes], [episodes]");
-    const raw = el?.getAttribute("episodes");
+    const el = document.querySelector(`:is(${ANIMEUNITY_SELECTORS.player})[episodes], :is(${ANIMEUNITY_SELECTORS.player})[data-episodes], [data-episodes], [episodes]`);
+    const raw = el?.getAttribute("data-episodes") || el?.getAttribute("episodes");
     if (raw) {
       const list = JSON.parse(raw);
       if (Array.isArray(list) && list.length > 0) {

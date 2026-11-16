@@ -1,17 +1,19 @@
+import { ANIMEUNITY_SELECTORS, getEpisodeItems, getEpisodeNumber } from "../../shared/animeunity/dom.js";
+
 /**
  * Retrieves the currently active episode number
  * Checks both the DOM active element and the video-player custom element attribute
  * @returns {number}
  */
 export function getActiveEpisode() {
-  const activeEl = document.querySelector(".episode-wrapper .episode-item.active, .episode-item.active");
+  const activeEl = document.querySelector(ANIMEUNITY_SELECTORS.episodeActive);
   if (activeEl) {
-    const num = parseInt(activeEl.innerText.trim(), 10);
-    if (!isNaN(num) && num > 0) return num;
+    const num = getEpisodeNumber(activeEl);
+    if (num > 0) return num;
   }
 
   try {
-    const player = document.querySelector("video-player");
+    const player = document.querySelector(ANIMEUNITY_SELECTORS.player);
     const epAttr = player?.getAttribute("episode");
     if (epAttr) {
       const parsed = JSON.parse(epAttr);
@@ -28,12 +30,12 @@ export function getActiveEpisode() {
  * @param {number} trackedProgress
  */
 export function highlightEpisodes(trackedProgress) {
-  const items = document.querySelectorAll(".episode-wrapper .episode-item");
+  const items = getEpisodeItems();
   if (!items.length) return;
 
   items.forEach((el) => {
-    const num = parseInt(el.innerText.trim(), 10);
-    if (isNaN(num)) return;
+    const num = getEpisodeNumber(el);
+    if (!num) return;
     const isTracked = trackedProgress > 0 && num === trackedProgress;
     const isDone = trackedProgress > 0 && num < trackedProgress;
     el.classList.toggle("al-tracked", isTracked);
@@ -68,7 +70,7 @@ export function autoSelectTargetEpisode(media, trackedProgress, retryCount = 0) 
   sessionStorage.removeItem("al_target_ep");
 
   // 1. Check if Vue component on <video-player> is mounted and hydrated
-  const player = document.querySelector("video-player");
+  const player = document.querySelector(ANIMEUNITY_SELECTORS.player);
   const playerVue = player?.__vue__ || document.querySelector(".episode-wrapper")?.__vue__;
 
   if (playerVue && Array.isArray(playerVue.episodes) && playerVue.episodes.length > 0) {
@@ -94,7 +96,7 @@ export function autoSelectTargetEpisode(media, trackedProgress, retryCount = 0) 
 
       // Smooth scroll wrapper to center active item
       setTimeout(() => {
-        const activeItem = document.querySelector(".episode-wrapper .episode-item.active");
+        const activeItem = document.querySelector(ANIMEUNITY_SELECTORS.episodeActive);
         const wrapper = activeItem?.closest(".episode-wrapper");
         if (activeItem && wrapper && wrapper.scrollWidth > wrapper.clientWidth) {
           wrapper.scrollTo({
@@ -118,10 +120,10 @@ export function autoSelectTargetEpisode(media, trackedProgress, retryCount = 0) 
 
   // 2. DOM fallback only if Vue is completely unavailable after all retries
   lastAutoSelectedKey = currentKey;
-  const items = document.querySelectorAll(".episode-wrapper .episode-item");
+  const items = getEpisodeItems();
   if (items.length > 0) {
     for (const item of items) {
-      const num = parseInt(item.innerText.trim(), 10);
+      const num = getEpisodeNumber(item);
       if (num === targetEp) {
         if (!item.classList.contains("active")) {
           const clickEl = item.querySelector("a") || item;

@@ -16,6 +16,7 @@ import {
 import { Buddy } from "../buddy.js";
 import { initBuddyPicker } from "./buddy-picker.js";
 import { Resume } from "../resume.js";
+import { ANIMEUNITY_SELECTORS } from "../../shared/animeunity/dom.js";
 
 /**
  * Renders the streamlined anime control card above the episode selector
@@ -54,7 +55,7 @@ export function renderActions(
     targetAnchor = anchorData;
     insertMode = "before";
   } else {
-    const epWrapper = document.querySelector(".episode-wrapper, section[x-data*='epList'], section:has(.ep-tile)");
+    const epWrapper = document.querySelector(`${ANIMEUNITY_SELECTORS.episodeContainer}, section:has(.ep-tile)`);
     if (epWrapper) {
       targetAnchor = epWrapper;
       insertMode = "before";

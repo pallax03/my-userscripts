@@ -225,7 +225,7 @@ export function renderCrossSwitch({ media, activeEp = 0, provider = null } = {})
   // Determine container
   let container = null;
   if (isUnity) {
-    container = document.getElementById("video-top");
+    container = document.querySelector("#video-top, [data-player-header], .player-header");
   } else {
     container = document.querySelector(".watch-toolbar") || document.querySelector(".player-card") || document.querySelector(".ag-cta");
   }
