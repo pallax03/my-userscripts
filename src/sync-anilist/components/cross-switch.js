@@ -147,7 +147,7 @@ export async function resolveSaturnUrl(media, targetEp = 1) {
  * @returns {Promise<string>}
  */
 export async function resolveUnityUrl(media, targetEp = 1) {
-  const auBase = Storage.get("al_au_base") || "https://www.animeunity.co";
+  const auBase = Storage.get("al_au_base") || "https://www.animeunity.cx";
   if (!media?.id) return auBase;
 
   const pref = Storage.get("al_pref_language") || "sub";
@@ -280,7 +280,7 @@ export function renderCrossSwitch({ media, activeEp = 0, provider = null } = {})
     }
 
     // Fallback search redirection
-    const auBase = Storage.get("al_au_base") || "https://www.animeunity.co";
+    const auBase = Storage.get("al_au_base") || "https://www.animeunity.cx";
     const asBase = Storage.get("al_as_base") || "https://www.animesaturn.net";
     const title = media.title?.english || media.title?.romaji || media.title?.userPreferred || "";
     if (isUnity) {

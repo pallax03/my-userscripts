@@ -30,6 +30,8 @@
 // @match        *://animeunity.tv/*
 // @match        *://*.animeunity.co/*
 // @match        *://animeunity.co/*
+// @match        *://*.animeunity.cx/*
+// @match        *://animeunity.cx/*
 // @match        *://*.animeunity.cc/*
 // @match        *://animeunity.cc/*
 // @match        *://*.animeunity.fun/*
@@ -77,6 +79,7 @@
 // @connect      animeunity.so
 // @connect      animeunity.tv
 // @connect      animeunity.co
+// @connect      animeunity.cx
 // @connect      animeunity.cc
 // @connect      animeunity.fun
 // @connect      animeunity.*
@@ -388,8 +391,8 @@
 		["path", { d: "M5 10V3" }],
 		["path", { d: "M5 21v-7" }]
 	];
-	var ThumbsUp = [["path", { d: "M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" }], ["path", { d: "M7 10v12" }]];
 	var ThumbsDown = [["path", { d: "M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z" }], ["path", { d: "M17 14V2" }]];
+	var ThumbsUp = [["path", { d: "M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" }], ["path", { d: "M7 10v12" }]];
 	var Trash = [
 		["path", { d: "M10 11v6" }],
 		["path", { d: "M14 11v6" }],
@@ -751,9 +754,49 @@
 			return null;
 		}
 	};
+	var ANIMEUNITY_SELECTORS = {
+		title: "[data-anime-title], .anime-title, #anime h1, #anime .title, h1.title",
+		episodeItems: [
+			".episode-wrapper .episode-item",
+			"[data-episode-number]",
+			"[data-episode]",
+			".episode-list .episode",
+			".episodes-list .episode",
+			".episode-item",
+			".ep-item",
+			".ep-tile"
+		].join(", "),
+		episodeActive: [
+			".episode-wrapper .episode-item.active",
+			"[data-episode-number].active",
+			"[data-episode].active",
+			".episode-item.active",
+			".episode.active",
+			".ep-item.active",
+			".ep-tile.active",
+			"[aria-current='true']"
+		].join(", "),
+		episodeContainer: ".episode-wrapper, .episode-list, .episodes-list, [data-episodes], section[x-data*='epList']",
+		player: "video-player, [data-player], .video-player",
+		playerTop: "#video-top, [data-player-header], .player-header",
+		playerBottom: "#video-bottom, [data-player-footer], .player-footer"
+	};
+	function getEpisodeItems(root = document) {
+		return root.querySelectorAll(ANIMEUNITY_SELECTORS.episodeItems);
+	}
+	function getEpisodeNumber(element) {
+		if (!element) return 0;
+		const raw = element.dataset?.episodeNumber || element.dataset?.episode || element.getAttribute("data-episode-number") || element.getAttribute("data-episode") || element.getAttribute("aria-label") || element.textContent;
+		const match = String(raw || "").match(/\d+/);
+		const number = match ? parseInt(match[0], 10) : 0;
+		return number > 0 ? number : 0;
+	}
+	function getAnimeId(pathname = window.location.pathname) {
+		const match = pathname.match(/\/anime\/(?:[^/]*-)?(\d+)(?:\/|$)/i) || pathname.match(/\/anime\/(\d+)(?:-|\/|$)/i);
+		return match ? match[1] : null;
+	}
 	function getAnimeKey(pathname = window.location.pathname) {
-		const m = pathname.match(/\/anime\/(\d+)/i);
-		return m ? m[1] : null;
+		return getAnimeId(pathname);
 	}
 	var inFlightFetches = new Set();
 	function getAnimeMetadata(customKey, { onResolved } = {}) {
@@ -778,7 +821,8 @@
 			title
 		};
 		try {
-			const raw = document.querySelector("video-player[anime], [anime]")?.getAttribute("anime");
+			const el = document.querySelector(`:is(${ANIMEUNITY_SELECTORS.player})[anime], [data-anime], [anime]`);
+			const raw = el?.getAttribute("data-anime") || el?.getAttribute("anime");
 			if (raw) {
 				const obj = JSON.parse(raw);
 				if (obj.mal_id && !malId) {
@@ -857,13 +901,13 @@
 		}
 	}
 	function getActiveEpisode() {
-		const activeEl = document.querySelector(".episode-wrapper .episode-item.active, .episode-item.active");
+		const activeEl = document.querySelector(ANIMEUNITY_SELECTORS.episodeActive);
 		if (activeEl) {
-			const num = parseInt(activeEl.innerText.trim(), 10);
-			if (!isNaN(num) && num > 0) return num;
+			const num = getEpisodeNumber(activeEl);
+			if (num > 0) return num;
 		}
 		try {
-			const epAttr = document.querySelector("video-player")?.getAttribute("episode");
+			const epAttr = document.querySelector(ANIMEUNITY_SELECTORS.player)?.getAttribute("episode");
 			if (epAttr) {
 				const parsed = JSON.parse(epAttr);
 				const num = parseInt(parsed?.number, 10);
@@ -881,7 +925,7 @@
 		const currentKey = `${window.location.pathname}_ep${targetEp}`;
 		if (lastAutoSelectedKey === currentKey && retryCount === 0) return;
 		sessionStorage.removeItem("al_target_ep");
-		const playerVue = document.querySelector("video-player")?.__vue__ || document.querySelector(".episode-wrapper")?.__vue__;
+		const playerVue = document.querySelector(ANIMEUNITY_SELECTORS.player)?.__vue__ || document.querySelector(".episode-wrapper")?.__vue__;
 		if (playerVue && Array.isArray(playerVue.episodes) && playerVue.episodes.length > 0) {
 			const epObj = playerVue.episodes.find((e) => parseInt(e.number, 10) === targetEp);
 			if (epObj) {
@@ -894,7 +938,7 @@
 					if (parseInt(playerVue.episode?.number, 10) !== targetEp) playerVue.switchEpisode(epObj);
 				}
 				setTimeout(() => {
-					const activeItem = document.querySelector(".episode-wrapper .episode-item.active");
+					const activeItem = document.querySelector(ANIMEUNITY_SELECTORS.episodeActive);
 					const wrapper = activeItem?.closest(".episode-wrapper");
 					if (activeItem && wrapper && wrapper.scrollWidth > wrapper.clientWidth) wrapper.scrollTo({
 						left: activeItem.offsetLeft - wrapper.clientWidth / 2 + activeItem.clientWidth / 2,
@@ -911,9 +955,9 @@
 			return;
 		}
 		lastAutoSelectedKey = currentKey;
-		const items = document.querySelectorAll(".episode-wrapper .episode-item");
+		const items = getEpisodeItems();
 		if (items.length > 0) {
-			for (const item of items) if (parseInt(item.innerText.trim(), 10) === targetEp) {
+			for (const item of items) if (getEpisodeNumber(item) === targetEp) {
 				if (!item.classList.contains("active")) (item.querySelector("a") || item).click();
 				const wrapper = item.closest(".episode-wrapper");
 				if (wrapper && wrapper.scrollWidth > wrapper.clientWidth) wrapper.scrollTo({
@@ -933,14 +977,14 @@
 			return p === "/" || p === "/home" || p === "";
 		}
 		isAnimePage() {
-			return /\/anime\/\d+/i.test(window.location.pathname);
+			return /\/anime\/[^/]+/i.test(window.location.pathname);
 		}
 		isWatchPage() {
-			return /\/anime\/\d+[^/]*\/\d+/i.test(window.location.pathname);
+			return /\/anime\/[^/]+\/\d+/i.test(window.location.pathname);
 		}
 		getAnimeInfo() {
 			const { malId, anilistId, title: metaTitle } = getAnimeMetadata();
-			const domTitle = document.querySelector("#anime .title, h1.title")?.innerText?.trim() || "";
+			const domTitle = document.querySelector(ANIMEUNITY_SELECTORS.title)?.innerText?.trim() || "";
 			const title = metaTitle || domTitle;
 			return {
 				title,
@@ -948,7 +992,7 @@
 				anilistId,
 				malId,
 				currentEp: this.getActiveEpisode(),
-				totalEp: document.querySelectorAll(".episode-wrapper .episode-item").length || null
+				totalEp: getEpisodeItems().length || null
 			};
 		}
 		getActiveEpisode() {
@@ -970,16 +1014,21 @@
 				element: container,
 				position: "prepend"
 			};
+			const home = document.querySelector("[data-page='home'], main.home, main");
+			if (home) return {
+				element: home,
+				position: "prepend"
+			};
 			return null;
 		}
 		getNavAnchor() {
 			return {
-				desktop: document.getElementById("left-nav") || document.querySelector("nav.navbar .navbar-nav, .nav-left"),
-				mobile: document.querySelector(".nav-top-mobile")
+				desktop: document.getElementById("left-nav") || document.querySelector("nav.navbar .navbar-nav, .nav-left, [data-navigation='desktop'], nav"),
+				mobile: document.querySelector(".nav-top-mobile, [data-navigation='mobile']")
 			};
 		}
 		getActionsAnchor() {
-			const epWrapper = document.querySelector(".episode-wrapper");
+			const epWrapper = document.querySelector(ANIMEUNITY_SELECTORS.episodeContainer);
 			if (epWrapper) return {
 				element: epWrapper,
 				position: "before"
@@ -992,14 +1041,14 @@
 			return null;
 		}
 		getVideoBottomAnchor() {
-			return document.getElementById("video-bottom");
+			return document.querySelector(ANIMEUNITY_SELECTORS.playerBottom);
 		}
 		highlightEpisodes(trackedProgress) {
 			if (trackedProgress === void 0 || trackedProgress === null) return;
-			const items = document.querySelectorAll(".episode-wrapper .episode-item");
+			const items = getEpisodeItems();
 			const activeEp = this.getActiveEpisode();
 			items.forEach((item) => {
-				const epNum = parseInt(item.innerText.trim(), 10);
+				const epNum = getEpisodeNumber(item);
 				if (isNaN(epNum)) return;
 				const isDone = epNum <= trackedProgress;
 				const isCurrent = epNum === activeEp;
@@ -2222,7 +2271,7 @@
 			targetAnchor = anchorData;
 			insertMode = "before";
 		} else {
-			const epWrapper = document.querySelector(".episode-wrapper, section[x-data*='epList'], section:has(.ep-tile)");
+			const epWrapper = document.querySelector(`${ANIMEUNITY_SELECTORS.episodeContainer}, section:has(.ep-tile)`);
 			if (epWrapper) {
 				targetAnchor = epWrapper;
 				insertMode = "before";
@@ -2643,15 +2692,15 @@
 		}
 		Logger.info(`Using search query: "${query}" (Resolved: ${resolved ? resolved.id : "NO"})`);
 		const isDesktop = window.innerWidth >= 768;
-		const desktopSearch = document.querySelector("#left-nav nav-search, #left-nav .search-box");
-		const mobileSearch = document.querySelector(".nav-top-mobile nav-search, .nav-top-mobile .search-box");
+		const desktopSearch = document.querySelector("#left-nav nav-search, #left-nav .search-box, [data-navigation='desktop'] nav-search, [data-navigation='desktop'] .search-box");
+		const mobileSearch = document.querySelector(".nav-top-mobile nav-search, .nav-top-mobile .search-box, [data-navigation='mobile'] nav-search, [data-navigation='mobile'] .search-box");
 		let targetNavSearch = null;
 		if (isDesktop && desktopSearch) targetNavSearch = desktopSearch;
 		else if (!isDesktop && mobileSearch) targetNavSearch = mobileSearch;
 		else {
 			const allNav = Array.from(document.querySelectorAll("nav-search, .search-box"));
 			targetNavSearch = allNav.find((el) => {
-				const parent = el.closest(".d-md-none, #left-nav, .nav-top-mobile") || el;
+				const parent = el.closest(".d-md-none, #left-nav, .nav-top-mobile, [data-navigation]") || el;
 				return window.getComputedStyle(parent).display !== "none";
 			}) || desktopSearch || mobileSearch || allNav[0];
 		}
@@ -4523,7 +4572,7 @@
 		return `${asBase}/filter?key=${encodeURIComponent(cleanTitle$1(title))}`;
 	}
 	async function resolveUnityUrl(media, targetEp = 1) {
-		const auBase = Storage.get("al_au_base") || "https://www.animeunity.co";
+		const auBase = Storage.get("al_au_base") || "https://www.animeunity.cx";
 		if (!media?.id) return auBase;
 		const prefDubInt = (Storage.get("al_pref_language") || "sub") === "dub" ? 1 : 0;
 		const rawMap = Storage.get("al_au_map");
@@ -4573,7 +4622,7 @@
 		const targetIcon = isUnity ? Globe : Tv;
 		const targetEp = activeEp > 0 ? activeEp : 1;
 		let container = null;
-		if (isUnity) container = document.getElementById("video-top");
+		if (isUnity) container = document.querySelector("#video-top, [data-player-header], .player-header");
 		else container = document.querySelector(".watch-toolbar") || document.querySelector(".player-card") || document.querySelector(".ag-cta");
 		const existing = document.getElementById("al-cross-switch-btn");
 		if (!container || !media) {
@@ -4621,7 +4670,7 @@
 			} catch (err) {
 				Logger.error("Cross switch error:", err);
 			}
-			const auBase = Storage.get("al_au_base") || "https://www.animeunity.co";
+			const auBase = Storage.get("al_au_base") || "https://www.animeunity.cx";
 			const asBase = Storage.get("al_as_base") || "https://www.animesaturn.net";
 			const title = media.title?.english || media.title?.romaji || media.title?.userPreferred || "";
 			if (isUnity) window.location.href = `${asBase}/filter?key=${encodeURIComponent(cleanTitle$1(title))}`;
@@ -5250,7 +5299,7 @@
 				document.querySelectorAll("#al-nav-dropdown, #al-nav-m-dropdown").forEach((d) => {
 					if (!d.contains(e.target) && !e.target.closest("#al-nav-desktop, #al-nav-mobile")) d.classList.remove("show");
 				});
-				if (e.target.closest(".episode-wrapper .episode-item, .ep-tile, a[href*='/ep-'], #video-bottom a.prev, #video-bottom a.next, .wt-btn")) setTimeout(() => {
+				if (e.target.closest(".episode-wrapper .episode-item, [data-episode], [data-episode-number], .episode-item, .ep-tile, a[href*='/ep-'], #video-bottom a.prev, #video-bottom a.next, .wt-btn")) setTimeout(() => {
 					const ep = provider?.getActiveEpisode?.();
 					if (ep) handleActiveEpisodeChange(ep);
 				}, 100);

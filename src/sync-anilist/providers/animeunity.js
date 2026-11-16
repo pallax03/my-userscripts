@@ -15,11 +15,11 @@ export class AnimeUnityProvider extends BaseProvider {
   }
 
   isAnimePage() {
-    return /\/anime\/\d+/i.test(window.location.pathname);
+    return /\/anime\/[^/]+/i.test(window.location.pathname);
   }
 
   isWatchPage() {
-    return /\/anime\/\d+[^/]*\/\d+/i.test(window.location.pathname);
+    return /\/anime\/[^/]+\/\d+/i.test(window.location.pathname);
   }
 
   getAnimeInfo() {
@@ -59,13 +59,17 @@ export class AnimeUnityProvider extends BaseProvider {
     const container = document.querySelector("#home > .container, .container");
     if (container) return { element: container, position: "prepend" };
 
+    const home = document.querySelector("[data-page='home'], main.home, main");
+    if (home) return { element: home, position: "prepend" };
+
     return null;
   }
 
   getNavAnchor() {
     return {
-      desktop: document.getElementById("left-nav") || document.querySelector("nav.navbar .navbar-nav, .nav-left"),
-      mobile: document.querySelector(".nav-top-mobile")
+      desktop: document.getElementById("left-nav") ||
+        document.querySelector("nav.navbar .navbar-nav, .nav-left, [data-navigation='desktop'], nav"),
+      mobile: document.querySelector(".nav-top-mobile, [data-navigation='mobile']")
     };
   }
 

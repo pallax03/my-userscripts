@@ -35,8 +35,8 @@ export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay =
   // - .nav-top-mobile nav-search (hidden on desktop via Bootstrap .d-md-none)
   // - #left-nav nav-search (visible on desktop)
   const isDesktop = window.innerWidth >= 768;
-  const desktopSearch = document.querySelector("#left-nav nav-search, #left-nav .search-box");
-  const mobileSearch = document.querySelector(".nav-top-mobile nav-search, .nav-top-mobile .search-box");
+  const desktopSearch = document.querySelector("#left-nav nav-search, #left-nav .search-box, [data-navigation='desktop'] nav-search, [data-navigation='desktop'] .search-box");
+  const mobileSearch = document.querySelector(".nav-top-mobile nav-search, .nav-top-mobile .search-box, [data-navigation='mobile'] nav-search, [data-navigation='mobile'] .search-box");
 
   let targetNavSearch = null;
   if (isDesktop && desktopSearch) {
@@ -46,7 +46,7 @@ export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay =
   } else {
     const allNav = Array.from(document.querySelectorAll("nav-search, .search-box"));
     targetNavSearch = allNav.find((el) => {
-      const parent = el.closest(".d-md-none, #left-nav, .nav-top-mobile") || el;
+      const parent = el.closest(".d-md-none, #left-nav, .nav-top-mobile, [data-navigation]") || el;
       return window.getComputedStyle(parent).display !== "none";
     }) || desktopSearch || mobileSearch || allNav[0];
   }

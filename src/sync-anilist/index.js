@@ -815,7 +815,7 @@ export const App = {
         }
       });
 
-      const epClick = e.target.closest(".episode-wrapper .episode-item, .ep-tile, a[href*='/ep-'], #video-bottom a.prev, #video-bottom a.next, .wt-btn");
+      const epClick = e.target.closest(".episode-wrapper .episode-item, [data-episode], [data-episode-number], .episode-item, .ep-tile, a[href*='/ep-'], #video-bottom a.prev, #video-bottom a.next, .wt-btn");
       if (epClick) {
         setTimeout(() => {
           const ep = provider?.getActiveEpisode?.();

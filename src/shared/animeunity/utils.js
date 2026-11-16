@@ -134,10 +134,10 @@ export function scanAnimeUnityPageMap() {
   const map = (rawMap && typeof rawMap === "object" && !Array.isArray(rawMap)) ? rawMap : {};
   let updated = false;
 
-  const layoutElements = document.querySelectorAll("layout-items[items-json]");
+  const layoutElements = document.querySelectorAll("layout-items[items-json], layout-items[data-items-json], [data-items-json]");
   layoutElements.forEach((el) => {
     try {
-      const raw = el.getAttribute("items-json");
+      const raw = el.getAttribute("data-items-json") || el.getAttribute("items-json");
       if (!raw) return;
       const parsed = JSON.parse(raw);
       const items = Array.isArray(parsed) ? parsed : parsed?.data || [];
