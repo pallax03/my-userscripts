@@ -1,0 +1,37 @@
+name: AI Agent Task
+description: Structured task specification for deterministic AI-agent execution
+title: "[Task]: "
+labels: ["agent-ready"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal & User Scenario
+      description: What problem does this solve and how does the user experience it?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope & Likely Files
+      description: Which modules/files are in scope (and any explicit non-goals)?
+    validations:
+      required: true
+  - type: textarea
+    id: invariants
+    attributes:
+      label: Invariants (Must Not Break)
+      description: Specific rules from AGENTS.md / docs/SPEC.md that must be preserved.
+      value: |
+        - AniList remains the Single Point of Truth
+        - Zero DOM scraping / zero JWPlayer iframe DOM mutation
+        - Keep #al-dock anchored bottom-right with zero mobile clipping
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria & Automated Tests
+      description: Concrete checkboxes + tests the agent must write/run to prove completion 100% autonomously.
+    validations:
+      required: true

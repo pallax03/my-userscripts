@@ -12,6 +12,5 @@ dist/*
 .env.*
 !.env.example
 
-AGENTS.md
 GEMINI.md
 .logs/
