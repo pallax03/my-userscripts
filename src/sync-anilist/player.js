@@ -4,6 +4,8 @@ import { resolveManualSkipTarget, buildTimelineHighlightGradient } from "./skip-
 export function initPlayer() {
   let rawOp = null;
   let rawEd = null;
+  let nativeOp = null;
+  let nativeEd = null;
   let currentOp = null;
   let currentEd = null;
   let lastHighlightKey = "";
@@ -342,8 +344,8 @@ export function initPlayer() {
 
   function computeAdjustedOp() {
     const dur = getDuration();
-    currentOp = adjustSegmentForBumper(rawOp, dur);
-    currentEd = adjustSegmentForBumper(rawEd, dur);
+    currentOp = adjustSegmentForBumper(rawOp || nativeOp, dur);
+    currentEd = adjustSegmentForBumper(rawEd || nativeEd, dur);
     updateTimelineHighlight();
   }
 
@@ -362,16 +364,16 @@ export function initPlayer() {
     if (tsKey === lastNativeTimestampKey) return;
     lastNativeTimestampKey = tsKey;
 
-    if (intro && !rawOp) {
-      rawOp = {
+    if (intro) {
+      nativeOp = {
         start: intro.start,
         end: intro.end,
         episodeLength: getDuration(),
         source: "native"
       };
     }
-    if (outro && !rawEd) {
-      rawEd = {
+    if (outro) {
+      nativeEd = {
         start: outro.start,
         end: outro.end,
         episodeLength: getDuration(),
@@ -428,7 +430,7 @@ export function initPlayer() {
     Logger.info(`⏩ ${isAuto ? "Auto-skipped" : "User skipped"} intro to ${target.toFixed(2)}s`);
     seekTo(target);
     try {
-      window.top.postMessage({ type: "AU_SKIP_EXECUTED", mode: isAuto ? "auto" : "manual", source: rawOp?.source || "aniskip", target }, "*");
+      window.top.postMessage({ type: "AU_SKIP_EXECUTED", mode: isAuto ? "auto" : "manual", source: (rawOp || nativeOp)?.source || "aniskip", target }, "*");
     } catch (_) {}
   }
 
@@ -508,7 +510,7 @@ export function initPlayer() {
       notifyReady();
     }
 
-    if (!rawOp && !rawEd) {
+    if (!rawOp && !nativeOp && !rawEd && !nativeEd) {
       if (btn && isBtnVisible) {
         btn.style.display = "none";
         isBtnVisible = false;

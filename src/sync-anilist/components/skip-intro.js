@@ -222,6 +222,7 @@ export async function checkSkipIntro(malId, epNum, duration = 0) {
 
   const roundedDur = Math.round(duration || 0);
   const isNew = malId !== activeMalId || epNum !== activeEp;
+  const isEpSwitch = (activeMalId !== null && malId !== activeMalId) || (activeEp !== null && epNum !== activeEp);
 
   if (isNew) {
     activeMalId = malId;
@@ -229,8 +230,10 @@ export async function checkSkipIntro(malId, epNum, duration = 0) {
     activeDuration = roundedDur;
     aniskipOp = null;
     aniskipEd = null;
-    nativeIntro = null;
-    nativeOutro = null;
+    if (isEpSwitch) {
+      nativeIntro = null;
+      nativeOutro = null;
+    }
     syncActiveOp();
     episodeAutoSkipOverride = null;
     broadcastOp();

@@ -3576,14 +3576,18 @@
 	async function checkSkipIntro(malId, epNum, duration = 0) {
 		if (!malId || !epNum) return;
 		const roundedDur = Math.round(duration || 0);
-		if (malId !== activeMalId || epNum !== activeEp) {
+		const isNew = malId !== activeMalId || epNum !== activeEp;
+		const isEpSwitch = activeMalId !== null && malId !== activeMalId || activeEp !== null && epNum !== activeEp;
+		if (isNew) {
 			activeMalId = malId;
 			activeEp = epNum;
 			activeDuration = roundedDur;
 			aniskipOp = null;
 			aniskipEd = null;
-			nativeIntro = null;
-			nativeOutro = null;
+			if (isEpSwitch) {
+				nativeIntro = null;
+				nativeOutro = null;
+			}
 			syncActiveOp();
 			episodeAutoSkipOverride = null;
 			broadcastOp();
@@ -3731,6 +3735,8 @@
 	function initPlayer() {
 		let rawOp = null;
 		let rawEd = null;
+		let nativeOp = null;
+		let nativeEd = null;
 		let currentOp = null;
 		let currentEd = null;
 		let lastHighlightKey = "";
@@ -4019,8 +4025,8 @@
 		}
 		function computeAdjustedOp() {
 			const dur = getDuration();
-			currentOp = adjustSegmentForBumper(rawOp, dur);
-			currentEd = adjustSegmentForBumper(rawEd, dur);
+			currentOp = adjustSegmentForBumper(rawOp || nativeOp, dur);
+			currentEd = adjustSegmentForBumper(rawEd || nativeEd, dur);
 			updateTimelineHighlight();
 		}
 		function checkNativeTimestamps() {
@@ -4040,13 +4046,13 @@
 			const tsKey = `${intro?.start || ""}-${intro?.end || ""}|${outro?.start || ""}-${outro?.end || ""}`;
 			if (tsKey === lastNativeTimestampKey) return;
 			lastNativeTimestampKey = tsKey;
-			if (intro && !rawOp) rawOp = {
+			if (intro) nativeOp = {
 				start: intro.start,
 				end: intro.end,
 				episodeLength: getDuration(),
 				source: "native"
 			};
-			if (outro && !rawEd) rawEd = {
+			if (outro) nativeEd = {
 				start: outro.start,
 				end: outro.end,
 				episodeLength: getDuration(),
@@ -4091,7 +4097,7 @@
 				window.top.postMessage({
 					type: "AU_SKIP_EXECUTED",
 					mode: isAuto ? "auto" : "manual",
-					source: rawOp?.source || "aniskip",
+					source: (rawOp || nativeOp)?.source || "aniskip",
 					target
 				}, "*");
 			} catch (_) {}
@@ -4153,7 +4159,7 @@
 			checkNativeTimestamps();
 			if (activeResumeTarget !== null && getPos() >= activeResumeTarget - 3) activeResumeTarget = null;
 			if (getDuration() > 0 && Math.round(getDuration()) !== Math.round(lastReportedDur)) notifyReady();
-			if (!rawOp && !rawEd) {
+			if (!rawOp && !nativeOp && !rawEd && !nativeEd) {
 				if (btn && isBtnVisible) {
 					btn.style.display = "none";
 					isBtnVisible = false;
