@@ -300,18 +300,18 @@ try {
   await page.goto("https://animeunity.cx/anime/12-one-piece", { waitUntil: "domcontentloaded" });
   await page.waitForSelector("#al-control-bar #al-bar-status", { timeout: 10000 });
   const detailText = await page.locator("#al-control-bar").innerText();
-  assert.ok(detailText.includes("Tracciato: Ep. 5 / 1122"), "Detail dock displays tracked/max progress");
+  assert.ok(detailText.includes("Progress: Ep. 5 / 1122"), "Detail dock displays tracked/max progress");
   await page.click("#al-dock-anime-btn");
   await page.waitForSelector("#al-dock-anime-menu.show #al-cross-switch-btn", { timeout: 5000 });
   const animeMenuText = await page.locator("#al-dock-anime-menu").innerText();
-  assert.ok(animeMenuText.includes("AnimeSaturn"), "Anime (⋯) menu contains secondary Go to AnimeSaturn fallback");
-  assert.ok(animeMenuText.includes("Rimuovi da AniList"), "Anime (⋯) menu contains Remove from AniList");
+  assert.ok(animeMenuText.includes("Watch on AnimeSaturn"), "Anime (⋯) menu contains secondary Watch on AnimeSaturn fallback");
+  assert.ok(animeMenuText.includes("Remove"), "Anime (⋯) menu contains Remove from AniList");
 
   // User PFP menu must stay strictly user-only (no anime title/actions)
   await page.click("#al-dock-avatar-btn");
   await page.waitForSelector("#al-dock-menu.show", { timeout: 5000 });
   const userMenuText = await page.locator("#al-dock-menu").innerText();
-  assert.ok(userMenuText.includes("Profilo AniList"), "User PFP menu has Profilo AniList");
+  assert.ok(userMenuText.includes("Profile"), "User PFP menu has Profile");
   assert.ok(!userMenuText.includes("One Piece"), "User PFP menu never mixes anime info");
 
   // Watch Ep 6 (next unwatched when progress=5) -> verify resume seek dispatch + 86% playback sync

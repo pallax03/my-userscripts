@@ -129,7 +129,8 @@ function prepareResumeTarget(force = false) {
     pendingResumeEp = activeEp;
     if (provider?.isWatchPage?.() && resumeLoadingToastKey !== currentKey) {
       resumeLoadingToastKey = currentKey;
-      showToast(`↺ Ripristino Ep. ${activeEp} a ${Resume.formatTime(targetTime)}...`, false, 2000);
+      showToast(`↺ Restoring Ep. ${activeEp} at ${Resume.formatTime(targetTime)}...`, false, 2000);
+      App.render();
     }
   } else if (force || currentMedia) {
     pendingResumeTarget = null;
@@ -644,7 +645,8 @@ export const App = {
       activeEp,
       trackedProgress,
       autoTrackState,
-      isWatch
+      isWatch,
+      resumeTarget: pendingResumeTarget || 0
     });
 
     provider?.highlightEpisodes(trackedProgress);
@@ -836,6 +838,7 @@ export const App = {
         if (resumeTime) {
           showToast(`↺ Resumed Ep. ${activeEp} at ${Resume.formatTime(resumeTime)}`, false, 2500);
         }
+        App.render();
       }
     });
 
