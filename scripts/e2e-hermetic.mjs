@@ -298,11 +298,21 @@ try {
 
   // Detail
   await page.goto("https://animeunity.cx/anime/12-one-piece", { waitUntil: "domcontentloaded" });
-  await page.waitForSelector("#al-control-bar #al-dock-avatar-btn", { timeout: 10000 });
-  await page.waitForSelector("#al-dock-switch-slot #al-cross-switch-btn", { timeout: 10000 });
+  await page.waitForSelector("#al-control-bar #al-bar-status", { timeout: 10000 });
   const detailText = await page.locator("#al-control-bar").innerText();
-  assert.ok(detailText.includes("Tracciato: Ep. 5 / 1122"), "Detail dock displays tracked progress");
-  assert.ok(detailText.includes("Saturn"), "Detail dock displays Go to AnimeSaturn button");
+  assert.ok(detailText.includes("Tracciato: Ep. 5 / 1122"), "Detail dock displays tracked/max progress");
+  await page.click("#al-dock-anime-btn");
+  await page.waitForSelector("#al-dock-anime-menu.show #al-cross-switch-btn", { timeout: 5000 });
+  const animeMenuText = await page.locator("#al-dock-anime-menu").innerText();
+  assert.ok(animeMenuText.includes("AnimeSaturn"), "Anime (⋯) menu contains secondary Go to AnimeSaturn fallback");
+  assert.ok(animeMenuText.includes("Rimuovi da AniList"), "Anime (⋯) menu contains Remove from AniList");
+
+  // User PFP menu must stay strictly user-only (no anime title/actions)
+  await page.click("#al-dock-avatar-btn");
+  await page.waitForSelector("#al-dock-menu.show", { timeout: 5000 });
+  const userMenuText = await page.locator("#al-dock-menu").innerText();
+  assert.ok(userMenuText.includes("Profilo AniList"), "User PFP menu has Profilo AniList");
+  assert.ok(!userMenuText.includes("One Piece"), "User PFP menu never mixes anime info");
 
   // Watch Ep 6 (next unwatched when progress=5) -> verify resume seek dispatch + 86% playback sync
   await page.evaluate(() => {
@@ -310,7 +320,9 @@ try {
   });
   await page.goto("https://animeunity.cx/anime/12-one-piece/50574", { waitUntil: "domcontentloaded" });
   await page.waitForSelector("#al-control-bar #al-ep-save", { timeout: 10000 });
-  await page.waitForSelector("#al-dock-switch-slot #al-cross-switch-btn", { timeout: 10000 });
+  await page.waitForSelector("#al-control-bar #al-bar-status", { timeout: 10000 });
+  const watchText = await page.locator("#al-control-bar").innerText();
+  assert.ok(watchText.includes("Ep. 6 / 1122"), "Watch dock displays current/max episode");
   await page.waitForTimeout(200);
 
   // Verify AL_RESUME_SEEK dispatch when iframe posts AL_PLAYER_READY
@@ -403,7 +415,7 @@ try {
   const mPage = await mobileCtx.newPage();
   await mPage.goto("https://animeunity.cx/anime/12-one-piece/50574", { waitUntil: "domcontentloaded" });
   await mPage.waitForSelector("#al-dock-avatar-btn", { timeout: 10000 });
-  await mPage.waitForSelector("#al-dock-switch-slot #al-cross-switch-btn", { timeout: 10000 });
+  await mPage.waitForSelector("#al-dock-anime-btn", { timeout: 10000 });
 
   const mDock = await mPage.locator("#al-dock").boundingBox();
   assert.ok(mDock && mDock.x >= 0 && mDock.x + mDock.width <= 390, `Mobile dock within 390px (${JSON.stringify(mDock)})`);

@@ -1,6 +1,6 @@
 import { Settings } from "../settings.js";
 import { Logger } from "../../shared/logger.js";
-import { iconHtml, SkipForward } from "../../shared/icons.js";
+import { iconHtml, SkipForward, Plus, Pencil } from "../../shared/icons.js";
 import { resolveSkipSegment } from "../skip-logic.js";
 import {
   openAniSkipDock,
@@ -84,14 +84,31 @@ export function renderAutoSkipButton(provider) {
   const container = document.getElementById("al-dock-skip-slot") || currentProvider?.getVideoBottomAnchor?.();
   if (!container) return;
 
+  const settings = Settings.get();
   const isActive = isEpisodeAutoSkipActive();
-  const renderKey = `${activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}` : "none"}|${isActive}`;
+  const renderKey = `${activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}` : "none"}|${isActive}|${settings.communityAniSkip}`;
   if (container.__lastSkipKey === renderKey && container.dataset.rendered === "1") return;
   container.__lastSkipKey = renderKey;
   container.dataset.rendered = "1";
 
   if (!activeOp) {
-    container.innerHTML = "";
+    if (!settings.communityAniSkip) {
+      container.innerHTML = "";
+      return;
+    }
+    container.innerHTML = `
+      <div class="al-dock-skip-cluster">
+        <button type="button" class="al-dock-chip is-pending" id="al-skip-add-btn" title="Nessuna intro trovata. Contribuisci ad AniSkip (Key: [ o ])">
+          ${iconHtml(Plus, { width: 10, height: 10 })}
+          <span>+ Intro</span>
+        </button>
+      </div>
+    `;
+    container.querySelector("#al-skip-add-btn")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openSkipContribute();
+    });
     return;
   }
 
@@ -102,6 +119,11 @@ export function renderAutoSkipButton(provider) {
         ${iconHtml(SkipForward, { width: 11, height: 11 })}
         <span>${isActive ? "Auto-Skip: ON" : "Auto-Skip: OFF"}</span>
       </button>
+      ${settings.communityAniSkip ? `
+        <button type="button" class="al-dock-step-btn" id="al-skip-edit-btn" title="Calibra timestamp intro (Key: [ o ])">
+          ${iconHtml(Pencil, { width: 10, height: 10 })}
+        </button>
+      ` : ""}
     </div>
   `;
 
@@ -109,6 +131,12 @@ export function renderAutoSkipButton(provider) {
     e.preventDefault();
     e.stopPropagation();
     toggleEpisodeAutoSkip();
+  });
+
+  container.querySelector("#al-skip-edit-btn")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openSkipContribute();
   });
 }
 

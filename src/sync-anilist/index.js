@@ -64,6 +64,7 @@ let resumedEpKey = null;
 let lastObservedCurrentTime = 0;
 let lastPlayerWindow = null;
 let lastSyncedMediaId = null;
+let resumeLoadingToastKey = null;
 
 function getResumeKey(activeEp) {
   const ep = activeEp || provider?.getActiveEpisode?.() || 1;
@@ -126,6 +127,10 @@ function prepareResumeTarget(force = false) {
   if (targetTime && targetTime > 0) {
     pendingResumeTarget = targetTime;
     pendingResumeEp = activeEp;
+    if (provider?.isWatchPage?.() && resumeLoadingToastKey !== currentKey) {
+      resumeLoadingToastKey = currentKey;
+      showToast(`↺ Ripristino Ep. ${activeEp} a ${Resume.formatTime(targetTime)}...`, false, 2000);
+    }
   } else if (force || currentMedia) {
     pendingResumeTarget = null;
     pendingResumeEp = null;
@@ -602,6 +607,15 @@ export const App = {
           App.sync();
         }
       },
+      onDelete: async () => {
+        if (
+          confirm("Remove this anime from your AniList?") &&
+          (await AniListAPI.deleteEntry(currentMedia.mediaListEntry.id))
+        ) {
+          showToast("Anime removed");
+          App.sync();
+        }
+      },
       onSave: (ep) => {
         cancelAutoTrack();
         App.setProgress(ep);
@@ -615,6 +629,11 @@ export const App = {
         cancelAutoTrack();
         if (currentActiveEp) cancelledEps.add(currentActiveEp);
         App.setProgress(rewindTarget);
+      },
+      onNextEp: () => {
+        cancelAutoTrack();
+        const nextEp = (trackedProgress > 0 ? trackedProgress : activeEp) + 1;
+        App.setProgress(nextEp);
       }
     }, {
       isLoading: isMediaLoading,
@@ -743,6 +762,18 @@ export const App = {
           prepareResumeTarget();
           if (pendingResumeTarget) {
             dispatchResumeSeek();
+          }
+        }
+      } else if (!isHome() && provider?.isAnimePage?.() && currentMedia) {
+        const urlEp = new URLSearchParams(window.location.search).get("ep");
+        const targetStr = urlEp || sessionStorage.getItem("al_target_ep");
+        const targetEp = targetStr ? parseInt(targetStr, 10) : 0;
+        if (targetEp > 0) {
+          sessionStorage.removeItem("al_target_ep");
+          const targetUrl = await provider.resolveTargetUrl(currentMedia, targetEp);
+          if (targetUrl && targetUrl !== window.location.pathname) {
+            window.location.href = targetUrl;
+            return;
           }
         }
       }

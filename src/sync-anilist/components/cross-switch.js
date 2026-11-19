@@ -298,17 +298,16 @@ export function renderCrossSwitch({ media, activeEp = 0, provider = null } = {})
     btn.type = "button";
     btn.id = "al-cross-switch-btn";
   }
-  btn.className = `al-cross-switch-btn ${isUnity ? "for-saturn" : "for-unity"}`;
+  btn.className = `al-dock-menu-item al-cross-switch-btn ${isUnity ? "for-saturn" : "for-unity"}`;
   if (btn.parentElement !== container) {
     container.appendChild(btn);
   }
 
   btn.title = `Switch to ${targetSiteName} · Open Ep. ${targetEp}`;
   btn.innerHTML = `
-    <span class="al-switch-icon">${iconHtml(targetIcon, { width: 12, height: 12 })}</span>
-    <span class="al-switch-label">${isUnity ? "Saturn" : "Unity"}</span>
-    <span class="al-switch-ep">Ep.${targetEp}</span>
-    ${iconHtml(ExternalLink, { width: 10, height: 10, class: "al-switch-ext" })}
+    ${iconHtml(targetIcon, { width: 13, height: 13 })}
+    <span>Guarda su ${targetSiteName} (Ep. ${targetEp})</span>
+    ${iconHtml(ExternalLink, { width: 11, height: 11, style: "margin-left:auto;opacity:0.7;" })}
   `;
 
   // Bind single click handler
