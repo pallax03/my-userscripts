@@ -114,11 +114,12 @@ export function resolveResumeAction({
   localResume = null,
   anilistResume = null
 }) {
+  const expectedNext = trackedProgress < 0 ? 1 : trackedProgress + 1;
   if (
     typeof trackedProgress !== "number" ||
     typeof activeEp !== "number" ||
     activeEp <= 0 ||
-    activeEp !== trackedProgress + 1
+    activeEp !== expectedNext
   ) {
     return { action: "none", reason: "ineligible_episode" };
   }

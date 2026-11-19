@@ -80,14 +80,25 @@ describe("resolveResumeAction", () => {
       { action: "none", reason: "ineligible_episode" }
     );
 
-    // Untracked (-1) or invalid episode
+    // Untracked (-1) disallows Ep. 2+, and invalid episode 0 is disallowed
     assert.deepEqual(
-      resolveResumeAction({ trackedProgress: -1, activeEp: 1, localResume: { ...validResume, ep: 1 } }),
+      resolveResumeAction({ trackedProgress: -1, activeEp: 2, localResume: { ...validResume, ep: 2 } }),
       { action: "none", reason: "ineligible_episode" }
     );
     assert.deepEqual(
       resolveResumeAction({ trackedProgress: 0, activeEp: 0, localResume: { ...validResume, ep: 0 } }),
       { action: "none", reason: "ineligible_episode" }
+    );
+  });
+
+  it("allows local-only resume on Ep. 1 when anime is not yet in AniList (trackedProgress: -1)", () => {
+    assert.deepEqual(
+      resolveResumeAction({
+        trackedProgress: -1,
+        activeEp: 1,
+        localResume: { ep: 1, time: 240, duration: 1440, percent: 17 }
+      }),
+      { action: "seek", time: 240 }
     );
   });
 
