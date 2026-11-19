@@ -1232,15 +1232,27 @@ a[href*="/login"].btn-danger {
   margin-bottom: 24px;
 }
 
+@keyframes al-shelf-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .al-home-shelf {
   width: 100%;
-  background: $al-surface-soft;
-  border: 1px solid $al-border-glass;
-  border-radius: 16px;
+  background: $al-surface-grad;
+  border: 1px solid $al-border-accent;
+  border-radius: 18px;
   padding: 16px 20px;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  box-shadow: $al-shadow-elevated;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: $al-shadow-elevated, 0 0 24px rgba(45, 212, 191, 0.08);
+  animation: al-shelf-in 0.28s $al-ease-spring;
 
   @media (max-width: 576px) {
     padding: 14px 12px;
@@ -1267,12 +1279,12 @@ a[href*="/login"].btn-danger {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    background: rgba(61, 180, 242, 0.15);
-    color: #3db4f2;
-    box-shadow: 0 0 10px rgba(61, 180, 242, 0.25);
+    width: 30px;
+    height: 30px;
+    border-radius: 9999px;
+    background: rgba(45, 212, 191, 0.16);
+    color: #2dd4bf;
+    box-shadow: 0 0 12px rgba(45, 212, 191, 0.28);
   }
 
   .al-shelf-title {
@@ -1281,7 +1293,7 @@ a[href*="/login"].btn-danger {
     font-weight: 800;
     letter-spacing: 0.6px;
     text-transform: uppercase;
-    color: #ffffff;
+    color: #f8fafc;
     line-height: 1;
   }
 
@@ -1289,13 +1301,13 @@ a[href*="/login"].btn-danger {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 2px 8px;
+    padding: 2px 9px;
     font-size: 11px;
     font-weight: 700;
-    border-radius: 10px;
+    border-radius: 9999px;
     background: rgba(255, 255, 255, 0.08);
-    color: #94a3b8;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: #cbd5e1;
+    border: none;
   }
 }
 
@@ -1477,8 +1489,8 @@ a[href*="/login"].btn-danger {
 
   &:hover {
     transform: translateY(-3px);
-    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.52), 0 0 0 1px rgba(61, 180, 242, 0.35);
-    border-color: rgba(61, 180, 242, 0.42);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.52), 0 0 18px rgba(45, 212, 191, 0.14);
+    border-color: rgba(45, 212, 191, 0.45);
 
     .al-card-cover img {
       transform: scale(1.06);
@@ -1574,9 +1586,9 @@ a[href*="/login"].btn-danger {
 
 .al-card-progress-fill {
   height: 100%;
-  background: #3db4f2;
-  border-radius: 2px;
-  transition: width 0.3s ease;
+  background: linear-gradient(90deg, #2dd4bf, #38bdf8);
+  border-radius: 9999px;
+  transition: width 0.35s $al-ease-spring;
 }
 
 .al-card-body {
@@ -1893,26 +1905,26 @@ a[href*="/login"].btn-danger {
   }
 
   &.al-btn-play {
-    background: #3db4f2;
-    color: #ffffff;
-    box-shadow: 0 2px 8px rgba(61, 180, 242, 0.3);
+    background: linear-gradient(135deg, #2dd4bf, #0284c7);
+    color: #042f2e;
+    box-shadow: 0 2px 12px rgba(45, 212, 191, 0.28);
 
     &:hover {
-      background: #2ca5e6;
-      box-shadow: 0 4px 14px rgba(61, 180, 242, 0.5);
-      color: #ffffff;
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(45, 212, 191, 0.42);
+      color: #042f2e;
     }
   }
 
   &.al-btn-caughtup {
-    background: rgba(34, 197, 94, 0.12);
-    border: 1px solid rgba(34, 197, 94, 0.3);
-    color: #4ade80;
+    background: rgba(45, 212, 191, 0.14);
+    border: none;
+    color: #5eead4;
 
     &:hover {
-      background: rgba(34, 197, 94, 0.22);
-      border-color: rgba(34, 197, 94, 0.5);
-      color: #86efac;
+      background: rgba(45, 212, 191, 0.22);
+      color: #ccfbf1;
     }
   }
 
