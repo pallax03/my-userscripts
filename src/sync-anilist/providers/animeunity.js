@@ -16,7 +16,8 @@ export class AnimeUnityProvider extends BaseProvider {
   }
 
   isWatchPage() {
-    return /^\/anime\/\d+[^/]*\/\d+/.test(location.pathname);
+    return /^\/anime\/\d+[^/]*\/\d+/.test(location.pathname) ||
+      Boolean(document.querySelector("iframe[src*='vixcloud'], iframe[src*='embed']"));
   }
 
   getAnimeInfo() {

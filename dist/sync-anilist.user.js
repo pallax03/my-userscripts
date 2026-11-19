@@ -880,14 +880,17 @@
 	}
 	function getCurrentEpisode(page = getPage(), pathname = typeof location !== "undefined" ? location.pathname : "") {
 		const match = pathname.match(/\/anime\/\d+[^/]*\/(\d+)/);
-		if (!match) return 0;
+		const hasPlayer = typeof document !== "undefined" && Boolean(document.querySelector("iframe[src*='vixcloud'], iframe[src*='embed']"));
+		if (!match && !hasPlayer) return 0;
 		const epNum = parseInt(page?.props?.episode?.number, 10);
 		if (epNum > 0) return epNum;
-		const videoId = parseInt(match[1], 10);
-		const episodes = page?.props?.loadedEpisodes?.episodes || [];
-		for (const ep of episodes) if (ep.videos?.some((v) => v.id === videoId)) {
-			const found = parseInt(ep.number, 10);
-			if (found > 0) return found;
+		if (match) {
+			const videoId = parseInt(match[1], 10);
+			const episodes = page?.props?.loadedEpisodes?.episodes || [];
+			for (const ep of episodes) if (ep.videos?.some((v) => v.id === videoId)) {
+				const found = parseInt(ep.number, 10);
+				if (found > 0) return found;
+			}
 		}
 		return 0;
 	}
@@ -1005,7 +1008,7 @@
 			return /^\/anime\/\d+/.test(location.pathname);
 		}
 		isWatchPage() {
-			return /^\/anime\/\d+[^/]*\/\d+/.test(location.pathname);
+			return /^\/anime\/\d+[^/]*\/\d+/.test(location.pathname) || Boolean(document.querySelector("iframe[src*='vixcloud'], iframe[src*='embed']"));
 		}
 		getAnimeInfo() {
 			const { malId, anilistId, title } = getAnimeMetadata();
@@ -2459,8 +2462,8 @@
 			selectedBuddy: currentBuddy,
 			defaultBuddy,
 			viewer,
-			emptyLabel: "Sync Amico",
-			placeholder: "Cerca amico seguito...",
+			emptyLabel: "Buddy",
+			placeholder: "Search friend...",
 			onSelect: actions.onBuddyChange,
 			onClear: () => actions.onBuddyChange("")
 		});
@@ -3912,6 +3915,9 @@
 			renderAutoSkipButton(currentProvider);
 		} catch (err) {
 			Logger.warn("AniSkip fetch failed:", err);
+			syncActiveOp();
+			broadcastOp();
+			renderAutoSkipButton(currentProvider);
 		}
 	}
 	function handleHotkeyAction(action, timeOverride = null) {

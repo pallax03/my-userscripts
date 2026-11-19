@@ -283,6 +283,9 @@ export async function checkSkipIntro(malId, epNum, duration = 0) {
     renderAutoSkipButton(currentProvider);
   } catch (err) {
     Logger.warn("AniSkip fetch failed:", err);
+    syncActiveOp();
+    broadcastOp();
+    renderAutoSkipButton(currentProvider);
   }
 }
 
