@@ -61,13 +61,18 @@ describe("Resume notes & formatting", () => {
 });
 
 describe("resolveResumeAction", () => {
-  it("returns none for past or future episodes, while allowing current tracked or next episode", () => {
-    const validResume = { ep: 5, time: 300, duration: 1400, percent: 21 };
+  it("allows only the immediate next unwatched episode and blocks watched/past/future episodes", () => {
+    const validResume = { ep: 6, time: 300, duration: 1400, percent: 21 };
 
-    // Current tracked episode with matching resume is eligible
+    // Immediate next unwatched episode (5 -> 6) is eligible
     assert.deepEqual(
-      resolveResumeAction({ trackedProgress: 5, activeEp: 5, localResume: validResume }),
+      resolveResumeAction({ trackedProgress: 5, activeEp: 6, localResume: validResume }),
       { action: "seek", time: 300 }
+    );
+    // Already-watched episode (ep 5 when progress is 5) is ineligible
+    assert.deepEqual(
+      resolveResumeAction({ trackedProgress: 5, activeEp: 5, localResume: { ...validResume, ep: 5 } }),
+      { action: "none", reason: "ineligible_episode" }
     );
     // Older rewatched episode is ineligible
     assert.deepEqual(
@@ -92,7 +97,7 @@ describe("resolveResumeAction", () => {
     );
   });
 
-  it("allows local-only resume on Ep. 1 when anime is not yet in AniList or COMPLETED", () => {
+  it("allows local-only resume on Ep. 1 when untracked, and blocks COMPLETED already-watched episodes", () => {
     assert.deepEqual(
       resolveResumeAction({
         trackedProgress: -1,
@@ -108,7 +113,7 @@ describe("resolveResumeAction", () => {
         status: "COMPLETED",
         localResume: { ep: 1, time: 300, duration: 1440, percent: 21 }
       }),
-      { action: "seek", time: 300 }
+      { action: "none", reason: "ineligible_episode" }
     );
   });
 

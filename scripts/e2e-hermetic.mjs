@@ -405,7 +405,7 @@ try {
   await page.waitForTimeout(300);
   assert.equal(state.mutations.length, beforeCompletedRewatch, "Pausing at 30% on COMPLETED Ep. 1 keeps AniList COMPLETED untouched");
   const rewatchLocal = await page.evaluate(() => JSON.parse(window.localStorage.getItem("al_resume_21") || "null"));
-  assert.equal(rewatchLocal?.ep, 1, "Local-only resume saved for COMPLETED Ep. 1");
+  assert.equal(rewatchLocal, null, "No resume saved for already-watched COMPLETED Ep. 1");
 
   await page.evaluate(() => {
     window.postMessage({ type: "PLAYER_EVENT", data: { event: "playerstate", position: 1290, duration: 1500, paused: false } }, "*");

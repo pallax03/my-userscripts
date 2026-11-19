@@ -107,23 +107,27 @@ export const Resume = {
  * @param {Object|null} [params.anilistResume] - AniList notes resume { ep, time, duration?, percent? }
  * @returns {{ action: "seek", time: number } | { action: "yield", reason: string } | { action: "none", reason: string }}
  */
+/**
+ * Auto-resume is strictly allowed ONLY for the immediate next unwatched episode
+ * after the tracked AniList progress (or Ep. 1 when untracked).
+ */
+export function isResumeEligibleEpisode({ trackedProgress, activeEp }) {
+  if (typeof trackedProgress !== "number" || typeof activeEp !== "number" || activeEp <= 0) {
+    return false;
+  }
+  const expectedNext = trackedProgress < 0 ? 1 : trackedProgress + 1;
+  return activeEp === expectedNext;
+}
+
 export function resolveResumeAction({
   trackedProgress,
   activeEp,
-  status = null,
+  status: _status = null,
   currentTime = 0,
   localResume = null,
   anilistResume = null
 }) {
-  const expectedNext = trackedProgress < 0 ? 1 : trackedProgress + 1;
-  const isTrackedCurrent = trackedProgress > 0 && activeEp === trackedProgress;
-  const isCompletedEp1Rewatch = status === "COMPLETED" && activeEp === 1;
-  if (
-    typeof trackedProgress !== "number" ||
-    typeof activeEp !== "number" ||
-    activeEp <= 0 ||
-    (activeEp !== expectedNext && !isTrackedCurrent && !isCompletedEp1Rewatch)
-  ) {
+  if (!isResumeEligibleEpisode({ trackedProgress, activeEp })) {
     return { action: "none", reason: "ineligible_episode" };
   }
 

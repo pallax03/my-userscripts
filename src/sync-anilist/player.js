@@ -9,6 +9,8 @@ export function initPlayer() {
   let lastHighlightKey = "";
   let autoSkip = false;
   let skipFallbackDuration = 85;
+  let btn = null;
+  let isBtnVisible = false;
   let lastReportedDur = 0;
   let hasAutoSkipped = false;
   let lastSkipTime = 0;
@@ -321,7 +323,7 @@ export function initPlayer() {
     styleEl.textContent = `
       .jw-cue.au-segment-intro,
       .jw-cue.au-segment-outro {
-        background-color: rgba(250, 204, 21, 0.9) !important;
+        background-color: rgba(250, 204, 21, 0.95) !important;
       }
       .jw-timesegment-container::after,
       .jw-slider-time > .jw-slider-container > .jw-rail::after,
@@ -332,7 +334,7 @@ export function initPlayer() {
         inset: 0;
         pointer-events: none;
         border-radius: inherit;
-        z-index: 2;
+        z-index: 5;
         background: ${gradient};
       }
     `;
@@ -462,6 +464,38 @@ export function initPlayer() {
     } catch (_) {}
   }
 
+  function ensureButton() {
+    if (btn && btn.parentElement) return;
+
+    btn = document.createElement("button");
+    btn.id = "au-skip-intro-btn";
+    btn.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><polygon points="19 5 19 19"></polygon></svg>
+      <span>Skip Intro (S)</span>
+    `;
+
+    ["mousedown", "mouseup", "pointerdown", "touchstart", "click"].forEach((evt) => {
+      btn.addEventListener(
+        evt,
+        (e) => {
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          if (evt === "click") {
+            e.preventDefault();
+            skipIntro(false);
+          }
+        },
+        true
+      );
+    });
+
+    const target = document.body || document.documentElement;
+    if (window.getComputedStyle(target).position === "static") {
+      target.style.position = "relative";
+    }
+    target.appendChild(btn);
+  }
+
   function checkTime() {
     bindMediaEvents();
     checkNativeTimestamps();
@@ -474,15 +508,31 @@ export function initPlayer() {
       notifyReady();
     }
 
-    if (!rawOp) return;
+    if (!rawOp && !rawEd) {
+      if (btn && isBtnVisible) {
+        btn.style.display = "none";
+        isBtnVisible = false;
+      }
+      return;
+    }
 
     computeAdjustedOp();
-    if (!currentOp) return;
+    if (!currentOp) {
+      if (btn && isBtnVisible) {
+        btn.style.display = "none";
+        isBtnVisible = false;
+      }
+      return;
+    }
 
     const pos = getPos();
 
     // Auto-skip logic
     if (autoSkip) {
+      if (btn && isBtnVisible) {
+        btn.style.display = "none";
+        isBtnVisible = false;
+      }
       if (pos >= currentOp.start && pos < currentOp.end - 1) {
         if (!hasAutoSkipped) {
           hasAutoSkipped = true;
@@ -490,6 +540,24 @@ export function initPlayer() {
         }
       } else if (pos < currentOp.start - 5) {
         hasAutoSkipped = false;
+      }
+      return;
+    }
+
+    // Manual skip button logic (restored from origin/master)
+    const showStart = Math.max(0, currentOp.start - 1.5);
+    const showEnd = Math.max(showStart, currentOp.end - 2);
+
+    if (pos >= showStart && pos <= showEnd) {
+      if (!isBtnVisible) {
+        ensureButton();
+        btn.style.display = "inline-flex";
+        isBtnVisible = true;
+      }
+    } else {
+      if (isBtnVisible && btn) {
+        btn.style.display = "none";
+        isBtnVisible = false;
       }
     }
   }

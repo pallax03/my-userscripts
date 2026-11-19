@@ -1385,9 +1385,15 @@
 			Storage.del(`al_resume_${mediaId}`);
 		}
 	};
-	function resolveResumeAction({ trackedProgress, activeEp, status = null, currentTime = 0, localResume = null, anilistResume = null }) {
-		const expectedNext = trackedProgress < 0 ? 1 : trackedProgress + 1;
-		if (typeof trackedProgress !== "number" || typeof activeEp !== "number" || activeEp <= 0 || activeEp !== expectedNext && !(trackedProgress > 0 && activeEp === trackedProgress) && !(status === "COMPLETED" && activeEp === 1)) return {
+	function isResumeEligibleEpisode({ trackedProgress, activeEp }) {
+		if (typeof trackedProgress !== "number" || typeof activeEp !== "number" || activeEp <= 0) return false;
+		return activeEp === (trackedProgress < 0 ? 1 : trackedProgress + 1);
+	}
+	function resolveResumeAction({ trackedProgress, activeEp, status: _status = null, currentTime = 0, localResume = null, anilistResume = null }) {
+		if (!isResumeEligibleEpisode({
+			trackedProgress,
+			activeEp
+		})) return {
 			action: "none",
 			reason: "ineligible_episode"
 		};
@@ -3730,6 +3736,8 @@
 		let lastHighlightKey = "";
 		let autoSkip = false;
 		let skipFallbackDuration = 85;
+		let btn = null;
+		let isBtnVisible = false;
 		let lastReportedDur = 0;
 		let hasAutoSkipped = false;
 		let lastSkipTime = 0;
@@ -3993,7 +4001,7 @@
 			styleEl.textContent = `
       .jw-cue.au-segment-intro,
       .jw-cue.au-segment-outro {
-        background-color: rgba(250, 204, 21, 0.9) !important;
+        background-color: rgba(250, 204, 21, 0.95) !important;
       }
       .jw-timesegment-container::after,
       .jw-slider-time > .jw-slider-container > .jw-rail::after,
@@ -4004,7 +4012,7 @@
         inset: 0;
         pointer-events: none;
         border-radius: inherit;
-        z-index: 2;
+        z-index: 5;
         background: ${gradient};
       }
     `;
@@ -4112,22 +4120,79 @@
 				}, "*");
 			} catch (_) {}
 		}
+		function ensureButton() {
+			if (btn && btn.parentElement) return;
+			btn = document.createElement("button");
+			btn.id = "au-skip-intro-btn";
+			btn.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><polygon points="19 5 19 19"></polygon></svg>
+      <span>Skip Intro (S)</span>
+    `;
+			[
+				"mousedown",
+				"mouseup",
+				"pointerdown",
+				"touchstart",
+				"click"
+			].forEach((evt) => {
+				btn.addEventListener(evt, (e) => {
+					e.stopPropagation();
+					e.stopImmediatePropagation();
+					if (evt === "click") {
+						e.preventDefault();
+						skipIntro(false);
+					}
+				}, true);
+			});
+			const target = document.body || document.documentElement;
+			if (window.getComputedStyle(target).position === "static") target.style.position = "relative";
+			target.appendChild(btn);
+		}
 		function checkTime() {
 			bindMediaEvents();
 			checkNativeTimestamps();
 			if (activeResumeTarget !== null && getPos() >= activeResumeTarget - 3) activeResumeTarget = null;
 			if (getDuration() > 0 && Math.round(getDuration()) !== Math.round(lastReportedDur)) notifyReady();
-			if (!rawOp) return;
+			if (!rawOp && !rawEd) {
+				if (btn && isBtnVisible) {
+					btn.style.display = "none";
+					isBtnVisible = false;
+				}
+				return;
+			}
 			computeAdjustedOp();
-			if (!currentOp) return;
+			if (!currentOp) {
+				if (btn && isBtnVisible) {
+					btn.style.display = "none";
+					isBtnVisible = false;
+				}
+				return;
+			}
 			const pos = getPos();
 			if (autoSkip) {
+				if (btn && isBtnVisible) {
+					btn.style.display = "none";
+					isBtnVisible = false;
+				}
 				if (pos >= currentOp.start && pos < currentOp.end - 1) {
 					if (!hasAutoSkipped) {
 						hasAutoSkipped = true;
 						skipIntro(true);
 					}
 				} else if (pos < currentOp.start - 5) hasAutoSkipped = false;
+				return;
+			}
+			const showStart = Math.max(0, currentOp.start - 1.5);
+			const showEnd = Math.max(showStart, currentOp.end - 2);
+			if (pos >= showStart && pos <= showEnd) {
+				if (!isBtnVisible) {
+					ensureButton();
+					btn.style.display = "inline-flex";
+					isBtnVisible = true;
+				}
+			} else if (isBtnVisible && btn) {
+				btn.style.display = "none";
+				isBtnVisible = false;
 			}
 		}
 		window.addEventListener("message", (e) => {
@@ -4472,12 +4537,10 @@
 		return `${currentMedia?.id || "media"}_ep${ep}`;
 	}
 	function isEpisodeEligibleForResume(ep) {
-		if (ep <= 0) return false;
-		if (trackedProgress < 0) return true;
-		if (ep === 1 && currentMedia?.mediaListEntry?.status === "COMPLETED") return true;
-		const nextToWatch = (trackedProgress > 0 ? trackedProgress : 0) + 1;
-		if (trackedProgress > 0 && ep < trackedProgress) return false;
-		return ep === nextToWatch || ep === trackedProgress;
+		return isResumeEligibleEpisode({
+			trackedProgress,
+			activeEp: ep
+		});
 	}
 	function prepareResumeTarget(force = false) {
 		const activeEp = provider?.getActiveEpisode?.() || 1;
@@ -4494,7 +4557,10 @@
 		if (sessionTime) {
 			const parsedTime = parseInt(sessionTime, 10);
 			const parsedEp = sessionTargetEp ? parseInt(sessionTargetEp, 10) : null;
-			if ((!parsedEp || parsedEp === activeEp) && (trackedProgress < 0 || activeEp === trackedProgress + 1)) targetTime = parsedTime;
+			if ((!parsedEp || parsedEp === activeEp) && isResumeEligibleEpisode({
+				trackedProgress,
+				activeEp
+			})) targetTime = parsedTime;
 		}
 		if (!targetTime && currentMedia) {
 			const decision = resolveResumeAction({

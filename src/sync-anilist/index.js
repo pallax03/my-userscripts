@@ -7,7 +7,7 @@ import { handleOAuthRedirect, handleUrlToken, getTodayDate, openTokenModal } fro
 import { cleanTitle, extractSeason } from "./providers/base.js";
 import { getProvider, getCurrentProvider } from "./providers/index.js";
 import { Settings } from "./settings.js";
-import { Resume, resolveResumeAction } from "./resume.js";
+import { Resume, resolveResumeAction, isResumeEligibleEpisode } from "./resume.js";
 import { shouldAutoTrack, computeProgressUpdate } from "./domain/tracking.js";
 import { renderNav } from "./components/nav.js";
 import { renderActions } from "./components/actions.js";
@@ -73,12 +73,7 @@ function getResumeKey(activeEp) {
 }
 
 function isEpisodeEligibleForResume(ep) {
-  if (ep <= 0) return false;
-  if (trackedProgress < 0) return true;
-  if (ep === 1 && currentMedia?.mediaListEntry?.status === "COMPLETED") return true;
-  const nextToWatch = (trackedProgress > 0 ? trackedProgress : 0) + 1;
-  if (trackedProgress > 0 && ep < trackedProgress) return false;
-  return ep === nextToWatch || ep === trackedProgress;
+  return isResumeEligibleEpisode({ trackedProgress, activeEp: ep });
 }
 
 function prepareResumeTarget(force = false) {
@@ -99,7 +94,7 @@ function prepareResumeTarget(force = false) {
   if (sessionTime) {
     const parsedTime = parseInt(sessionTime, 10);
     const parsedEp = sessionTargetEp ? parseInt(sessionTargetEp, 10) : null;
-    if ((!parsedEp || parsedEp === activeEp) && (trackedProgress < 0 || activeEp === trackedProgress + 1)) {
+    if ((!parsedEp || parsedEp === activeEp) && isResumeEligibleEpisode({ trackedProgress, activeEp })) {
       targetTime = parsedTime;
     }
   }
