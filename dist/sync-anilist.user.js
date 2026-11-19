@@ -318,6 +318,7 @@
 			iconNode
 		]);
 	};
+	var Bookmark = [["path", { d: "M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z" }]];
 	var Check = [["path", { d: "M20 6 9 17l-5-5" }]];
 	var ChevronDown = [["path", { d: "m6 9 6 6 6-6" }]];
 	var Clock = [["circle", {
@@ -325,6 +326,23 @@
 		cy: "12",
 		r: "10"
 	}], ["path", { d: "M12 6v6l4 2" }]];
+	var Ellipsis = [
+		["circle", {
+			cx: "12",
+			cy: "12",
+			r: "1"
+		}],
+		["circle", {
+			cx: "19",
+			cy: "12",
+			r: "1"
+		}],
+		["circle", {
+			cx: "5",
+			cy: "12",
+			r: "1"
+		}]
+	];
 	var ExternalLink = [
 		["path", { d: "M15 3h6v6" }],
 		["path", { d: "M10 14 21 3" }],
@@ -353,6 +371,7 @@
 		["path", { d: "M21 12H9" }],
 		["path", { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" }]
 	];
+	var Pencil = [["path", { d: "M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" }], ["path", { d: "m15 5 4 4" }]];
 	var Play = [["path", { d: "M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" }]];
 	var Plus = [["path", { d: "M5 12h14" }], ["path", { d: "M12 5v14" }]];
 	var RotateCcw = [["path", { d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" }], ["path", { d: "M3 3v5h5" }]];
@@ -2091,716 +2110,6 @@
 			callbacks.onLogout?.();
 		});
 	}
-	function isValidSegment(segment) {
-		return Boolean(segment && typeof segment.start === "number" && typeof segment.end === "number" && Number.isFinite(segment.start) && Number.isFinite(segment.end) && segment.end > segment.start);
-	}
-	function resolveSkipSegment({ aniskipOp = null, nativeIntro = null } = {}) {
-		if (isValidSegment(aniskipOp)) return {
-			...aniskipOp,
-			source: aniskipOp.source || "aniskip"
-		};
-		if (isValidSegment(nativeIntro)) return {
-			...nativeIntro,
-			source: nativeIntro.source || "native"
-		};
-		return null;
-	}
-	function resolveManualSkipTarget({ currentPos = 0, duration = 0, segment = null, fallbackDuration = 85 } = {}) {
-		const pos = typeof currentPos === "number" && Number.isFinite(currentPos) && currentPos >= 0 ? currentPos : 0;
-		const dur = typeof duration === "number" && Number.isFinite(duration) && duration > 0 ? duration : 0;
-		const fallback = typeof fallbackDuration === "number" && Number.isFinite(fallbackDuration) && fallbackDuration > 0 ? fallbackDuration : 85;
-		if (isValidSegment(segment)) {
-			const showStart = Math.max(0, segment.start - 1.5);
-			const showEnd = Math.max(showStart, segment.end - 2);
-			if (pos >= showStart && pos <= showEnd) return {
-				target: Math.max(0, segment.end - 1),
-				mode: "segment",
-				source: segment.source || "aniskip"
-			};
-		}
-		const rawTarget = pos + fallback;
-		return {
-			target: dur > 0 ? Math.max(0, Math.min(dur - 1, rawTarget)) : rawTarget,
-			mode: "fallback",
-			source: "fallback"
-		};
-	}
-	var ANISKIP_API_URL = "https://api.aniskip.com/v2";
-	var PRESET_PROVIDERS = [
-		"Crunchyroll",
-		"Netflix",
-		"Prime Video",
-		"Disney+",
-		"HIDIVE",
-		"Fansub"
-	];
-	function seekPlayerTime(targetSec) {
-		if (typeof targetSec !== "number" || isNaN(targetSec) || targetSec < 0) return;
-		const t = Math.max(0, Math.round(targetSec * 10) / 10);
-		document.querySelectorAll("iframe").forEach((frame) => {
-			try {
-				frame.contentWindow?.postMessage({
-					type: "AU_SEEK_PLAYER",
-					time: t
-				}, "*");
-			} catch (_) {}
-		});
-		const v = document.querySelector("video");
-		if (v) try {
-			v.currentTime = t;
-		} catch (_) {}
-	}
-	function getSubmitterId() {
-		let id = Storage.get("aniskip_submitter_id");
-		if (!id) {
-			if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") id = crypto.randomUUID();
-			else id = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-				const r = Math.random() * 16 | 0;
-				return (c === "x" ? r : r & 3 | 8).toString(16);
-			});
-			Storage.set("aniskip_submitter_id", id);
-		}
-		return id;
-	}
-	function getSavedProvider() {
-		return Storage.get("aniskip_provider") || "Crunchyroll";
-	}
-	function saveProvider(val) {
-		if (val && typeof val === "string") Storage.set("aniskip_provider", val.trim());
-	}
-	async function createSkipTime({ malId, epNum, skipType = "op", startTime, endTime, episodeLength, providerName = "Crunchyroll" }) {
-		if (!malId || !epNum) throw new Error("Missing anime or episode metadata");
-		const start = Math.max(0, Math.round(startTime * 10) / 10);
-		const end = Math.round(endTime * 10) / 10;
-		const duration = Math.round((episodeLength || 0) * 10) / 10;
-		const interval = end - start;
-		if (interval < 5) throw new Error("Interval must be at least 5 seconds");
-		if (interval > 240) throw new Error("Interval cannot exceed 4 minutes");
-		const effectiveProvider = String(providerName || "Crunchyroll").trim();
-		saveProvider(effectiveProvider);
-		const payload = {
-			skipType,
-			providerName: effectiveProvider,
-			startTime: start,
-			endTime: end,
-			episodeLength: duration > 0 ? duration : Math.max(end + 60, 1420),
-			submitterId: getSubmitterId()
-		};
-		const res = await fetch(`${ANISKIP_API_URL}/skip-times/${malId}/${epNum}`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(payload)
-		});
-		if (res.status === 429) throw new Error("Daily submission limit reached for this episode (max 10/day)");
-		const data = await res.json().catch(() => ({}));
-		if (!res.ok) throw new Error(data.message || `AniSkip Error (${res.status})`);
-		return { skipId: data.skipId };
-	}
-	var dockContainer = null;
-	var dockState = null;
-	var lastPlaybackTime = 0;
-	var lastPlaybackDuration = 0;
-	function isAniSkipDockOpen() {
-		return !!dockContainer && (document.body.contains(dockContainer) || document.fullscreenElement?.contains(dockContainer));
-	}
-	function broadcastDockState(isOpen) {
-		document.querySelectorAll("iframe").forEach((frame) => {
-			try {
-				frame.contentWindow?.postMessage({
-					type: "AU_ANISKIP_DOCK_STATE",
-					open: isOpen
-				}, "*");
-			} catch (_) {}
-		});
-	}
-	function requestPlayerCurrentTime() {
-		document.querySelectorAll("iframe").forEach((frame) => {
-			try {
-				frame.contentWindow?.postMessage({ type: "AU_REQUEST_CURRENT_TIME" }, "*");
-			} catch (_) {}
-		});
-	}
-	function dismissAniSkipDock() {
-		broadcastDockState(false);
-		dockContainer?.remove();
-		dockContainer = null;
-		dockState = null;
-	}
-	function getCurrentPlaybackTime() {
-		const v = document.querySelector("video");
-		if (v && typeof v.currentTime === "number" && !isNaN(v.currentTime)) return v.currentTime;
-		return lastPlaybackTime;
-	}
-	function getRecommendedDuration() {
-		const settings = Settings.get();
-		return typeof settings.skipFallbackDuration === "number" && settings.skipFallbackDuration > 0 ? settings.skipFallbackDuration : 85;
-	}
-	function openAniSkipDock({ malId, epNum, currentTime = 0, duration = 0, initialStart = null, initialEnd = null, skipType = "op", provider, onSuccess }) {
-		if (typeof currentTime === "number" && currentTime > 0) lastPlaybackTime = currentTime;
-		if (typeof duration === "number" && duration > 0) lastPlaybackDuration = duration;
-		const currentPos = Math.max(0, Math.round((currentTime || lastPlaybackTime || 0) * 10) / 10);
-		const totalDur = Math.round((duration || lastPlaybackDuration || 0) * 10) / 10;
-		const recDuration = getRecommendedDuration();
-		const isEditing = typeof initialStart === "number";
-		const start = isEditing ? initialStart : currentPos;
-		const end = typeof initialEnd === "number" ? initialEnd : totalDur > 0 ? Math.min(totalDur, start + recDuration) : start + recDuration;
-		dockState = {
-			malId,
-			epNum,
-			skipType: skipType || "op",
-			providerName: getSavedProvider(),
-			startTime: start,
-			endTime: Math.round(end * 10) / 10,
-			episodeLength: totalDur,
-			isManualIn: isEditing,
-			isManualOut: isEditing,
-			activeTarget: "in",
-			lastManualTarget: isEditing ? "in" : null,
-			lastCustomStart: isEditing ? initialStart : null,
-			lastCustomEnd: isEditing ? initialEnd : null,
-			provider,
-			onSuccess
-		};
-		broadcastDockState(true);
-		requestPlayerCurrentTime();
-		if (isEditing) seekPlayerTime(start);
-		renderAniSkipDock();
-	}
-	function applyInPoint(timeOverride = null) {
-		if (!dockState) return;
-		const cur = typeof timeOverride === "number" ? timeOverride : getCurrentPlaybackTime();
-		const recDuration = getRecommendedDuration();
-		const curSec = Math.round(cur);
-		const inSec = Math.round(dockState.startTime);
-		if (Math.abs(cur - dockState.startTime) < 1 || curSec === inSec) dockState.startTime = Math.max(0, inSec - 1);
-		else dockState.startTime = Math.max(0, Math.round(cur * 10) / 10);
-		seekPlayerTime(dockState.startTime);
-		dockState.isManualIn = true;
-		dockState.activeTarget = "in";
-		dockState.lastManualTarget = "in";
-		if (!dockState.isManualOut || dockState.endTime <= dockState.startTime) {
-			const totalDur = dockState.episodeLength || 0;
-			const smartEnd = totalDur > 0 ? Math.min(totalDur, dockState.startTime + recDuration) : dockState.startTime + recDuration;
-			dockState.endTime = Math.round(smartEnd * 10) / 10;
-		}
-		renderAniSkipDock();
-	}
-	function applyOutPoint(timeOverride = null) {
-		if (!dockState) return;
-		const cur = typeof timeOverride === "number" ? timeOverride : getCurrentPlaybackTime();
-		const recDuration = getRecommendedDuration();
-		const curSec = Math.round(cur);
-		const outSec = Math.round(dockState.endTime);
-		if (Math.abs(cur - dockState.endTime) < 1 || curSec === outSec) dockState.endTime = Math.max(dockState.startTime + 5, outSec - 1);
-		else dockState.endTime = Math.round(cur * 10) / 10;
-		seekPlayerTime(dockState.endTime);
-		dockState.isManualOut = true;
-		dockState.activeTarget = "out";
-		dockState.lastManualTarget = "out";
-		if (!dockState.isManualIn || dockState.startTime >= dockState.endTime) dockState.startTime = Math.max(0, Math.round((dockState.endTime - recDuration) * 10) / 10);
-		renderAniSkipDock();
-	}
-	function handleAniSkipArrow(key) {
-		if (!dockState) return;
-		const delta = key === "ArrowLeft" || key === "ArrowDown" ? -1 : 1;
-		if ((dockState.activeTarget || "in") === "in") {
-			const nextStart = Math.max(0, Math.round((dockState.startTime + delta) * 10) / 10);
-			if (nextStart < dockState.endTime - 5 || !dockState.isManualOut) {
-				dockState.startTime = nextStart;
-				dockState.isManualIn = true;
-				dockState.lastManualTarget = "in";
-				seekPlayerTime(dockState.startTime);
-				if (!dockState.isManualOut) dockState.endTime = Math.round((dockState.startTime + getRecommendedDuration()) * 10) / 10;
-			}
-		} else {
-			const nextEnd = Math.max(dockState.startTime + 5, Math.round((dockState.endTime + delta) * 10) / 10);
-			dockState.endTime = nextEnd;
-			dockState.isManualOut = true;
-			dockState.lastManualTarget = "out";
-			seekPlayerTime(dockState.endTime);
-		}
-		renderAniSkipDock();
-	}
-	function toggleAutoCustomDuration() {
-		if (!dockState) return;
-		const recDuration = getRecommendedDuration();
-		const totalDur = dockState.episodeLength || 0;
-		if (dockState.isManualIn && dockState.isManualOut) {
-			dockState.lastCustomStart = dockState.startTime;
-			dockState.lastCustomEnd = dockState.endTime;
-			if (dockState.lastManualTarget === "out") {
-				dockState.startTime = Math.max(0, Math.round((dockState.endTime - recDuration) * 10) / 10);
-				dockState.isManualIn = false;
-				seekPlayerTime(dockState.startTime);
-			} else {
-				const smartEnd = totalDur > 0 ? Math.min(totalDur, dockState.startTime + recDuration) : dockState.startTime + recDuration;
-				dockState.endTime = Math.round(smartEnd * 10) / 10;
-				dockState.isManualOut = false;
-				seekPlayerTime(dockState.endTime);
-			}
-		} else if (typeof dockState.lastCustomStart === "number" && typeof dockState.lastCustomEnd === "number") {
-			dockState.startTime = dockState.lastCustomStart;
-			dockState.endTime = dockState.lastCustomEnd;
-			dockState.isManualIn = true;
-			dockState.isManualOut = true;
-			seekPlayerTime(dockState.startTime);
-		}
-		renderAniSkipDock();
-	}
-	function handleAniSkipHotkey(action, currentTime = 0, duration = 0, context = {}) {
-		const { malId, epNum, provider, onSuccess } = context;
-		if (!malId || !epNum) return;
-		if (typeof currentTime === "number" && currentTime > 0) lastPlaybackTime = currentTime;
-		if (typeof duration === "number" && duration > 0) lastPlaybackDuration = duration;
-		if (!dockState) openAniSkipDock({
-			malId,
-			epNum,
-			currentTime,
-			duration,
-			provider,
-			onSuccess
-		});
-		if (action === "start") applyInPoint(currentTime);
-		else if (action === "end") applyOutPoint(currentTime);
-	}
-	function renderAniSkipDock() {
-		if (!dockState) return;
-		const mountPoint = document.fullscreenElement || document.body;
-		if (!dockContainer) {
-			dockContainer = document.createElement("div");
-			dockContainer.id = "al-aniskip-dock";
-			dockContainer.className = "al-aniskip-dock";
-			dockContainer.addEventListener("mouseenter", requestPlayerCurrentTime);
-		}
-		if (dockContainer.parentElement !== mountPoint) mountPoint.appendChild(dockContainer);
-		const { skipType, providerName, startTime, endTime, isManualIn, isManualOut, activeTarget } = dockState;
-		const interval = Math.round((endTime - startTime) * 10) / 10;
-		const isValid = interval >= 5 && interval <= 240;
-		const isPreset = PRESET_PROVIDERS.includes(providerName);
-		const isAllManual = isManualIn && isManualOut;
-		const recDuration = getRecommendedDuration();
-		dockContainer.innerHTML = `
-    <div class="al-dock-inner">
-      <!-- Type Selector -->
-      <div class="al-dock-types">
-        <button type="button" class="al-dock-type ${skipType === "op" ? "is-active" : ""}" data-type="op" title="Opening sequence">
-          OP
-        </button>
-        <button type="button" class="al-dock-type ${skipType === "ed" ? "is-active" : ""}" data-type="ed" title="Ending sequence">
-          ED
-        </button>
-      </div>
-
-      <!-- Guided Provider Selector -->
-      <div class="al-dock-provider-wrap" title="Video source / release provider">
-        <span class="al-dock-provider-icon">${iconHtml(Tv, {
-			width: 12,
-			height: 12
-		})}</span>
-        <select class="al-dock-provider-select">
-          ${PRESET_PROVIDERS.map((p) => `<option value="${p}" ${providerName === p ? "selected" : ""}>${p}</option>`).join("")}
-          <option value="custom" ${!isPreset ? "selected" : ""}>Custom...</option>
-        </select>
-        <input type="text" class="al-dock-provider-custom ${!isPreset ? "" : "is-hidden"}" value="${!isPreset ? providerName : ""}" placeholder="Provider" spellcheck="false" />
-      </div>
-
-      <!-- In Point Split-Pill (Left: Set/Mark with [, Right: Preview Seek) -->
-      <div class="al-dock-split-pill ${isManualIn ? "is-manual" : "is-auto"} ${activeTarget === "in" ? "is-active-target" : ""}" title="Left: Set In (Key: [) | Right: Jump to In point">
-        <button type="button" class="al-dock-pill-btn al-dock-in-mark" title="Set In (Key: [). Click repeatedly to step 1s back">
-          <span class="al-dock-kbd">[</span>
-          <span class="al-dock-pill-tag">In</span>
-        </button>
-        <button type="button" class="al-dock-pill-btn al-dock-in-seek" title="Seek video to ${Resume.formatTime(startTime)}">
-          <b class="al-dock-pill-time">${Resume.formatTime(startTime)}</b>
-          <span class="al-dock-pill-arrow">⤏</span>
-        </button>
-      </div>
-
-      <!-- Out Point Split-Pill (Left: Set/Mark with ], Right: Preview Seek) -->
-      <div class="al-dock-split-pill ${isManualOut ? "is-manual" : "is-auto"} ${activeTarget === "out" ? "is-active-target" : ""}" title="Left: Set Out (Key: ]) | Right: Jump to Out point">
-        <button type="button" class="al-dock-pill-btn al-dock-out-mark" title="Set Out (Key: ]). Click repeatedly to step 1s back">
-          <span class="al-dock-kbd">]</span>
-          <span class="al-dock-pill-tag">Out</span>
-        </button>
-        <button type="button" class="al-dock-pill-btn al-dock-out-seek" title="Seek video to ${Resume.formatTime(endTime)}">
-          <b class="al-dock-pill-time">${Resume.formatTime(endTime)}</b>
-          <span class="al-dock-pill-arrow">⤏</span>
-        </button>
-      </div>
-
-      <!-- Live Duration & Status Toggle Button (Auto vs Custom) -->
-      <button type="button" class="al-dock-dur-btn al-dock-dur-badge ${isValid ? "is-valid" : "is-invalid"} ${isAllManual ? "is-custom" : "is-auto"}" title="${isAllManual ? `Click to recalculate Auto duration from ${dockState.lastManualTarget === "out" ? "Out" : "In"}` : `Assisted auto duration (${recDuration}s). Click to restore custom`}">
-        ${interval}s ${isAllManual ? "Custom ✓" : "Auto"}
-      </button>
-
-      <!-- Submit Action with Enter badge -->
-      <button type="button" class="al-dock-submit-btn ${isValid ? "" : "is-disabled"}" title="Submit to AniSkip (Key: Enter)">
-        <span class="al-dock-kbd">↵</span>
-        <span>Submit</span>
-      </button>
-
-      <!-- Close Action -->
-      <button type="button" class="al-dock-close-btn" title="Close dock (Key: Esc)">
-        ${iconHtml(X, {
-			width: 13,
-			height: 13
-		})}
-      </button>
-    </div>
-  `;
-		const typeButtons = dockContainer.querySelectorAll(".al-dock-type");
-		typeButtons.forEach((btn) => {
-			btn.addEventListener("click", (e) => {
-				e.stopPropagation();
-				dockState.skipType = btn.dataset.type || "op";
-				typeButtons.forEach((b) => b.classList.toggle("is-active", b === btn));
-			});
-		});
-		const providerSelect = dockContainer.querySelector(".al-dock-provider-select");
-		const providerCustom = dockContainer.querySelector(".al-dock-provider-custom");
-		providerSelect?.addEventListener("change", (e) => {
-			const val = e.target.value;
-			if (val === "custom") {
-				providerCustom.classList.remove("is-hidden");
-				providerCustom.focus();
-				if (providerCustom.value) {
-					dockState.providerName = providerCustom.value;
-					saveProvider(providerCustom.value);
-				}
-			} else {
-				providerCustom.classList.add("is-hidden");
-				dockState.providerName = val;
-				saveProvider(val);
-			}
-		});
-		providerCustom?.addEventListener("input", (e) => {
-			dockState.providerName = e.target.value;
-			saveProvider(e.target.value);
-		});
-		dockContainer.querySelector(".al-dock-in-mark")?.addEventListener("click", (e) => {
-			e.stopPropagation();
-			applyInPoint();
-		});
-		dockContainer.querySelector(".al-dock-in-seek")?.addEventListener("click", (e) => {
-			e.stopPropagation();
-			dockState.activeTarget = "in";
-			seekPlayerTime(dockState.startTime);
-			renderAniSkipDock();
-		});
-		dockContainer.querySelector(".al-dock-out-mark")?.addEventListener("click", (e) => {
-			e.stopPropagation();
-			applyOutPoint();
-		});
-		dockContainer.querySelector(".al-dock-out-seek")?.addEventListener("click", (e) => {
-			e.stopPropagation();
-			dockState.activeTarget = "out";
-			seekPlayerTime(dockState.endTime);
-			renderAniSkipDock();
-		});
-		dockContainer.querySelector(".al-dock-dur-btn")?.addEventListener("click", (e) => {
-			e.stopPropagation();
-			toggleAutoCustomDuration();
-		});
-		dockContainer.querySelector(".al-dock-submit-btn")?.addEventListener("click", async (e) => {
-			e.stopPropagation();
-			if (!isValid) return;
-			await submitCurrentDock();
-		});
-		dockContainer.querySelector(".al-dock-close-btn")?.addEventListener("click", (e) => {
-			e.stopPropagation();
-			dismissAniSkipDock();
-		});
-	}
-	async function submitCurrentDock() {
-		if (!dockState) return;
-		const btn = dockContainer?.querySelector(".al-dock-submit-btn");
-		if (btn) {
-			btn.disabled = true;
-			btn.innerHTML = `${iconHtml(LoaderCircle, {
-				width: 12,
-				height: 12
-			})} <span>Saving...</span>`;
-		}
-		try {
-			const res = await createSkipTime({
-				malId: dockState.malId,
-				epNum: dockState.epNum,
-				skipType: dockState.skipType,
-				startTime: dockState.startTime,
-				endTime: dockState.endTime,
-				episodeLength: dockState.episodeLength,
-				providerName: dockState.providerName
-			});
-			showToast("✓ Skip time saved to AniSkip!", false, 3e3);
-			const successData = {
-				start: dockState.startTime,
-				end: dockState.endTime,
-				episodeLength: dockState.episodeLength,
-				skipType: dockState.skipType,
-				skipId: res.skipId
-			};
-			const cb = dockState.onSuccess;
-			dismissAniSkipDock();
-			if (typeof cb === "function") cb(successData);
-		} catch (err) {
-			Logger.error("AniSkip submission failed:", err);
-			showToast(`AniSkip: ${err.message}`, true, 4e3);
-			if (btn) {
-				btn.disabled = false;
-				btn.innerHTML = `<span class="al-dock-kbd">↵</span> <span>Submit</span>`;
-			}
-		}
-	}
-	window.addEventListener("keydown", (e) => {
-		if (!isAniSkipDockOpen()) return;
-		const tag = document.activeElement?.tagName?.toLowerCase();
-		if (tag === "input" || tag === "textarea" || tag === "select") return;
-		if (e.key === "Escape") {
-			e.preventDefault();
-			dismissAniSkipDock();
-		} else if (e.key === "Enter") {
-			e.preventDefault();
-			submitCurrentDock();
-		} else if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown") {
-			e.preventDefault();
-			handleAniSkipArrow(e.key);
-		}
-	});
-	window.addEventListener("message", (e) => {
-		if (e.data?.type === "AL_PLAYBACK_STATE") {
-			if (typeof e.data.currentTime === "number" && !isNaN(e.data.currentTime)) lastPlaybackTime = e.data.currentTime;
-			if (typeof e.data.duration === "number" && !isNaN(e.data.duration) && e.data.duration > 0) lastPlaybackDuration = e.data.duration;
-		} else if (e.data?.type === "AU_ANISKIP_ARROW") handleAniSkipArrow(e.data.key);
-	});
-	window.addEventListener("focus", () => {
-		if (isAniSkipDockOpen()) requestPlayerCurrentTime();
-	});
-	var cache = new Map();
-	var activeMalId = null;
-	var activeEp = null;
-	var aniskipOp = null;
-	var nativeIntro = null;
-	var activeOp = null;
-	var activeDuration = 0;
-	var fetchToken = 0;
-	var episodeAutoSkipOverride = null;
-	var currentProvider = null;
-	var lastKnownCurrentTime = 0;
-	var lastKnownDuration = 0;
-	function syncActiveOp() {
-		activeOp = resolveSkipSegment({
-			aniskipOp,
-			nativeIntro
-		});
-	}
-	function isEpisodeAutoSkipActive() {
-		if (episodeAutoSkipOverride !== null) return episodeAutoSkipOverride;
-		return Settings.get().autoSkip;
-	}
-	function toggleEpisodeAutoSkip() {
-		episodeAutoSkipOverride = !isEpisodeAutoSkipActive();
-		broadcastOp();
-		renderAutoSkipButton(currentProvider);
-		return episodeAutoSkipOverride;
-	}
-	function getEffectiveIds() {
-		return {
-			malId: activeMalId || currentProvider?.getAnimeInfo?.()?.malId || null,
-			epNum: activeEp || currentProvider?.getActiveEpisode?.() || 1
-		};
-	}
-	function handleSuccessfulContribution(newData) {
-		aniskipOp = newData;
-		syncActiveOp();
-		const { malId, epNum } = getEffectiveIds();
-		if (malId && epNum) {
-			const cacheKey = `${malId}_${epNum}`;
-			cache.set(cacheKey, aniskipOp);
-		}
-		broadcastOp();
-		renderAutoSkipButton(currentProvider);
-	}
-	function openSkipContribute() {
-		const { malId, epNum } = getEffectiveIds();
-		if (!malId) {
-			Logger.warn("Cannot open AniSkip dock: MAL ID missing");
-			return false;
-		}
-		openAniSkipDock({
-			malId,
-			epNum,
-			currentTime: lastKnownCurrentTime,
-			duration: activeDuration || lastKnownDuration,
-			initialStart: activeOp?.start,
-			initialEnd: activeOp?.end,
-			skipType: activeOp?.skipType || "op",
-			provider: currentProvider,
-			onSuccess: handleSuccessfulContribution
-		});
-		return true;
-	}
-	function renderAutoSkipButton(provider) {
-		if (provider) currentProvider = provider;
-		const container = document.getElementById("al-dock-skip-slot") || currentProvider?.getVideoBottomAnchor?.();
-		if (!container) return;
-		const isActive = isEpisodeAutoSkipActive();
-		const renderKey = `${activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}` : "none"}|${isActive}`;
-		if (container.__lastSkipKey === renderKey && container.dataset.rendered === "1") return;
-		container.__lastSkipKey = renderKey;
-		container.dataset.rendered = "1";
-		if (!activeOp) {
-			container.innerHTML = "";
-			return;
-		}
-		const srcLabel = activeOp.source === "native" ? "Native" : "AniSkip";
-		container.innerHTML = `
-    <div class="al-dock-skip-cluster">
-      <button type="button" class="al-dock-chip ${isActive ? "is-tracked" : "is-pending"}" id="al-skip-toggle-btn" title="${srcLabel}: ${isActive ? "Auto-Skip attivo (Clicca per disattivare)" : "Auto-Skip disattivato (Clicca per attivare)"}">
-        ${iconHtml(SkipForward, {
-			width: 11,
-			height: 11
-		})}
-        <span>${isActive ? "Auto-Skip: ON" : "Auto-Skip: OFF"}</span>
-      </button>
-    </div>
-  `;
-		container.querySelector("#al-skip-toggle-btn")?.addEventListener("click", (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-			toggleEpisodeAutoSkip();
-		});
-	}
-	function broadcastOp() {
-		const settings = Settings.get();
-		const msg = {
-			type: "AU_SKIP_OP",
-			op: activeOp,
-			autoSkip: isEpisodeAutoSkipActive(),
-			skipFallbackDuration: settings.skipFallbackDuration
-		};
-		document.querySelectorAll("iframe").forEach((frame) => {
-			try {
-				frame.contentWindow?.postMessage(msg, "*");
-			} catch (_) {}
-		});
-	}
-	async function checkSkipIntro(malId, epNum, duration = 0) {
-		if (!malId || !epNum) return;
-		const roundedDur = Math.round(duration || 0);
-		if (malId !== activeMalId || epNum !== activeEp) {
-			activeMalId = malId;
-			activeEp = epNum;
-			activeDuration = roundedDur;
-			aniskipOp = null;
-			nativeIntro = null;
-			syncActiveOp();
-			episodeAutoSkipOverride = null;
-			broadcastOp();
-			renderAutoSkipButton(currentProvider);
-		} else if (roundedDur > 0) activeDuration = roundedDur;
-		const cacheKey = `${malId}_${epNum}`;
-		if (cache.has(cacheKey)) {
-			aniskipOp = cache.get(cacheKey);
-			syncActiveOp();
-			broadcastOp();
-			renderAutoSkipButton(currentProvider);
-			return;
-		}
-		const token = ++fetchToken;
-		try {
-			const res = await fetch(`https://api.aniskip.com/v2/skip-times/${malId}/${epNum}?types=op&episodeLength=${activeDuration}`);
-			if (token !== fetchToken) return;
-			if (!res.ok) {
-				aniskipOp = null;
-				cache.set(cacheKey, null);
-				syncActiveOp();
-				broadcastOp();
-				renderAutoSkipButton(currentProvider);
-				return;
-			}
-			const op = (await res.json()).results?.find((r) => r.skipType === "op" || r.skipType === "mixed-op");
-			if (op) {
-				aniskipOp = {
-					start: op.interval.startTime,
-					end: op.interval.endTime,
-					episodeLength: op.episodeLength || 0,
-					skipType: op.skipType,
-					skipId: op.skipId,
-					source: "aniskip"
-				};
-				cache.set(cacheKey, aniskipOp);
-			} else {
-				aniskipOp = null;
-				cache.set(cacheKey, null);
-			}
-			syncActiveOp();
-			Logger.info(`📡 AniSkip result for Ep ${epNum}:`, activeOp || "No opening found");
-			broadcastOp();
-			renderAutoSkipButton(currentProvider);
-		} catch (err) {
-			Logger.warn("AniSkip fetch failed:", err);
-		}
-	}
-	function handleHotkeyAction(action, timeOverride = null) {
-		if (!Settings.get().communityAniSkip) return;
-		const { malId, epNum } = getEffectiveIds();
-		if (!malId) return;
-		handleAniSkipHotkey(action, typeof timeOverride === "number" ? timeOverride : lastKnownCurrentTime, activeDuration || lastKnownDuration, {
-			malId,
-			epNum,
-			provider: currentProvider,
-			onSuccess: handleSuccessfulContribution
-		});
-	}
-	function initSkipIntroTop() {
-		window.addEventListener("message", (e) => {
-			if (e.data?.type === "AU_FRAME_READY" || e.data?.type === "AL_PLAYER_READY") {
-				const frameDur = e.data.duration ? Math.round(e.data.duration) : 0;
-				if (frameDur > 0 && !activeOp && activeMalId && activeEp) checkSkipIntro(activeMalId, activeEp, frameDur);
-				else broadcastOp();
-			} else if (e.data?.type === "AU_NATIVE_TIMESTAMPS" && e.data.intro) {
-				const prevKey = activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}` : "";
-				nativeIntro = {
-					start: e.data.intro.start,
-					end: e.data.intro.end,
-					episodeLength: activeDuration || lastKnownDuration,
-					skipType: "op",
-					source: "native"
-				};
-				syncActiveOp();
-				const nextKey = activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}` : "";
-				if (activeOp && nextKey !== prevKey) {
-					broadcastOp();
-					renderAutoSkipButton(currentProvider);
-				}
-			} else if (e.data?.type === "AL_PLAYBACK_STATE") {
-				if (typeof e.data.currentTime === "number") lastKnownCurrentTime = e.data.currentTime;
-				if (typeof e.data.duration === "number" && e.data.duration > 0) lastKnownDuration = e.data.duration;
-			} else if (e.data?.type === "AU_ANISKIP_HOTKEY") handleHotkeyAction(e.data.action || (e.data.key === "]" || e.data.key === "o" ? "end" : "start"), e.data.currentTime);
-			else if (e.data?.type === "AU_ANISKIP_ARROW") handleAniSkipArrow(e.data.key);
-		});
-		window.addEventListener("keydown", (e) => {
-			const tag = document.activeElement?.tagName?.toLowerCase();
-			if (tag === "input" || tag === "textarea" || tag === "select") return;
-			if (e.key === "s" || e.key === "S") {
-				document.querySelectorAll("iframe").forEach((frame) => {
-					try {
-						frame.contentWindow?.postMessage({ type: "AU_TRIGGER_SKIP" }, "*");
-					} catch (_) {}
-				});
-				return;
-			}
-			const keyLower = e.key?.toLowerCase();
-			const isStart = keyLower === "i" || e.key === "[" || e.code === "BracketLeft";
-			const isEnd = keyLower === "o" || e.key === "]" || e.code === "BracketRight";
-			if (isStart) handleHotkeyAction("start");
-			else if (isEnd) handleHotkeyAction("end");
-		}, true);
-		Settings.subscribe(() => {
-			broadcastOp();
-			renderAutoSkipButton(currentProvider);
-		});
-	}
 	function deriveDockState({ media, activeEp = 0, isWatch = false, autoTrackState = null, buddyData = null } = {}) {
 		const entry = media?.mediaListEntry || null;
 		const progress = entry?.progress || 0;
@@ -2968,9 +2277,30 @@
       </button>
     `;
 		bar.innerHTML = `
-    <!-- Gruppo 1: Controllo Episodio (Watch) o Progresso (Detail) -->
+    <!-- Gruppo 1: Stato AniList (sempre visibile quando in lista) -->
+    ${entry ? `
+      <div class="al-dock-group al-dock-status-group">
+        <div class="al-dock-select-box">
+          ${iconHtml(Bookmark, {
+			width: 11,
+			height: 11,
+			class: "al-dock-icon-muted"
+		})}
+          <select class="al-dock-select" id="al-bar-status" title="Stato su AniList">
+            ${Object.entries(statusMap).map(([k, label]) => `
+              <option value="${k}" ${entry.status === k ? "selected" : ""}>${label}</option>
+            `).join("")}
+          </select>
+        </div>
+      </div>
+    ` : ""}
+
+    <!-- Gruppo 2: Episodio attuale / Max + Stato Sync -->
     <div class="al-dock-group al-dock-ep-group">
       ${isWatchEp ? `
+        <div class="al-dock-ep-badge" title="Episodio ${activeEp} su ${total || "?"} (AniList: Ep. ${progress})">
+          Ep. ${activeEp} / ${total || "?"}
+        </div>
         ${actionBtnHtml}
       ` : `
         ${entry ? `
@@ -2989,13 +2319,10 @@
       `}
     </div>
 
-    <!-- Gruppo 2: Slot Skip Intro (Watch Page, solo quando esiste segmento) -->
+    <!-- Gruppo 3: Auto-Skip ON/OFF + Contribute (Watch Page) -->
     ${isWatchEp ? `<div class="al-dock-group al-dock-skip-slot" id="al-dock-skip-slot"></div>` : ""}
 
-    <!-- Gruppo 3: Provider Switch (Go to AnimeSaturn / AnimeUnity) -->
-    <div class="al-dock-group al-dock-switch-box" id="al-dock-switch-slot"></div>
-
-    <!-- Gruppo 4: Buddy Ahead Sync (solo se l'amico è più avanti!) + Menu Account -->
+    <!-- Gruppo 4: Buddy Ahead Sync + Menu Anime (⋯) + PFP Utente (separato!) -->
     <div class="al-dock-group al-dock-user-group">
       ${entry && currentBuddy && buddyData && canSyncBuddy ? `
         <button type="button" class="al-dock-buddy-btn is-ahead" id="al-bar-buddy-sync" title="Allineati a ${buddyData.name} (${isBuddyCompleted ? "Completato" : `Ep. ${buddyData.progress}`})">
@@ -3004,26 +2331,22 @@
         </button>
       ` : ""}
 
+      <!-- Menu Anime (azioni anime separate dall'account utente) -->
       <div class="al-dock-user-wrap">
-        <button type="button" class="al-dock-avatar-btn" id="al-dock-avatar-btn" title="${title} • ${viewer?.name || "Account AniList"}">
-          <img src="${viewer?.avatar?.medium || "https://anilist.co/img/icons/icon.svg"}" class="al-dock-avatar" />
+        <button type="button" class="al-dock-step-btn" id="al-dock-anime-btn" title="Opzioni Anime (-1 / +1, AnimeSaturn, Rimuovi)">
+          ${iconHtml(Ellipsis, {
+			width: 14,
+			height: 14
+		})}
         </button>
-        <div class="al-dock-menu" id="al-dock-menu">
+        <div class="al-dock-menu" id="al-dock-anime-menu">
           <div class="al-dock-menu-header">
-            <img src="${viewer?.avatar?.medium || "https://anilist.co/img/icons/icon.svg"}" class="al-dock-menu-avatar" />
             <div class="al-dock-menu-user">
-              <span class="al-dock-menu-name">${viewer?.name || "Connesso"}</span>
-              <span class="al-dock-menu-sub">${entry ? `Ep. ${progress}/${total || "?"}` : "Non in lista"}</span>
+              <span class="al-dock-menu-name">${title}</span>
+              <span class="al-dock-menu-sub">${entry ? `${statusMap[entry.status] || entry.status} • Ep. ${progress}/${total || "?"}` : "Non in lista"}</span>
             </div>
           </div>
           <div class="al-dock-menu-body">
-            <a class="al-dock-menu-item" href="https://anilist.co/anime/${media.id}" target="_blank" rel="noopener noreferrer">
-              ${iconHtml(ExternalLink, {
-			width: 13,
-			height: 13
-		})}
-              <span class="al-title-name">${title}</span>
-            </a>
             ${entry ? `
               <div class="al-dock-menu-controls" style="display:flex;gap:6px;padding:4px 6px;align-items:center;">
                 <button type="button" class="al-dock-step-btn" id="al-ep-rewind" title="Riavvolgi tracciamento a Ep. ${Math.max(0, (activeEp || progress || 1) - 1)}">
@@ -3033,23 +2356,52 @@
 		})}
                   <span style="font-size:10px;margin-left:3px;">-1</span>
                 </button>
-                <select class="al-dock-select" id="al-bar-status" title="Stato su AniList" style="flex:1;">
-                  ${Object.entries(statusMap).map(([k, label]) => `
-                    <option value="${k}" ${entry.status === k ? "selected" : ""}>${label}</option>
-                  `).join("")}
-                </select>
+                <span style="font-size:11px;opacity:0.85;flex:1;text-align:center;">Ep. ${progress}/${total || "?"}</span>
+                <button type="button" class="al-dock-step-btn" id="al-ep-next" title="Avanza tracciamento ad Ep. ${(progress || 0) + 1}">
+                  ${iconHtml(Plus, {
+			width: 11,
+			height: 11
+		})}
+                  <span style="font-size:10px;margin-left:2px;">+1</span>
+                </button>
               </div>
               <div class="al-dock-buddy-picker-trigger" id="al-bar-buddy-picker-mount" style="padding:2px 6px;"></div>
             ` : ""}
-            ${isWatchEp ? `
-              <button type="button" class="al-dock-menu-item" id="al-dock-menu-skip">
-                ${iconHtml(SkipForward, {
+            <a class="al-dock-menu-item" href="https://anilist.co/anime/${media.id}" target="_blank" rel="noopener noreferrer">
+              ${iconHtml(ExternalLink, {
 			width: 13,
 			height: 13
 		})}
-                <span>Calibra / + Intro</span>
+              <span>Apri su AniList</span>
+            </a>
+            <div class="al-dock-switch-box" id="al-dock-switch-slot"></div>
+            ${entry ? `
+              <button type="button" class="al-dock-menu-item danger" id="al-dock-menu-del">
+                ${iconHtml(Trash, {
+			width: 13,
+			height: 13
+		})}
+                <span>Rimuovi da AniList</span>
               </button>
             ` : ""}
+          </div>
+        </div>
+      </div>
+
+      <!-- Menu Utente (solo PFP e Account AniList) -->
+      <div class="al-dock-user-wrap">
+        <button type="button" class="al-dock-avatar-btn" id="al-dock-avatar-btn" title="${viewer?.name || "Account AniList"}">
+          <img src="${viewer?.avatar?.medium || "https://anilist.co/img/icons/icon.svg"}" class="al-dock-avatar" />
+        </button>
+        <div class="al-dock-menu" id="al-dock-menu">
+          <div class="al-dock-menu-header">
+            <img src="${viewer?.avatar?.medium || "https://anilist.co/img/icons/icon.svg"}" class="al-dock-menu-avatar" />
+            <div class="al-dock-menu-user">
+              <span class="al-dock-menu-name">${viewer?.name || "Connesso"}</span>
+              <span class="al-dock-menu-sub">Account AniList</span>
+            </div>
+          </div>
+          <div class="al-dock-menu-body">
             <a class="al-dock-menu-item" href="https://anilist.co/user/${viewer?.name || ""}" target="_blank" rel="noopener noreferrer">
               ${iconHtml(User, {
 			width: 13,
@@ -3085,24 +2437,38 @@
 			const rewindTarget = Math.max(0, (activeEp || progress || 1) - 1);
 			actions.onRewind?.(rewindTarget, activeEp);
 		});
+		bar.querySelector("#al-ep-next")?.addEventListener("click", () => {
+			actions.onNextEp?.();
+		});
 		bar.querySelector("#al-ep-cancel-track")?.addEventListener("click", () => {
 			actions.onCancelCountdown?.();
 		});
 		bar.querySelector("#al-bar-buddy-sync")?.addEventListener("click", () => {
 			if (typeof actions.onBuddySync === "function" && buddyData) actions.onBuddySync(buddyData.progress, isBuddyCompleted);
 		});
-		bar.querySelector("#al-dock-menu-skip")?.addEventListener("click", () => {
-			menu?.classList.remove("show");
-			openSkipContribute();
-		});
+		const animeBtn = bar.querySelector("#al-dock-anime-btn");
+		const animeMenu = bar.querySelector("#al-dock-anime-menu");
 		const avatarBtn = bar.querySelector("#al-dock-avatar-btn");
 		const menu = bar.querySelector("#al-dock-menu");
+		animeBtn?.addEventListener("click", (e) => {
+			e.stopPropagation();
+			menu?.classList.remove("show");
+			animeMenu?.classList.toggle("show");
+		});
 		avatarBtn?.addEventListener("click", (e) => {
 			e.stopPropagation();
+			animeMenu?.classList.remove("show");
 			menu?.classList.toggle("show");
 		});
 		document.addEventListener("click", (e) => {
-			if (!bar.contains(e.target)) menu?.classList.remove("show");
+			if (!bar.contains(e.target)) {
+				menu?.classList.remove("show");
+				animeMenu?.classList.remove("show");
+			}
+		});
+		bar.querySelector("#al-dock-menu-del")?.addEventListener("click", () => {
+			animeMenu?.classList.remove("show");
+			actions.onDelete?.();
 		});
 		bar.querySelector("#al-dock-menu-prefs")?.addEventListener("click", () => {
 			menu?.classList.remove("show");
@@ -3797,6 +3163,749 @@
 		shelfContainer.appendChild(carouselWrap);
 		return shelfContainer;
 	}
+	function isValidSegment(segment) {
+		return Boolean(segment && typeof segment.start === "number" && typeof segment.end === "number" && Number.isFinite(segment.start) && Number.isFinite(segment.end) && segment.end > segment.start);
+	}
+	function resolveSkipSegment({ aniskipOp = null, nativeIntro = null } = {}) {
+		if (isValidSegment(aniskipOp)) return {
+			...aniskipOp,
+			source: aniskipOp.source || "aniskip"
+		};
+		if (isValidSegment(nativeIntro)) return {
+			...nativeIntro,
+			source: nativeIntro.source || "native"
+		};
+		return null;
+	}
+	function resolveManualSkipTarget({ currentPos = 0, duration = 0, segment = null, fallbackDuration = 85 } = {}) {
+		const pos = typeof currentPos === "number" && Number.isFinite(currentPos) && currentPos >= 0 ? currentPos : 0;
+		const dur = typeof duration === "number" && Number.isFinite(duration) && duration > 0 ? duration : 0;
+		const fallback = typeof fallbackDuration === "number" && Number.isFinite(fallbackDuration) && fallbackDuration > 0 ? fallbackDuration : 85;
+		if (isValidSegment(segment)) {
+			const showStart = Math.max(0, segment.start - 1.5);
+			const showEnd = Math.max(showStart, segment.end - 2);
+			if (pos >= showStart && pos <= showEnd) return {
+				target: Math.max(0, segment.end - 1),
+				mode: "segment",
+				source: segment.source || "aniskip"
+			};
+		}
+		const rawTarget = pos + fallback;
+		return {
+			target: dur > 0 ? Math.max(0, Math.min(dur - 1, rawTarget)) : rawTarget,
+			mode: "fallback",
+			source: "fallback"
+		};
+	}
+	var ANISKIP_API_URL = "https://api.aniskip.com/v2";
+	var PRESET_PROVIDERS = [
+		"Crunchyroll",
+		"Netflix",
+		"Prime Video",
+		"Disney+",
+		"HIDIVE",
+		"Fansub"
+	];
+	function seekPlayerTime(targetSec) {
+		if (typeof targetSec !== "number" || isNaN(targetSec) || targetSec < 0) return;
+		const t = Math.max(0, Math.round(targetSec * 10) / 10);
+		document.querySelectorAll("iframe").forEach((frame) => {
+			try {
+				frame.contentWindow?.postMessage({
+					type: "AU_SEEK_PLAYER",
+					time: t
+				}, "*");
+			} catch (_) {}
+		});
+		const v = document.querySelector("video");
+		if (v) try {
+			v.currentTime = t;
+		} catch (_) {}
+	}
+	function getSubmitterId() {
+		let id = Storage.get("aniskip_submitter_id");
+		if (!id) {
+			if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") id = crypto.randomUUID();
+			else id = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+				const r = Math.random() * 16 | 0;
+				return (c === "x" ? r : r & 3 | 8).toString(16);
+			});
+			Storage.set("aniskip_submitter_id", id);
+		}
+		return id;
+	}
+	function getSavedProvider() {
+		return Storage.get("aniskip_provider") || "Crunchyroll";
+	}
+	function saveProvider(val) {
+		if (val && typeof val === "string") Storage.set("aniskip_provider", val.trim());
+	}
+	async function createSkipTime({ malId, epNum, skipType = "op", startTime, endTime, episodeLength, providerName = "Crunchyroll" }) {
+		if (!malId || !epNum) throw new Error("Missing anime or episode metadata");
+		const start = Math.max(0, Math.round(startTime * 10) / 10);
+		const end = Math.round(endTime * 10) / 10;
+		const duration = Math.round((episodeLength || 0) * 10) / 10;
+		const interval = end - start;
+		if (interval < 5) throw new Error("Interval must be at least 5 seconds");
+		if (interval > 240) throw new Error("Interval cannot exceed 4 minutes");
+		const effectiveProvider = String(providerName || "Crunchyroll").trim();
+		saveProvider(effectiveProvider);
+		const payload = {
+			skipType,
+			providerName: effectiveProvider,
+			startTime: start,
+			endTime: end,
+			episodeLength: duration > 0 ? duration : Math.max(end + 60, 1420),
+			submitterId: getSubmitterId()
+		};
+		const res = await fetch(`${ANISKIP_API_URL}/skip-times/${malId}/${epNum}`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(payload)
+		});
+		if (res.status === 429) throw new Error("Daily submission limit reached for this episode (max 10/day)");
+		const data = await res.json().catch(() => ({}));
+		if (!res.ok) throw new Error(data.message || `AniSkip Error (${res.status})`);
+		return { skipId: data.skipId };
+	}
+	var dockContainer = null;
+	var dockState = null;
+	var lastPlaybackTime = 0;
+	var lastPlaybackDuration = 0;
+	function isAniSkipDockOpen() {
+		return !!dockContainer && (document.body.contains(dockContainer) || document.fullscreenElement?.contains(dockContainer));
+	}
+	function broadcastDockState(isOpen) {
+		document.querySelectorAll("iframe").forEach((frame) => {
+			try {
+				frame.contentWindow?.postMessage({
+					type: "AU_ANISKIP_DOCK_STATE",
+					open: isOpen
+				}, "*");
+			} catch (_) {}
+		});
+	}
+	function requestPlayerCurrentTime() {
+		document.querySelectorAll("iframe").forEach((frame) => {
+			try {
+				frame.contentWindow?.postMessage({ type: "AU_REQUEST_CURRENT_TIME" }, "*");
+			} catch (_) {}
+		});
+	}
+	function dismissAniSkipDock() {
+		broadcastDockState(false);
+		dockContainer?.remove();
+		dockContainer = null;
+		dockState = null;
+	}
+	function getCurrentPlaybackTime() {
+		const v = document.querySelector("video");
+		if (v && typeof v.currentTime === "number" && !isNaN(v.currentTime)) return v.currentTime;
+		return lastPlaybackTime;
+	}
+	function getRecommendedDuration() {
+		const settings = Settings.get();
+		return typeof settings.skipFallbackDuration === "number" && settings.skipFallbackDuration > 0 ? settings.skipFallbackDuration : 85;
+	}
+	function openAniSkipDock({ malId, epNum, currentTime = 0, duration = 0, initialStart = null, initialEnd = null, skipType = "op", provider, onSuccess }) {
+		if (typeof currentTime === "number" && currentTime > 0) lastPlaybackTime = currentTime;
+		if (typeof duration === "number" && duration > 0) lastPlaybackDuration = duration;
+		const currentPos = Math.max(0, Math.round((currentTime || lastPlaybackTime || 0) * 10) / 10);
+		const totalDur = Math.round((duration || lastPlaybackDuration || 0) * 10) / 10;
+		const recDuration = getRecommendedDuration();
+		const isEditing = typeof initialStart === "number";
+		const start = isEditing ? initialStart : currentPos;
+		const end = typeof initialEnd === "number" ? initialEnd : totalDur > 0 ? Math.min(totalDur, start + recDuration) : start + recDuration;
+		dockState = {
+			malId,
+			epNum,
+			skipType: skipType || "op",
+			providerName: getSavedProvider(),
+			startTime: start,
+			endTime: Math.round(end * 10) / 10,
+			episodeLength: totalDur,
+			isManualIn: isEditing,
+			isManualOut: isEditing,
+			activeTarget: "in",
+			lastManualTarget: isEditing ? "in" : null,
+			lastCustomStart: isEditing ? initialStart : null,
+			lastCustomEnd: isEditing ? initialEnd : null,
+			provider,
+			onSuccess
+		};
+		broadcastDockState(true);
+		requestPlayerCurrentTime();
+		if (isEditing) seekPlayerTime(start);
+		renderAniSkipDock();
+	}
+	function applyInPoint(timeOverride = null) {
+		if (!dockState) return;
+		const cur = typeof timeOverride === "number" ? timeOverride : getCurrentPlaybackTime();
+		const recDuration = getRecommendedDuration();
+		const curSec = Math.round(cur);
+		const inSec = Math.round(dockState.startTime);
+		if (Math.abs(cur - dockState.startTime) < 1 || curSec === inSec) dockState.startTime = Math.max(0, inSec - 1);
+		else dockState.startTime = Math.max(0, Math.round(cur * 10) / 10);
+		seekPlayerTime(dockState.startTime);
+		dockState.isManualIn = true;
+		dockState.activeTarget = "in";
+		dockState.lastManualTarget = "in";
+		if (!dockState.isManualOut || dockState.endTime <= dockState.startTime) {
+			const totalDur = dockState.episodeLength || 0;
+			const smartEnd = totalDur > 0 ? Math.min(totalDur, dockState.startTime + recDuration) : dockState.startTime + recDuration;
+			dockState.endTime = Math.round(smartEnd * 10) / 10;
+		}
+		renderAniSkipDock();
+	}
+	function applyOutPoint(timeOverride = null) {
+		if (!dockState) return;
+		const cur = typeof timeOverride === "number" ? timeOverride : getCurrentPlaybackTime();
+		const recDuration = getRecommendedDuration();
+		const curSec = Math.round(cur);
+		const outSec = Math.round(dockState.endTime);
+		if (Math.abs(cur - dockState.endTime) < 1 || curSec === outSec) dockState.endTime = Math.max(dockState.startTime + 5, outSec - 1);
+		else dockState.endTime = Math.round(cur * 10) / 10;
+		seekPlayerTime(dockState.endTime);
+		dockState.isManualOut = true;
+		dockState.activeTarget = "out";
+		dockState.lastManualTarget = "out";
+		if (!dockState.isManualIn || dockState.startTime >= dockState.endTime) dockState.startTime = Math.max(0, Math.round((dockState.endTime - recDuration) * 10) / 10);
+		renderAniSkipDock();
+	}
+	function handleAniSkipArrow(key) {
+		if (!dockState) return;
+		const delta = key === "ArrowLeft" || key === "ArrowDown" ? -1 : 1;
+		if ((dockState.activeTarget || "in") === "in") {
+			const nextStart = Math.max(0, Math.round((dockState.startTime + delta) * 10) / 10);
+			if (nextStart < dockState.endTime - 5 || !dockState.isManualOut) {
+				dockState.startTime = nextStart;
+				dockState.isManualIn = true;
+				dockState.lastManualTarget = "in";
+				seekPlayerTime(dockState.startTime);
+				if (!dockState.isManualOut) dockState.endTime = Math.round((dockState.startTime + getRecommendedDuration()) * 10) / 10;
+			}
+		} else {
+			const nextEnd = Math.max(dockState.startTime + 5, Math.round((dockState.endTime + delta) * 10) / 10);
+			dockState.endTime = nextEnd;
+			dockState.isManualOut = true;
+			dockState.lastManualTarget = "out";
+			seekPlayerTime(dockState.endTime);
+		}
+		renderAniSkipDock();
+	}
+	function toggleAutoCustomDuration() {
+		if (!dockState) return;
+		const recDuration = getRecommendedDuration();
+		const totalDur = dockState.episodeLength || 0;
+		if (dockState.isManualIn && dockState.isManualOut) {
+			dockState.lastCustomStart = dockState.startTime;
+			dockState.lastCustomEnd = dockState.endTime;
+			if (dockState.lastManualTarget === "out") {
+				dockState.startTime = Math.max(0, Math.round((dockState.endTime - recDuration) * 10) / 10);
+				dockState.isManualIn = false;
+				seekPlayerTime(dockState.startTime);
+			} else {
+				const smartEnd = totalDur > 0 ? Math.min(totalDur, dockState.startTime + recDuration) : dockState.startTime + recDuration;
+				dockState.endTime = Math.round(smartEnd * 10) / 10;
+				dockState.isManualOut = false;
+				seekPlayerTime(dockState.endTime);
+			}
+		} else if (typeof dockState.lastCustomStart === "number" && typeof dockState.lastCustomEnd === "number") {
+			dockState.startTime = dockState.lastCustomStart;
+			dockState.endTime = dockState.lastCustomEnd;
+			dockState.isManualIn = true;
+			dockState.isManualOut = true;
+			seekPlayerTime(dockState.startTime);
+		}
+		renderAniSkipDock();
+	}
+	function handleAniSkipHotkey(action, currentTime = 0, duration = 0, context = {}) {
+		const { malId, epNum, provider, onSuccess } = context;
+		if (!malId || !epNum) return;
+		if (typeof currentTime === "number" && currentTime > 0) lastPlaybackTime = currentTime;
+		if (typeof duration === "number" && duration > 0) lastPlaybackDuration = duration;
+		if (!dockState) openAniSkipDock({
+			malId,
+			epNum,
+			currentTime,
+			duration,
+			provider,
+			onSuccess
+		});
+		if (action === "start") applyInPoint(currentTime);
+		else if (action === "end") applyOutPoint(currentTime);
+	}
+	function renderAniSkipDock() {
+		if (!dockState) return;
+		const mountPoint = document.fullscreenElement || document.body;
+		if (!dockContainer) {
+			dockContainer = document.createElement("div");
+			dockContainer.id = "al-aniskip-dock";
+			dockContainer.className = "al-aniskip-dock";
+			dockContainer.addEventListener("mouseenter", requestPlayerCurrentTime);
+		}
+		if (dockContainer.parentElement !== mountPoint) mountPoint.appendChild(dockContainer);
+		const { skipType, providerName, startTime, endTime, isManualIn, isManualOut, activeTarget } = dockState;
+		const interval = Math.round((endTime - startTime) * 10) / 10;
+		const isValid = interval >= 5 && interval <= 240;
+		const isPreset = PRESET_PROVIDERS.includes(providerName);
+		const isAllManual = isManualIn && isManualOut;
+		const recDuration = getRecommendedDuration();
+		dockContainer.innerHTML = `
+    <div class="al-dock-inner">
+      <!-- Type Selector -->
+      <div class="al-dock-types">
+        <button type="button" class="al-dock-type ${skipType === "op" ? "is-active" : ""}" data-type="op" title="Opening sequence">
+          OP
+        </button>
+        <button type="button" class="al-dock-type ${skipType === "ed" ? "is-active" : ""}" data-type="ed" title="Ending sequence">
+          ED
+        </button>
+      </div>
+
+      <!-- Guided Provider Selector -->
+      <div class="al-dock-provider-wrap" title="Video source / release provider">
+        <span class="al-dock-provider-icon">${iconHtml(Tv, {
+			width: 12,
+			height: 12
+		})}</span>
+        <select class="al-dock-provider-select">
+          ${PRESET_PROVIDERS.map((p) => `<option value="${p}" ${providerName === p ? "selected" : ""}>${p}</option>`).join("")}
+          <option value="custom" ${!isPreset ? "selected" : ""}>Custom...</option>
+        </select>
+        <input type="text" class="al-dock-provider-custom ${!isPreset ? "" : "is-hidden"}" value="${!isPreset ? providerName : ""}" placeholder="Provider" spellcheck="false" />
+      </div>
+
+      <!-- In Point Split-Pill (Left: Set/Mark with [, Right: Preview Seek) -->
+      <div class="al-dock-split-pill ${isManualIn ? "is-manual" : "is-auto"} ${activeTarget === "in" ? "is-active-target" : ""}" title="Left: Set In (Key: [) | Right: Jump to In point">
+        <button type="button" class="al-dock-pill-btn al-dock-in-mark" title="Set In (Key: [). Click repeatedly to step 1s back">
+          <span class="al-dock-kbd">[</span>
+          <span class="al-dock-pill-tag">In</span>
+        </button>
+        <button type="button" class="al-dock-pill-btn al-dock-in-seek" title="Seek video to ${Resume.formatTime(startTime)}">
+          <b class="al-dock-pill-time">${Resume.formatTime(startTime)}</b>
+          <span class="al-dock-pill-arrow">⤏</span>
+        </button>
+      </div>
+
+      <!-- Out Point Split-Pill (Left: Set/Mark with ], Right: Preview Seek) -->
+      <div class="al-dock-split-pill ${isManualOut ? "is-manual" : "is-auto"} ${activeTarget === "out" ? "is-active-target" : ""}" title="Left: Set Out (Key: ]) | Right: Jump to Out point">
+        <button type="button" class="al-dock-pill-btn al-dock-out-mark" title="Set Out (Key: ]). Click repeatedly to step 1s back">
+          <span class="al-dock-kbd">]</span>
+          <span class="al-dock-pill-tag">Out</span>
+        </button>
+        <button type="button" class="al-dock-pill-btn al-dock-out-seek" title="Seek video to ${Resume.formatTime(endTime)}">
+          <b class="al-dock-pill-time">${Resume.formatTime(endTime)}</b>
+          <span class="al-dock-pill-arrow">⤏</span>
+        </button>
+      </div>
+
+      <!-- Live Duration & Status Toggle Button (Auto vs Custom) -->
+      <button type="button" class="al-dock-dur-btn al-dock-dur-badge ${isValid ? "is-valid" : "is-invalid"} ${isAllManual ? "is-custom" : "is-auto"}" title="${isAllManual ? `Click to recalculate Auto duration from ${dockState.lastManualTarget === "out" ? "Out" : "In"}` : `Assisted auto duration (${recDuration}s). Click to restore custom`}">
+        ${interval}s ${isAllManual ? "Custom ✓" : "Auto"}
+      </button>
+
+      <!-- Submit Action with Enter badge -->
+      <button type="button" class="al-dock-submit-btn ${isValid ? "" : "is-disabled"}" title="Submit to AniSkip (Key: Enter)">
+        <span class="al-dock-kbd">↵</span>
+        <span>Submit</span>
+      </button>
+
+      <!-- Close Action -->
+      <button type="button" class="al-dock-close-btn" title="Close dock (Key: Esc)">
+        ${iconHtml(X, {
+			width: 13,
+			height: 13
+		})}
+      </button>
+    </div>
+  `;
+		const typeButtons = dockContainer.querySelectorAll(".al-dock-type");
+		typeButtons.forEach((btn) => {
+			btn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				dockState.skipType = btn.dataset.type || "op";
+				typeButtons.forEach((b) => b.classList.toggle("is-active", b === btn));
+			});
+		});
+		const providerSelect = dockContainer.querySelector(".al-dock-provider-select");
+		const providerCustom = dockContainer.querySelector(".al-dock-provider-custom");
+		providerSelect?.addEventListener("change", (e) => {
+			const val = e.target.value;
+			if (val === "custom") {
+				providerCustom.classList.remove("is-hidden");
+				providerCustom.focus();
+				if (providerCustom.value) {
+					dockState.providerName = providerCustom.value;
+					saveProvider(providerCustom.value);
+				}
+			} else {
+				providerCustom.classList.add("is-hidden");
+				dockState.providerName = val;
+				saveProvider(val);
+			}
+		});
+		providerCustom?.addEventListener("input", (e) => {
+			dockState.providerName = e.target.value;
+			saveProvider(e.target.value);
+		});
+		dockContainer.querySelector(".al-dock-in-mark")?.addEventListener("click", (e) => {
+			e.stopPropagation();
+			applyInPoint();
+		});
+		dockContainer.querySelector(".al-dock-in-seek")?.addEventListener("click", (e) => {
+			e.stopPropagation();
+			dockState.activeTarget = "in";
+			seekPlayerTime(dockState.startTime);
+			renderAniSkipDock();
+		});
+		dockContainer.querySelector(".al-dock-out-mark")?.addEventListener("click", (e) => {
+			e.stopPropagation();
+			applyOutPoint();
+		});
+		dockContainer.querySelector(".al-dock-out-seek")?.addEventListener("click", (e) => {
+			e.stopPropagation();
+			dockState.activeTarget = "out";
+			seekPlayerTime(dockState.endTime);
+			renderAniSkipDock();
+		});
+		dockContainer.querySelector(".al-dock-dur-btn")?.addEventListener("click", (e) => {
+			e.stopPropagation();
+			toggleAutoCustomDuration();
+		});
+		dockContainer.querySelector(".al-dock-submit-btn")?.addEventListener("click", async (e) => {
+			e.stopPropagation();
+			if (!isValid) return;
+			await submitCurrentDock();
+		});
+		dockContainer.querySelector(".al-dock-close-btn")?.addEventListener("click", (e) => {
+			e.stopPropagation();
+			dismissAniSkipDock();
+		});
+	}
+	async function submitCurrentDock() {
+		if (!dockState) return;
+		const btn = dockContainer?.querySelector(".al-dock-submit-btn");
+		if (btn) {
+			btn.disabled = true;
+			btn.innerHTML = `${iconHtml(LoaderCircle, {
+				width: 12,
+				height: 12
+			})} <span>Saving...</span>`;
+		}
+		try {
+			const res = await createSkipTime({
+				malId: dockState.malId,
+				epNum: dockState.epNum,
+				skipType: dockState.skipType,
+				startTime: dockState.startTime,
+				endTime: dockState.endTime,
+				episodeLength: dockState.episodeLength,
+				providerName: dockState.providerName
+			});
+			showToast("✓ Skip time saved to AniSkip!", false, 3e3);
+			const successData = {
+				start: dockState.startTime,
+				end: dockState.endTime,
+				episodeLength: dockState.episodeLength,
+				skipType: dockState.skipType,
+				skipId: res.skipId
+			};
+			const cb = dockState.onSuccess;
+			dismissAniSkipDock();
+			if (typeof cb === "function") cb(successData);
+		} catch (err) {
+			Logger.error("AniSkip submission failed:", err);
+			showToast(`AniSkip: ${err.message}`, true, 4e3);
+			if (btn) {
+				btn.disabled = false;
+				btn.innerHTML = `<span class="al-dock-kbd">↵</span> <span>Submit</span>`;
+			}
+		}
+	}
+	window.addEventListener("keydown", (e) => {
+		if (!isAniSkipDockOpen()) return;
+		const tag = document.activeElement?.tagName?.toLowerCase();
+		if (tag === "input" || tag === "textarea" || tag === "select") return;
+		if (e.key === "Escape") {
+			e.preventDefault();
+			dismissAniSkipDock();
+		} else if (e.key === "Enter") {
+			e.preventDefault();
+			submitCurrentDock();
+		} else if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown") {
+			e.preventDefault();
+			handleAniSkipArrow(e.key);
+		}
+	});
+	window.addEventListener("message", (e) => {
+		if (e.data?.type === "AL_PLAYBACK_STATE") {
+			if (typeof e.data.currentTime === "number" && !isNaN(e.data.currentTime)) lastPlaybackTime = e.data.currentTime;
+			if (typeof e.data.duration === "number" && !isNaN(e.data.duration) && e.data.duration > 0) lastPlaybackDuration = e.data.duration;
+		} else if (e.data?.type === "AU_ANISKIP_ARROW") handleAniSkipArrow(e.data.key);
+	});
+	window.addEventListener("focus", () => {
+		if (isAniSkipDockOpen()) requestPlayerCurrentTime();
+	});
+	var cache = new Map();
+	var activeMalId = null;
+	var activeEp = null;
+	var aniskipOp = null;
+	var nativeIntro = null;
+	var activeOp = null;
+	var activeDuration = 0;
+	var fetchToken = 0;
+	var episodeAutoSkipOverride = null;
+	var currentProvider = null;
+	var lastKnownCurrentTime = 0;
+	var lastKnownDuration = 0;
+	function syncActiveOp() {
+		activeOp = resolveSkipSegment({
+			aniskipOp,
+			nativeIntro
+		});
+	}
+	function isEpisodeAutoSkipActive() {
+		if (episodeAutoSkipOverride !== null) return episodeAutoSkipOverride;
+		return Settings.get().autoSkip;
+	}
+	function toggleEpisodeAutoSkip() {
+		episodeAutoSkipOverride = !isEpisodeAutoSkipActive();
+		broadcastOp();
+		renderAutoSkipButton(currentProvider);
+		return episodeAutoSkipOverride;
+	}
+	function getEffectiveIds() {
+		return {
+			malId: activeMalId || currentProvider?.getAnimeInfo?.()?.malId || null,
+			epNum: activeEp || currentProvider?.getActiveEpisode?.() || 1
+		};
+	}
+	function handleSuccessfulContribution(newData) {
+		aniskipOp = newData;
+		syncActiveOp();
+		const { malId, epNum } = getEffectiveIds();
+		if (malId && epNum) {
+			const cacheKey = `${malId}_${epNum}`;
+			cache.set(cacheKey, aniskipOp);
+		}
+		broadcastOp();
+		renderAutoSkipButton(currentProvider);
+	}
+	function openSkipContribute() {
+		const { malId, epNum } = getEffectiveIds();
+		if (!malId) {
+			Logger.warn("Cannot open AniSkip dock: MAL ID missing");
+			return false;
+		}
+		openAniSkipDock({
+			malId,
+			epNum,
+			currentTime: lastKnownCurrentTime,
+			duration: activeDuration || lastKnownDuration,
+			initialStart: activeOp?.start,
+			initialEnd: activeOp?.end,
+			skipType: activeOp?.skipType || "op",
+			provider: currentProvider,
+			onSuccess: handleSuccessfulContribution
+		});
+		return true;
+	}
+	function renderAutoSkipButton(provider) {
+		if (provider) currentProvider = provider;
+		const container = document.getElementById("al-dock-skip-slot") || currentProvider?.getVideoBottomAnchor?.();
+		if (!container) return;
+		const settings = Settings.get();
+		const isActive = isEpisodeAutoSkipActive();
+		const renderKey = `${activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}` : "none"}|${isActive}|${settings.communityAniSkip}`;
+		if (container.__lastSkipKey === renderKey && container.dataset.rendered === "1") return;
+		container.__lastSkipKey = renderKey;
+		container.dataset.rendered = "1";
+		if (!activeOp) {
+			if (!settings.communityAniSkip) {
+				container.innerHTML = "";
+				return;
+			}
+			container.innerHTML = `
+      <div class="al-dock-skip-cluster">
+        <button type="button" class="al-dock-chip is-pending" id="al-skip-add-btn" title="Nessuna intro trovata. Contribuisci ad AniSkip (Key: [ o ])">
+          ${iconHtml(Plus, {
+				width: 10,
+				height: 10
+			})}
+          <span>+ Intro</span>
+        </button>
+      </div>
+    `;
+			container.querySelector("#al-skip-add-btn")?.addEventListener("click", (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				openSkipContribute();
+			});
+			return;
+		}
+		const srcLabel = activeOp.source === "native" ? "Native" : "AniSkip";
+		container.innerHTML = `
+    <div class="al-dock-skip-cluster">
+      <button type="button" class="al-dock-chip ${isActive ? "is-tracked" : "is-pending"}" id="al-skip-toggle-btn" title="${srcLabel}: ${isActive ? "Auto-Skip attivo (Clicca per disattivare)" : "Auto-Skip disattivato (Clicca per attivare)"}">
+        ${iconHtml(SkipForward, {
+			width: 11,
+			height: 11
+		})}
+        <span>${isActive ? "Auto-Skip: ON" : "Auto-Skip: OFF"}</span>
+      </button>
+      ${settings.communityAniSkip ? `
+        <button type="button" class="al-dock-step-btn" id="al-skip-edit-btn" title="Calibra timestamp intro (Key: [ o ])">
+          ${iconHtml(Pencil, {
+			width: 10,
+			height: 10
+		})}
+        </button>
+      ` : ""}
+    </div>
+  `;
+		container.querySelector("#al-skip-toggle-btn")?.addEventListener("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			toggleEpisodeAutoSkip();
+		});
+		container.querySelector("#al-skip-edit-btn")?.addEventListener("click", (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			openSkipContribute();
+		});
+	}
+	function broadcastOp() {
+		const settings = Settings.get();
+		const msg = {
+			type: "AU_SKIP_OP",
+			op: activeOp,
+			autoSkip: isEpisodeAutoSkipActive(),
+			skipFallbackDuration: settings.skipFallbackDuration
+		};
+		document.querySelectorAll("iframe").forEach((frame) => {
+			try {
+				frame.contentWindow?.postMessage(msg, "*");
+			} catch (_) {}
+		});
+	}
+	async function checkSkipIntro(malId, epNum, duration = 0) {
+		if (!malId || !epNum) return;
+		const roundedDur = Math.round(duration || 0);
+		if (malId !== activeMalId || epNum !== activeEp) {
+			activeMalId = malId;
+			activeEp = epNum;
+			activeDuration = roundedDur;
+			aniskipOp = null;
+			nativeIntro = null;
+			syncActiveOp();
+			episodeAutoSkipOverride = null;
+			broadcastOp();
+			renderAutoSkipButton(currentProvider);
+		} else if (roundedDur > 0) activeDuration = roundedDur;
+		const cacheKey = `${malId}_${epNum}`;
+		if (cache.has(cacheKey)) {
+			aniskipOp = cache.get(cacheKey);
+			syncActiveOp();
+			broadcastOp();
+			renderAutoSkipButton(currentProvider);
+			return;
+		}
+		const token = ++fetchToken;
+		try {
+			const res = await fetch(`https://api.aniskip.com/v2/skip-times/${malId}/${epNum}?types=op&episodeLength=${activeDuration}`);
+			if (token !== fetchToken) return;
+			if (!res.ok) {
+				aniskipOp = null;
+				cache.set(cacheKey, null);
+				syncActiveOp();
+				broadcastOp();
+				renderAutoSkipButton(currentProvider);
+				return;
+			}
+			const op = (await res.json()).results?.find((r) => r.skipType === "op" || r.skipType === "mixed-op");
+			if (op) {
+				aniskipOp = {
+					start: op.interval.startTime,
+					end: op.interval.endTime,
+					episodeLength: op.episodeLength || 0,
+					skipType: op.skipType,
+					skipId: op.skipId,
+					source: "aniskip"
+				};
+				cache.set(cacheKey, aniskipOp);
+			} else {
+				aniskipOp = null;
+				cache.set(cacheKey, null);
+			}
+			syncActiveOp();
+			Logger.info(`📡 AniSkip result for Ep ${epNum}:`, activeOp || "No opening found");
+			broadcastOp();
+			renderAutoSkipButton(currentProvider);
+		} catch (err) {
+			Logger.warn("AniSkip fetch failed:", err);
+		}
+	}
+	function handleHotkeyAction(action, timeOverride = null) {
+		if (!Settings.get().communityAniSkip) return;
+		const { malId, epNum } = getEffectiveIds();
+		if (!malId) return;
+		handleAniSkipHotkey(action, typeof timeOverride === "number" ? timeOverride : lastKnownCurrentTime, activeDuration || lastKnownDuration, {
+			malId,
+			epNum,
+			provider: currentProvider,
+			onSuccess: handleSuccessfulContribution
+		});
+	}
+	function initSkipIntroTop() {
+		window.addEventListener("message", (e) => {
+			if (e.data?.type === "AU_FRAME_READY" || e.data?.type === "AL_PLAYER_READY") {
+				const frameDur = e.data.duration ? Math.round(e.data.duration) : 0;
+				if (frameDur > 0 && !activeOp && activeMalId && activeEp) checkSkipIntro(activeMalId, activeEp, frameDur);
+				else broadcastOp();
+			} else if (e.data?.type === "AU_NATIVE_TIMESTAMPS" && e.data.intro) {
+				const prevKey = activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}` : "";
+				nativeIntro = {
+					start: e.data.intro.start,
+					end: e.data.intro.end,
+					episodeLength: activeDuration || lastKnownDuration,
+					skipType: "op",
+					source: "native"
+				};
+				syncActiveOp();
+				const nextKey = activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}` : "";
+				if (activeOp && nextKey !== prevKey) {
+					broadcastOp();
+					renderAutoSkipButton(currentProvider);
+				}
+			} else if (e.data?.type === "AL_PLAYBACK_STATE") {
+				if (typeof e.data.currentTime === "number") lastKnownCurrentTime = e.data.currentTime;
+				if (typeof e.data.duration === "number" && e.data.duration > 0) lastKnownDuration = e.data.duration;
+			} else if (e.data?.type === "AU_ANISKIP_HOTKEY") handleHotkeyAction(e.data.action || (e.data.key === "]" || e.data.key === "o" ? "end" : "start"), e.data.currentTime);
+			else if (e.data?.type === "AU_ANISKIP_ARROW") handleAniSkipArrow(e.data.key);
+		});
+		window.addEventListener("keydown", (e) => {
+			const tag = document.activeElement?.tagName?.toLowerCase();
+			if (tag === "input" || tag === "textarea" || tag === "select") return;
+			if (e.key === "s" || e.key === "S") {
+				document.querySelectorAll("iframe").forEach((frame) => {
+					try {
+						frame.contentWindow?.postMessage({ type: "AU_TRIGGER_SKIP" }, "*");
+					} catch (_) {}
+				});
+				return;
+			}
+			const keyLower = e.key?.toLowerCase();
+			const isStart = keyLower === "i" || e.key === "[" || e.code === "BracketLeft";
+			const isEnd = keyLower === "o" || e.key === "]" || e.code === "BracketRight";
+			if (isStart) handleHotkeyAction("start");
+			else if (isEnd) handleHotkeyAction("end");
+		}, true);
+		Settings.subscribe(() => {
+			broadcastOp();
+			renderAutoSkipButton(currentProvider);
+		});
+	}
 	function initPlayer() {
 		let rawOp = null;
 		let currentOp = null;
@@ -4396,20 +4505,19 @@
 			btn.type = "button";
 			btn.id = "al-cross-switch-btn";
 		}
-		btn.className = `al-cross-switch-btn ${isUnity ? "for-saturn" : "for-unity"}`;
+		btn.className = `al-dock-menu-item al-cross-switch-btn ${isUnity ? "for-saturn" : "for-unity"}`;
 		if (btn.parentElement !== container) container.appendChild(btn);
 		btn.title = `Switch to ${targetSiteName} · Open Ep. ${targetEp}`;
 		btn.innerHTML = `
-    <span class="al-switch-icon">${iconHtml(targetIcon, {
-			width: 12,
-			height: 12
-		})}</span>
-    <span class="al-switch-label">${isUnity ? "Saturn" : "Unity"}</span>
-    <span class="al-switch-ep">Ep.${targetEp}</span>
+    ${iconHtml(targetIcon, {
+			width: 13,
+			height: 13
+		})}
+    <span>Guarda su ${targetSiteName} (Ep. ${targetEp})</span>
     ${iconHtml(ExternalLink, {
-			width: 10,
-			height: 10,
-			class: "al-switch-ext"
+			width: 11,
+			height: 11,
+			style: "margin-left:auto;opacity:0.7;"
 		})}
   `;
 		btn.onclick = async (e) => {
@@ -4478,6 +4586,7 @@
 	var lastObservedCurrentTime = 0;
 	var lastPlayerWindow = null;
 	var lastSyncedMediaId = null;
+	var resumeLoadingToastKey = null;
 	function getResumeKey(activeEp) {
 		const ep = activeEp || provider?.getActiveEpisode?.() || 1;
 		return `${currentMedia?.id || "media"}_ep${ep}`;
@@ -4527,6 +4636,10 @@
 		if (targetTime && targetTime > 0) {
 			pendingResumeTarget = targetTime;
 			pendingResumeEp = activeEp;
+			if (provider?.isWatchPage?.() && resumeLoadingToastKey !== currentKey) {
+				resumeLoadingToastKey = currentKey;
+				showToast(`↺ Ripristino Ep. ${activeEp} a ${Resume.formatTime(targetTime)}...`, false, 2e3);
+			}
 		} else if (force || currentMedia) {
 			pendingResumeTarget = null;
 			pendingResumeEp = null;
@@ -4916,6 +5029,12 @@
 						App.sync();
 					}
 				},
+				onDelete: async () => {
+					if (confirm("Remove this anime from your AniList?") && await AniListAPI.deleteEntry(currentMedia.mediaListEntry.id)) {
+						showToast("Anime removed");
+						App.sync();
+					}
+				},
 				onSave: (ep) => {
 					cancelAutoTrack();
 					App.setProgress(ep);
@@ -4929,6 +5048,11 @@
 					cancelAutoTrack();
 					if (currentActiveEp) cancelledEps.add(currentActiveEp);
 					App.setProgress(rewindTarget);
+				},
+				onNextEp: () => {
+					cancelAutoTrack();
+					const nextEp = (trackedProgress > 0 ? trackedProgress : activeEp) + 1;
+					App.setProgress(nextEp);
 				}
 			}, {
 				isLoading: isMediaLoading,
@@ -5028,6 +5152,17 @@
 					if (ep > 0 && resumedEpKey !== getResumeKey(ep)) {
 						prepareResumeTarget();
 						if (pendingResumeTarget) dispatchResumeSeek();
+					}
+				} else if (!isHome() && provider?.isAnimePage?.() && currentMedia) {
+					const targetStr = new URLSearchParams(window.location.search).get("ep") || sessionStorage.getItem("al_target_ep");
+					const targetEp = targetStr ? parseInt(targetStr, 10) : 0;
+					if (targetEp > 0) {
+						sessionStorage.removeItem("al_target_ep");
+						const targetUrl = await provider.resolveTargetUrl(currentMedia, targetEp);
+						if (targetUrl && targetUrl !== window.location.pathname) {
+							window.location.href = targetUrl;
+							return;
+						}
 					}
 				}
 			} catch (err) {
