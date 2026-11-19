@@ -332,8 +332,8 @@ export function renderActions(
       selectedBuddy: currentBuddy,
       defaultBuddy,
       viewer,
-      emptyLabel: "Sync Amico",
-      placeholder: "Cerca amico seguito...",
+      emptyLabel: "Buddy",
+      placeholder: "Search friend...",
       onSelect: actions.onBuddyChange,
       onClear: () => actions.onBuddyChange("")
     });
