@@ -352,7 +352,6 @@
 		["path", { d: "M10 14 21 3" }],
 		["path", { d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" }]
 	];
-	var FastForward = [["path", { d: "M12 6a2 2 0 0 1 3.414-1.414l6 6a2 2 0 0 1 0 2.828l-6 6A2 2 0 0 1 12 18z" }], ["path", { d: "M2 6a2 2 0 0 1 3.414-1.414l6 6a2 2 0 0 1 0 2.828l-6 6A2 2 0 0 1 2 18z" }]];
 	var Globe = [
 		["circle", {
 			cx: "12",
@@ -379,24 +378,12 @@
 	var Pencil = [["path", { d: "M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" }], ["path", { d: "m15 5 4 4" }]];
 	var Play = [["path", { d: "M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" }]];
 	var Plus = [["path", { d: "M5 12h14" }], ["path", { d: "M12 5v14" }]];
-	var RotateCcw = [["path", { d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" }], ["path", { d: "M3 3v5h5" }]];
 	var Search = [["path", { d: "m21 21-4.34-4.34" }], ["circle", {
 		cx: "11",
 		cy: "11",
 		r: "8"
 	}]];
 	var SkipForward = [["path", { d: "M21 4v16" }], ["path", { d: "M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z" }]];
-	var SlidersVertical = [
-		["path", { d: "M10 8h4" }],
-		["path", { d: "M12 21v-9" }],
-		["path", { d: "M12 8V3" }],
-		["path", { d: "M17 16h4" }],
-		["path", { d: "M19 12V3" }],
-		["path", { d: "M19 21v-5" }],
-		["path", { d: "M3 14h4" }],
-		["path", { d: "M5 10V3" }],
-		["path", { d: "M5 21v-7" }]
-	];
 	var ThumbsDown = [["path", { d: "M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z" }], ["path", { d: "M17 14V2" }]];
 	var ThumbsUp = [["path", { d: "M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" }], ["path", { d: "M7 10v12" }]];
 	var Trash = [
@@ -1310,65 +1297,33 @@
 	var listeners = new Set();
 	var Settings = {
 		get() {
-			Storage.get("al_opt_autotrack");
-			Storage.get("al_opt_autodelay");
-			Storage.get("al_pref_track_trigger");
-			const completionThreshold = Storage.get("al_pref_completion_threshold");
-			const autoResume = Storage.get("al_pref_autoresume");
-			Storage.get("al_pref_cross_device_sync");
-			const searchAutoSelectDelay = Storage.get("al_pref_search_autoselect");
 			const defaultBuddy = Storage.get("al_pref_default_buddy");
 			const autoSkip = Storage.get("al_opt_autoskip");
-			const skipFallback = Storage.get("al_opt_skip_fallback");
-			const communityAniSkip = Storage.get("al_pref_community_aniskip");
 			const shelfFilterUnwatched = Storage.get("al_shelf_filter_unwatched");
 			const shelfFilterSync = Storage.get("al_shelf_filter_sync");
-			const isAutoResumeActive = autoResume !== false && autoResume !== "false";
 			return {
 				autoTrack: true,
 				trackTrigger: "completion",
-				completionThreshold: completionThreshold !== null && completionThreshold !== void 0 && !isNaN(parseInt(completionThreshold, 10)) ? parseInt(completionThreshold, 10) : 85,
-				autoResume: isAutoResumeActive,
-				crossDeviceSync: isAutoResumeActive,
+				completionThreshold: 85,
+				autoResume: true,
+				crossDeviceSync: true,
 				delay: 0,
 				preventRewind: false,
 				autoSkip: autoSkip === true || autoSkip === "true",
-				communityAniSkip: communityAniSkip !== false && communityAniSkip !== "false",
-				skipFallbackDuration: skipFallback !== null && skipFallback !== void 0 && !isNaN(parseInt(skipFallback, 10)) ? parseInt(skipFallback, 10) : 85,
+				communityAniSkip: true,
+				skipFallbackDuration: 85,
 				language: "sub",
 				homeShelf: true,
 				shelfFilterUnwatched: shelfFilterUnwatched === true || shelfFilterUnwatched === "true",
 				shelfFilterSync: shelfFilterSync === true || shelfFilterSync === "true",
-				searchAutoSelectDelay: searchAutoSelectDelay !== null && searchAutoSelectDelay !== void 0 ? parseInt(searchAutoSelectDelay, 10) : 5,
+				searchAutoSelectDelay: 5,
 				defaultBuddy: defaultBuddy ? String(defaultBuddy).trim() : ""
 			};
 		},
 		set(key, val) {
-			if (key === "autoTrack") {
-				Storage.set("al_opt_autotrack", String(val));
-				if (!val) Storage.set("al_pref_track_trigger", "manual");
-				else if (Storage.get("al_pref_track_trigger") === "manual" || !Storage.get("al_pref_track_trigger")) Storage.set("al_pref_track_trigger", "completion");
-			} else if (key === "trackTrigger") {
-				Storage.set("al_pref_track_trigger", String(val));
-				Storage.set("al_opt_autotrack", String(val !== "manual"));
-			} else if (key === "completionThreshold") Storage.set("al_pref_completion_threshold", String(val));
-			else if (key === "autoResume") {
-				Storage.set("al_pref_autoresume", String(val));
-				Storage.set("al_pref_cross_device_sync", String(val));
-			} else if (key === "crossDeviceSync") {
-				Storage.set("al_pref_cross_device_sync", String(val));
-				Storage.set("al_pref_autoresume", String(val));
-			} else if (key === "delay") Storage.set("al_opt_autodelay", String(val));
-			else if (key === "autoSkip") Storage.set("al_opt_autoskip", String(val));
-			else if (key === "communityAniSkip") Storage.set("al_pref_community_aniskip", String(val));
-			else if (key === "skipFallbackDuration") Storage.set("al_opt_skip_fallback", String(val));
-			else if (key === "language") {
-				Storage.set("al_pref_language", String(val));
-				Storage.del("al_au_map");
-				Storage.del("al_as_map");
-			} else if (key === "shelfFilterUnwatched") Storage.set("al_shelf_filter_unwatched", String(val));
+			if (key === "autoSkip") Storage.set("al_opt_autoskip", String(val));
+			else if (key === "shelfFilterUnwatched") Storage.set("al_shelf_filter_unwatched", String(val));
 			else if (key === "shelfFilterSync") Storage.set("al_shelf_filter_sync", String(val));
-			else if (key === "searchAutoSelectDelay") Storage.set("al_pref_search_autoselect", String(val));
 			else if (key === "defaultBuddy") Storage.set("al_pref_default_buddy", String(val || "").trim());
 			const current = Settings.get();
 			listeners.forEach((fn) => {
@@ -1495,6 +1450,91 @@
 			isRewatching,
 			isReset
 		};
+	}
+	function renderNav(currentUser, callbacks, provider = null) {
+		document.getElementById("al-nav-desktop")?.remove();
+		document.getElementById("al-nav-mobile")?.remove();
+		if (!provider?.isHome?.()) {
+			document.getElementById("al-home-user-pill")?.remove();
+			return;
+		}
+		const navSlot = slot("nav");
+		let pill = document.getElementById("al-home-user-pill");
+		if (!pill) {
+			pill = document.createElement("div");
+			pill.id = "al-home-user-pill";
+			pill.className = "al-compact-pill";
+		}
+		if (pill.parentElement !== navSlot) navSlot.appendChild(pill);
+		const avatar = currentUser?.avatar?.medium || "https://anilist.co/img/icons/icon.svg";
+		if (!currentUser) {
+			pill.innerHTML = `
+      <div class="al-dock-dot is-offline" title="Not connected"></div>
+      <button type="button" class="al-pill-btn primary" id="al-home-login-btn">
+        ${iconHtml(KeyRound, {
+				width: 13,
+				height: 13
+			})}
+        <span>Login AniList</span>
+      </button>
+    `;
+			pill.querySelector("#al-home-login-btn")?.addEventListener("click", (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				callbacks.onLogin?.();
+			});
+			return;
+		}
+		pill.innerHTML = `
+    <div class="al-dock-dot is-synced" title="Connected to AniList"></div>
+    <div class="al-dock-user-wrap">
+      <button type="button" class="al-dock-avatar-btn" id="al-home-avatar-btn" title="${currentUser.name}">
+        <img src="${avatar}" class="al-dock-avatar" alt="${currentUser.name}" />
+      </button>
+      <div class="al-dock-menu" id="al-home-menu">
+        <div class="al-dock-menu-header">
+          <img src="${avatar}" class="al-dock-menu-avatar" alt="${currentUser.name}" />
+          <div class="al-dock-menu-user">
+            <span class="al-dock-menu-name">${currentUser.name}</span>
+            <span class="al-dock-menu-sub">AniList Account</span>
+          </div>
+        </div>
+        <div class="al-dock-menu-body">
+          <a class="al-dock-menu-item" href="https://anilist.co/user/${currentUser.name}" target="_blank" rel="noopener noreferrer">
+            ${iconHtml(User, {
+			width: 13,
+			height: 13
+		})}
+            <span>Profile</span>
+          </a>
+          <button type="button" class="al-dock-menu-item danger" id="al-home-menu-logout">
+            ${iconHtml(LogOut, {
+			width: 13,
+			height: 13
+		})}
+            <span>Logout</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+		const avatarBtn = pill.querySelector("#al-home-avatar-btn");
+		const menu = pill.querySelector("#al-home-menu");
+		avatarBtn?.addEventListener("click", (e) => {
+			e.stopPropagation();
+			menu?.classList.toggle("show");
+		});
+		document.addEventListener("click", (e) => {
+			if (!pill.contains(e.target)) menu?.classList.remove("show");
+		});
+		pill.querySelector("#al-home-menu-token")?.addEventListener("click", () => {
+			menu?.classList.remove("show");
+			callbacks.onChangeToken?.();
+		});
+		pill.querySelector("#al-home-menu-logout")?.addEventListener("click", () => {
+			menu?.classList.remove("show");
+			callbacks.onLogout?.();
+		});
 	}
 	var cache$1 = new Map();
 	var CACHE_TTL_MS = 18e4;
@@ -1790,343 +1830,6 @@
 		};
 		document.addEventListener("click", container._buddyDocClick);
 	}
-	function openPreferencesModal({ onSave, viewer } = {}) {
-		const currentViewer = viewer || Buddy.getViewer();
-		const settings = Settings.get();
-		const { modal, close } = createModal({
-			id: "al-prefs-overlay",
-			className: "al-prefs-modal",
-			variant: "drawer",
-			icon: SlidersVertical,
-			title: "Preferences",
-			subtitle: "Playback, search, and sync settings",
-			onClose: () => {
-				if (typeof onSave === "function") onSave();
-			},
-			body: `
-      <!-- 1. Playback & Auto-Resume -->
-      <div class="al-pref-group ${settings.autoResume ? "is-active" : ""}" id="al-pref-sec-autoresume">
-        <div class="al-pref-header">
-          <div class="al-pref-title-click">
-            <span class="al-pref-icon" style="color: #3db4f2; display: flex; align-items: center;">${iconHtml(RotateCcw, {
-				width: 16,
-				height: 16
-			})}</span>
-            <div class="al-pref-info">
-              <span class="al-pref-title">Auto-resume playback</span>
-              <span class="al-pref-desc">Restore playback minute automatically (progress tracks at 85% completion)</span>
-            </div>
-          </div>
-          <input type="checkbox" class="al-switch al-toggle-autoresume" ${settings.autoResume ? "checked" : ""} />
-        </div>
-      </div>
-
-      <!-- 2. Skip Intro (AniSkip) -->
-      <div class="al-pref-group al-pref-collapsible is-open is-active" style="margin-top: 10px;" id="al-pref-sec-skipintro">
-        <div class="al-pref-header">
-          <div class="al-pref-title-click">
-            <span class="al-pref-chevron">${iconHtml(ChevronDown, {
-				width: 14,
-				height: 14
-			})}</span>
-            <div class="al-pref-info">
-              <span class="al-pref-title">Skip intro (AniSkip)</span>
-              <span class="al-pref-desc">Automatic opening skip & shortcut controls</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="al-pref-sub">
-          <label class="al-pref-row" style="cursor: pointer;">
-            <span class="al-pref-sub-label">
-              ${iconHtml(SkipForward, {
-				width: 13,
-				height: 13
-			})}
-              <span>Auto-skip opening intro</span>
-            </span>
-            <input type="checkbox" class="al-switch al-toggle-autoskip" ${settings.autoSkip ? "checked" : ""} />
-          </label>
-
-          <label class="al-pref-row" style="cursor: pointer;">
-            <span class="al-pref-sub-label">
-              ${iconHtml(ThumbsUp, {
-				width: 13,
-				height: 13
-			})}
-              <span>Community voting & contribute</span>
-            </span>
-            <input type="checkbox" class="al-switch al-toggle-community-aniskip" ${settings.communityAniSkip ? "checked" : ""} />
-          </label>
-
-          <div class="al-pref-row">
-            <span class="al-pref-sub-label">
-              ${iconHtml(FastForward, {
-				width: 13,
-				height: 13
-			})}
-              <span>Fallback skip (Key 'S')</span>
-            </span>
-            <select class="al-select-xs al-sel-skip-fallback">
-              <option value="75" ${settings.skipFallbackDuration === 75 ? "selected" : ""}>75 seconds</option>
-              <option value="80" ${settings.skipFallbackDuration === 80 ? "selected" : ""}>80 seconds</option>
-              <option value="85" ${settings.skipFallbackDuration === 85 ? "selected" : ""}>85 seconds (Default)</option>
-              <option value="90" ${settings.skipFallbackDuration === 90 ? "selected" : ""}>90 seconds</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- 3. Navigation & Search Preferences -->
-      <div class="al-pref-group al-pref-collapsible is-open is-active" style="margin-top: 10px;" id="al-pref-sec-search">
-        <div class="al-pref-header">
-          <div class="al-pref-title-click">
-            <span class="al-pref-chevron">${iconHtml(ChevronDown, {
-				width: 14,
-				height: 14
-			})}</span>
-            <div class="al-pref-info">
-              <span class="al-pref-title">Search & Matching</span>
-              <span class="al-pref-desc">Streaming language & auto-navigation</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="al-pref-sub">
-          <div class="al-pref-row">
-            <span class="al-pref-sub-label">
-              ${iconHtml(Clock, {
-				width: 13,
-				height: 13
-			})}
-              <span>Auto-open search match</span>
-            </span>
-            <select class="al-select-xs al-sel-autoselect">
-              <option value="5" ${settings.searchAutoSelectDelay === 5 ? "selected" : ""}>5 seconds (Default)</option>
-              <option value="10" ${settings.searchAutoSelectDelay === 10 ? "selected" : ""}>10 seconds</option>
-              <option value="0" ${settings.searchAutoSelectDelay === 0 ? "selected" : ""}>Manual (Browse results)</option>
-            </select>
-          </div>
-
-          <div class="al-pref-row" style="align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 8px; margin-top: 4px;">
-            <span class="al-pref-sub-label">
-              ${iconHtml(RotateCcw, {
-				width: 13,
-				height: 13
-			})}
-              <span>Reset learned anime URLs</span>
-            </span>
-            <button type="button" class="al-btn-pref-action danger al-btn-clear-cache">
-              ${iconHtml(Trash, {
-				width: 11,
-				height: 11
-			})}
-              <span>Clear Cache</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 4. Sync Together (Watch Buddy) -->
-      <div class="al-pref-group al-pref-collapsible is-open is-active" style="margin-top: 10px;" id="al-pref-sec-buddy">
-        <div class="al-pref-header">
-          <div class="al-pref-title-click">
-            <span class="al-pref-chevron">${iconHtml(ChevronDown, {
-				width: 14,
-				height: 14
-			})}</span>
-            <div class="al-pref-info">
-              <span class="al-pref-title">Sync Together</span>
-              <span class="al-pref-desc">Watch with your AniList friend</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="al-pref-sub">
-          <div class="al-pref-row" style="align-items: center; justify-content: space-between;">
-            <div class="al-pref-sub-label">
-              ${iconHtml(Users, {
-				width: 13,
-				height: 13
-			})}
-              <div>
-                <span>Default Sync Buddy</span>
-                <div style="font-size: 11px; color: #64748b; font-weight: normal; margin-top: 1px;">Preselected for new anime</div>
-              </div>
-            </div>
-            <div class="al-buddy-box" id="al-pref-buddy-box"></div>
-          </div>
-        </div>
-      </div>
-    `,
-			actions: [{
-				label: "Done",
-				primary: true,
-				icon: Check,
-				onClick: () => {
-					close();
-					if (typeof onSave === "function") onSave();
-				}
-			}]
-		});
-		const autoResumeToggle = modal.querySelector(".al-toggle-autoresume");
-		const autoResumeGroup = modal.querySelector("#al-pref-sec-autoresume");
-		const autoResumeHeader = autoResumeGroup?.querySelector(".al-pref-title-click");
-		const setAutoResume = (active) => {
-			if (autoResumeToggle) autoResumeToggle.checked = active;
-			Settings.set("autoResume", active);
-			autoResumeGroup?.classList.toggle("is-active", active);
-		};
-		autoResumeHeader?.addEventListener("click", () => {
-			setAutoResume(!autoResumeToggle?.checked);
-		});
-		autoResumeToggle?.addEventListener("change", (e) => {
-			setAutoResume(e.target.checked);
-		});
-		const skipGroup = modal.querySelector("#al-pref-sec-skipintro");
-		(skipGroup?.querySelector(".al-pref-title-click"))?.addEventListener("click", () => {
-			skipGroup?.classList.toggle("is-open");
-		});
-		const autoSkipToggle = modal.querySelector(".al-toggle-autoskip");
-		if (autoSkipToggle) autoSkipToggle.addEventListener("change", (e) => {
-			Settings.set("autoSkip", e.target.checked);
-		});
-		const communityToggle = modal.querySelector(".al-toggle-community-aniskip");
-		if (communityToggle) communityToggle.addEventListener("change", (e) => {
-			Settings.set("communityAniSkip", e.target.checked);
-		});
-		const skipFallbackSelect = modal.querySelector(".al-sel-skip-fallback");
-		if (skipFallbackSelect) skipFallbackSelect.addEventListener("change", (e) => {
-			Settings.set("skipFallbackDuration", parseInt(e.target.value, 10));
-		});
-		const searchGroup = modal.querySelector("#al-pref-sec-search");
-		(searchGroup?.querySelector(".al-pref-title-click"))?.addEventListener("click", () => {
-			searchGroup?.classList.toggle("is-open");
-		});
-		const autoSelect = modal.querySelector(".al-sel-autoselect");
-		if (autoSelect) autoSelect.addEventListener("change", (e) => {
-			Settings.set("searchAutoSelectDelay", parseInt(e.target.value, 10));
-		});
-		const clearCacheBtn = modal.querySelector(".al-btn-clear-cache");
-		if (clearCacheBtn) clearCacheBtn.addEventListener("click", () => {
-			Storage.del("al_au_map");
-			Storage.del("al_as_map");
-			showToast("⚡ Search cache cleared: mappings reset");
-		});
-		const buddyGroup = modal.querySelector("#al-pref-sec-buddy");
-		(buddyGroup?.querySelector(".al-pref-title-click"))?.addEventListener("click", () => {
-			buddyGroup?.classList.toggle("is-open");
-		});
-		initBuddyPicker(modal.querySelector("#al-pref-buddy-box"), {
-			selectedBuddy: Settings.get().defaultBuddy,
-			defaultBuddy: "",
-			viewer: currentViewer,
-			emptyLabel: "Select Friend",
-			placeholder: "Search followed friend...",
-			onSelect: (name) => {
-				Settings.set("defaultBuddy", name);
-			},
-			onClear: () => {
-				Settings.set("defaultBuddy", "");
-			}
-		});
-	}
-	function renderNav(currentUser, callbacks, provider = null) {
-		document.getElementById("al-nav-desktop")?.remove();
-		document.getElementById("al-nav-mobile")?.remove();
-		if (!provider?.isHome?.()) {
-			document.getElementById("al-home-user-pill")?.remove();
-			return;
-		}
-		const navSlot = slot("nav");
-		let pill = document.getElementById("al-home-user-pill");
-		if (!pill) {
-			pill = document.createElement("div");
-			pill.id = "al-home-user-pill";
-			pill.className = "al-compact-pill";
-		}
-		if (pill.parentElement !== navSlot) navSlot.appendChild(pill);
-		const avatar = currentUser?.avatar?.medium || "https://anilist.co/img/icons/icon.svg";
-		if (!currentUser) {
-			pill.innerHTML = `
-      <div class="al-dock-dot is-offline" title="Not connected"></div>
-      <button type="button" class="al-pill-btn primary" id="al-home-login-btn">
-        ${iconHtml(KeyRound, {
-				width: 13,
-				height: 13
-			})}
-        <span>Login AniList</span>
-      </button>
-    `;
-			pill.querySelector("#al-home-login-btn")?.addEventListener("click", (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				callbacks.onLogin?.();
-			});
-			return;
-		}
-		pill.innerHTML = `
-    <div class="al-dock-dot is-synced" title="Connected to AniList"></div>
-    <div class="al-dock-user-wrap">
-      <button type="button" class="al-dock-avatar-btn" id="al-home-avatar-btn" title="${currentUser.name}">
-        <img src="${avatar}" class="al-dock-avatar" alt="${currentUser.name}" />
-      </button>
-      <div class="al-dock-menu" id="al-home-menu">
-        <div class="al-dock-menu-header">
-          <img src="${avatar}" class="al-dock-menu-avatar" alt="${currentUser.name}" />
-          <div class="al-dock-menu-user">
-            <span class="al-dock-menu-name">${currentUser.name}</span>
-            <span class="al-dock-menu-sub">AniList Account</span>
-          </div>
-        </div>
-        <div class="al-dock-menu-body">
-          <a class="al-dock-menu-item" href="https://anilist.co/user/${currentUser.name}" target="_blank" rel="noopener noreferrer">
-            ${iconHtml(User, {
-			width: 13,
-			height: 13
-		})}
-            <span>Profile</span>
-          </a>
-          <button type="button" class="al-dock-menu-item" id="al-home-menu-prefs">
-            ${iconHtml(SlidersVertical, {
-			width: 13,
-			height: 13
-		})}
-            <span>Settings</span>
-          </button>
-          <button type="button" class="al-dock-menu-item danger" id="al-home-menu-logout">
-            ${iconHtml(LogOut, {
-			width: 13,
-			height: 13
-		})}
-            <span>Logout</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
-		const avatarBtn = pill.querySelector("#al-home-avatar-btn");
-		const menu = pill.querySelector("#al-home-menu");
-		avatarBtn?.addEventListener("click", (e) => {
-			e.stopPropagation();
-			menu?.classList.toggle("show");
-		});
-		document.addEventListener("click", (e) => {
-			if (!pill.contains(e.target)) menu?.classList.remove("show");
-		});
-		pill.querySelector("#al-home-menu-prefs")?.addEventListener("click", () => {
-			menu?.classList.remove("show");
-			openPreferencesModal({ viewer: currentUser });
-		});
-		pill.querySelector("#al-home-menu-token")?.addEventListener("click", () => {
-			menu?.classList.remove("show");
-			callbacks.onChangeToken?.();
-		});
-		pill.querySelector("#al-home-menu-logout")?.addEventListener("click", () => {
-			menu?.classList.remove("show");
-			callbacks.onLogout?.();
-		});
-	}
 	function deriveDockState({ media, activeEp = 0, isWatch = false, autoTrackState = null, buddyData = null } = {}) {
 		const entry = media?.mediaListEntry || null;
 		const progress = entry?.progress || 0;
@@ -2403,13 +2106,6 @@
 		})}
               <span>Profile</span>
             </a>
-            <button type="button" class="al-dock-menu-item" id="al-dock-menu-prefs">
-              ${iconHtml(SlidersVertical, {
-			width: 13,
-			height: 13
-		})}
-              <span>Settings</span>
-            </button>
             <button type="button" class="al-dock-menu-item danger" id="al-dock-menu-logout">
               ${iconHtml(LogOut, {
 			width: 13,
@@ -2448,10 +2144,6 @@
 		});
 		document.addEventListener("click", (e) => {
 			if (!bar.contains(e.target)) menu?.classList.remove("show");
-		});
-		bar.querySelector("#al-dock-menu-prefs")?.addEventListener("click", () => {
-			menu?.classList.remove("show");
-			openPreferencesModal({ viewer });
 		});
 		bar.querySelector("#al-dock-menu-logout")?.addEventListener("click", () => {
 			menu?.classList.remove("show");
@@ -3009,15 +2701,6 @@
 		header.appendChild(titleWrap);
 		const controls = document.createElement("div");
 		controls.className = "al-shelf-controls";
-		const prefBtn = document.createElement("button");
-		prefBtn.type = "button";
-		prefBtn.className = "al-shelf-pref-btn";
-		prefBtn.title = "Preferences";
-		prefBtn.innerHTML = iconHtml(SlidersVertical, {
-			width: 14,
-			height: 14
-		});
-		controls.appendChild(prefBtn);
 		const unwatchedEntries = entries.filter((e) => calculateEntryState(e).hasUnwatchedAired);
 		const unwatchedBtn = document.createElement("button");
 		unwatchedBtn.type = "button";
@@ -3062,18 +2745,6 @@
 			});
 			controls.appendChild(syncBtn);
 		}
-		prefBtn.addEventListener("click", () => {
-			openPreferencesModal({
-				viewer,
-				onSave: () => {
-					unwatchedOnly = Settings.get().shelfFilterUnwatched;
-					syncOnly = Settings.get().shelfFilterSync;
-					unwatchedBtn.classList.toggle("is-active", unwatchedOnly);
-					if (syncBtn) syncBtn.classList.toggle("is-active", syncOnly);
-					updateTrack();
-				}
-			});
-		});
 		header.appendChild(controls);
 		shelfContainer.appendChild(header);
 		const carouselWrap = document.createElement("div");

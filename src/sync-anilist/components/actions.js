@@ -6,7 +6,6 @@ import {
   KeyRound,
   Check,
   Zap,
-  Sliders,
   User,
   LogOut,
   Bookmark
@@ -14,7 +13,6 @@ import {
 import { Buddy } from "../buddy.js";
 import { Resume } from "../resume.js";
 import { initBuddyPicker } from "./buddy-picker.js";
-import { openPreferencesModal } from "./preferences-modal.js";
 import { deriveDockState } from "../dock-model.js";
 import { slot } from "../slots.js";
 
@@ -264,10 +262,6 @@ export function renderActions(
               ${iconHtml(User, { width: 13, height: 13 })}
               <span>Profile</span>
             </a>
-            <button type="button" class="al-dock-menu-item" id="al-dock-menu-prefs">
-              ${iconHtml(Sliders, { width: 13, height: 13 })}
-              <span>Settings</span>
-            </button>
             <button type="button" class="al-dock-menu-item danger" id="al-dock-menu-logout">
               ${iconHtml(LogOut, { width: 13, height: 13 })}
               <span>Logout</span>
@@ -316,10 +310,6 @@ export function renderActions(
     }
   });
 
-  bar.querySelector("#al-dock-menu-prefs")?.addEventListener("click", () => {
-    menu?.classList.remove("show");
-    openPreferencesModal({ viewer });
-  });
   bar.querySelector("#al-dock-menu-logout")?.addEventListener("click", () => {
     menu?.classList.remove("show");
     actions.onLogout?.();

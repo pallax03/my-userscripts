@@ -59,5 +59,5 @@ When modifying providers, player, iframe messaging, or UI dock/shelf:
    - Keep all UI strings, tooltips, and status labels in **short, crisp English** (no mixed-language text or verbose instructions).
    - Prefer intuitive icons and semantic colors (`green` = synced/ON, `amber` = pending/rewatch, `teal/blue` = loading/restoring, `red` = destructive).
 2. **Strict User vs. Anime Menu Separation**:
-   - **User PFP Menu (`#al-dock-menu`)**: strictly User Account only (`Profile`, `Settings`, `Logout`). Never mix anime data or actions.
+   - **User PFP Menu (`#al-dock-menu`)**: strictly User Account only (`Profile`, `Logout`). Never mix anime data or actions.
    - **Anime Menu (`#al-dock-anime-menu`, `⋯`)**: secondary anime overrides (`-` / `+`, `AniList ↗`, secondary provider fallback like `Watch on AnimeSaturn`, `Buddy`, `Remove`).

@@ -2,10 +2,8 @@ import {
   iconHtml,
   User,
   KeyRound,
-  LogOut,
-  Sliders
+  LogOut
 } from "../../shared/icons.js";
-import { openPreferencesModal } from "./preferences-modal.js";
 import { slot } from "../slots.js";
 
 /**
@@ -72,10 +70,6 @@ export function renderNav(currentUser, callbacks, provider = null) {
             ${iconHtml(User, { width: 13, height: 13 })}
             <span>Profile</span>
           </a>
-          <button type="button" class="al-dock-menu-item" id="al-home-menu-prefs">
-            ${iconHtml(Sliders, { width: 13, height: 13 })}
-            <span>Settings</span>
-          </button>
           <button type="button" class="al-dock-menu-item danger" id="al-home-menu-logout">
             ${iconHtml(LogOut, { width: 13, height: 13 })}
             <span>Logout</span>
@@ -95,10 +89,6 @@ export function renderNav(currentUser, callbacks, provider = null) {
     if (!pill.contains(e.target)) menu?.classList.remove("show");
   });
 
-  pill.querySelector("#al-home-menu-prefs")?.addEventListener("click", () => {
-    menu?.classList.remove("show");
-    openPreferencesModal({ viewer: currentUser });
-  });
   pill.querySelector("#al-home-menu-token")?.addEventListener("click", () => {
     menu?.classList.remove("show");
     callbacks.onChangeToken?.();

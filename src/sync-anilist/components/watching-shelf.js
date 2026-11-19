@@ -1,8 +1,7 @@
 import { showToast } from "../../shared/toast.js";
 import { Logger } from "../../shared/logger.js";
-import { iconHtml, ANILIST_ICON_SVG, Play, Clock, Check, Zap, Sliders, Loader2, Link, Users } from "../../shared/icons.js";
+import { iconHtml, ANILIST_ICON_SVG, Play, Clock, Check, Zap, Loader2, Link, Users } from "../../shared/icons.js";
 import { openTokenModal } from "../../shared/anilist/auth.js";
-import { openPreferencesModal } from "./preferences-modal.js";
 import { simulateAgenticSearch } from "./agent-search.js";
 import { Settings } from "../settings.js";
 import { Buddy } from "../buddy.js";
@@ -469,14 +468,6 @@ export function renderWatchingShelf({
   const controls = document.createElement("div");
   controls.className = "al-shelf-controls";
 
-  // Preferences Button
-  const prefBtn = document.createElement("button");
-  prefBtn.type = "button";
-  prefBtn.className = "al-shelf-pref-btn";
-  prefBtn.title = "Preferences";
-  prefBtn.innerHTML = iconHtml(Sliders, { width: 14, height: 14 });
-  controls.appendChild(prefBtn);
-
   // Filter Chip ("Only unwatched")
   const unwatchedEntries = entries.filter((e) => calculateEntryState(e).hasUnwatchedAired);
 
@@ -522,21 +513,6 @@ export function renderWatchingShelf({
     });
     controls.appendChild(syncBtn);
   }
-
-  prefBtn.addEventListener("click", () => {
-    openPreferencesModal({
-      viewer,
-      onSave: () => {
-        unwatchedOnly = Settings.get().shelfFilterUnwatched;
-        syncOnly = Settings.get().shelfFilterSync;
-        unwatchedBtn.classList.toggle("is-active", unwatchedOnly);
-        if (syncBtn) {
-          syncBtn.classList.toggle("is-active", syncOnly);
-        }
-        updateTrack();
-      }
-    });
-  });
 
   header.appendChild(controls);
   shelfContainer.appendChild(header);
