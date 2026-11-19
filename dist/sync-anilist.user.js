@@ -346,14 +346,6 @@
 		r: ".5",
 		fill: "currentColor"
 	}]];
-	var Languages = [
-		["path", { d: "m5 8 6 6" }],
-		["path", { d: "m4 14 6-6 2-3" }],
-		["path", { d: "M2 5h12" }],
-		["path", { d: "M7 2h1" }],
-		["path", { d: "m22 22-5-10-5 10" }],
-		["path", { d: "M14 18h6" }]
-	];
 	var Link = [["path", { d: "M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" }], ["path", { d: "M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" }]];
 	var LoaderCircle = [["path", { d: "M21 12a9 9 0 1 1-6.219-8.56" }]];
 	var LogOut = [
@@ -1300,7 +1292,7 @@
 				autoSkip: autoSkip === true || autoSkip === "true",
 				communityAniSkip: communityAniSkip !== false && communityAniSkip !== "false",
 				skipFallbackDuration: skipFallback !== null && skipFallback !== void 0 && !isNaN(parseInt(skipFallback, 10)) ? parseInt(skipFallback, 10) : 85,
-				language: Storage.get("al_pref_language") || "sub",
+				language: "sub",
 				homeShelf: true,
 				shelfFilterUnwatched: shelfFilterUnwatched === true || shelfFilterUnwatched === "true",
 				shelfFilterSync: shelfFilterSync === true || shelfFilterSync === "true",
@@ -1395,9 +1387,9 @@
 			Storage.del(`al_resume_${mediaId}`);
 		}
 	};
-	function resolveResumeAction({ trackedProgress, activeEp, currentTime = 0, localResume = null, anilistResume = null }) {
+	function resolveResumeAction({ trackedProgress, activeEp, status = null, currentTime = 0, localResume = null, anilistResume = null }) {
 		const expectedNext = trackedProgress < 0 ? 1 : trackedProgress + 1;
-		if (typeof trackedProgress !== "number" || typeof activeEp !== "number" || activeEp <= 0 || activeEp !== expectedNext && !(trackedProgress > 0 && activeEp === trackedProgress)) return {
+		if (typeof trackedProgress !== "number" || typeof activeEp !== "number" || activeEp <= 0 || activeEp !== expectedNext && !(trackedProgress > 0 && activeEp === trackedProgress) && !(status === "COMPLETED" && activeEp === 1)) return {
 			action: "none",
 			reason: "ineligible_episode"
 		};
@@ -1428,6 +1420,37 @@
 		return {
 			action: "none",
 			reason: "no_valid_resume"
+		};
+	}
+	function shouldAutoTrack({ activeEp, trackedProgress, status = null, percent = 0, isEnded = false, threshold = 85, isCancelled = false }) {
+		if (!activeEp || activeEp <= 0 || isCancelled) return false;
+		if (percent < threshold && !isEnded) return false;
+		return activeEp > trackedProgress || status === "REPEATING" || status === "COMPLETED" && activeEp === 1;
+	}
+	function computeProgressUpdate({ mediaId, newProgress, totalEp = 0, entry = null, overrideStatus = null, today = null }) {
+		const isReset = newProgress === 0;
+		const prevStatus = entry?.status || null;
+		const isCompletedEp1Rewatch = prevStatus === "COMPLETED" && newProgress === 1 && !overrideStatus;
+		const isCompleted = !isCompletedEp1Rewatch && (overrideStatus === "COMPLETED" || totalEp > 0 && newProgress >= totalEp);
+		const isRewatching = prevStatus === "REPEATING" || isCompletedEp1Rewatch;
+		let status = "CURRENT";
+		if (isCompleted) status = "COMPLETED";
+		else if (isReset || isRewatching) status = isRewatching || prevStatus === "COMPLETED" ? "REPEATING" : "CURRENT";
+		const params = {
+			mediaId,
+			progress: newProgress,
+			status
+		};
+		if (today && !entry?.startedAt?.year) params.startedAt = today;
+		if (isCompleted) {
+			if (today && !entry?.completedAt?.year) params.completedAt = today;
+			if (prevStatus === "REPEATING") params.repeat = (entry?.repeat || 0) + 1;
+		}
+		return {
+			params,
+			isCompleted,
+			isRewatching,
+			isReset
 		};
 	}
 	var cache$1 = new Map();
@@ -1829,20 +1852,6 @@
         <div class="al-pref-sub">
           <div class="al-pref-row">
             <span class="al-pref-sub-label">
-              ${iconHtml(Languages, {
-				width: 13,
-				height: 13
-			})}
-              <span>Preferred language</span>
-            </span>
-            <select class="al-select-xs al-sel-language">
-              <option value="sub" ${settings.language === "sub" ? "selected" : ""}>SUB (Original)</option>
-              <option value="dub" ${settings.language === "dub" ? "selected" : ""}>ITA (Dubbed)</option>
-            </select>
-          </div>
-
-          <div class="al-pref-row">
-            <span class="al-pref-sub-label">
               ${iconHtml(Clock, {
 				width: 13,
 				height: 13
@@ -1950,10 +1959,6 @@
 		const searchGroup = modal.querySelector("#al-pref-sec-search");
 		(searchGroup?.querySelector(".al-pref-title-click"))?.addEventListener("click", () => {
 			searchGroup?.classList.toggle("is-open");
-		});
-		const langSelect = modal.querySelector(".al-sel-language");
-		if (langSelect) langSelect.addEventListener("change", (e) => {
-			Settings.set("language", e.target.value);
 		});
 		const autoSelect = modal.querySelector(".al-sel-autoselect");
 		if (autoSelect) autoSelect.addEventListener("change", (e) => {
@@ -3021,41 +3026,16 @@
             </a>
             ${entry ? `
               <div class="al-dock-menu-controls" style="display:flex;gap:6px;padding:4px 6px;align-items:center;">
-                <button type="button" class="al-dock-step-btn" id="al-ep-rewind" title="Riavvolgi a Ep. ${Math.max(0, (activeEp || progress || 1) - 1)}">
+                <button type="button" class="al-dock-step-btn" id="al-ep-rewind" title="Riavvolgi tracciamento a Ep. ${Math.max(0, (activeEp || progress || 1) - 1)}">
                   ${iconHtml(RotateCcw, {
 			width: 11,
 			height: 11
 		})}
+                  <span style="font-size:10px;margin-left:3px;">-1</span>
                 </button>
-                <span style="font-size:11px;opacity:0.85;flex:1;text-align:center;">Ep. ${progress}/${total || "?"}</span>
-                <button type="button" class="al-dock-step-btn" id="al-ep-next" title="Avanza ad Ep. ${(progress || 0) + 1}">
-                  ${iconHtml(Plus, {
-			width: 11,
-			height: 11
-		})}
-                </button>
-              </div>
-              <div style="display:flex;gap:6px;padding:4px 6px;">
                 <select class="al-dock-select" id="al-bar-status" title="Stato su AniList" style="flex:1;">
                   ${Object.entries(statusMap).map(([k, label]) => `
                     <option value="${k}" ${entry.status === k ? "selected" : ""}>${label}</option>
-                  `).join("")}
-                </select>
-                <select class="al-dock-select" id="al-bar-score" title="Voto su AniList">
-                  <option value="0" ${!entry.score ? "selected" : ""}>Voto: -</option>
-                  ${[
-			10,
-			9,
-			8,
-			7,
-			6,
-			5,
-			4,
-			3,
-			2,
-			1
-		].map((s) => `
-                    <option value="${s}" ${entry.score === s ? "selected" : ""}>★ ${s}</option>
                   `).join("")}
                 </select>
               </div>
@@ -3084,15 +3064,6 @@
 		})}
               <span>Impostazioni</span>
             </button>
-            ${entry ? `
-              <button type="button" class="al-dock-menu-item danger" id="al-dock-menu-del">
-                ${iconHtml(Trash, {
-			width: 13,
-			height: 13
-		})}
-                <span>Rimuovi da AniList</span>
-              </button>
-            ` : ""}
             <button type="button" class="al-dock-menu-item danger" id="al-dock-menu-logout">
               ${iconHtml(LogOut, {
 			width: 13,
@@ -3106,7 +3077,6 @@
     </div>
   `;
 		bar.querySelector("#al-bar-status")?.addEventListener("change", (e) => actions.onStatusChange(e.target.value));
-		bar.querySelector("#al-bar-score")?.addEventListener("change", (e) => actions.onScoreChange?.(parseInt(e.target.value, 10)));
 		bar.querySelector("#al-ep-save")?.addEventListener("click", () => {
 			if (!entry) actions.onAdd?.();
 			else actions.onSave?.(activeEp || 1);
@@ -3114,9 +3084,6 @@
 		bar.querySelector("#al-ep-rewind")?.addEventListener("click", () => {
 			const rewindTarget = Math.max(0, (activeEp || progress || 1) - 1);
 			actions.onRewind?.(rewindTarget, activeEp);
-		});
-		bar.querySelector("#al-ep-next")?.addEventListener("click", () => {
-			actions.onNextEp?.();
 		});
 		bar.querySelector("#al-ep-cancel-track")?.addEventListener("click", () => {
 			actions.onCancelCountdown?.();
@@ -3140,10 +3107,6 @@
 		bar.querySelector("#al-dock-menu-prefs")?.addEventListener("click", () => {
 			menu?.classList.remove("show");
 			openPreferencesModal({ viewer });
-		});
-		bar.querySelector("#al-dock-menu-del")?.addEventListener("click", () => {
-			menu?.classList.remove("show");
-			actions.onDelete?.();
 		});
 		bar.querySelector("#al-dock-menu-logout")?.addEventListener("click", () => {
 			menu?.classList.remove("show");
@@ -4522,11 +4485,10 @@
 	function isEpisodeEligibleForResume(ep) {
 		if (ep <= 0) return false;
 		if (trackedProgress < 0) return true;
+		if (ep === 1 && currentMedia?.mediaListEntry?.status === "COMPLETED") return true;
 		const nextToWatch = (trackedProgress > 0 ? trackedProgress : 0) + 1;
 		if (trackedProgress > 0 && ep < trackedProgress) return false;
-		if (ep === nextToWatch) return true;
-		if (ep === trackedProgress) return true;
-		return false;
+		return ep === nextToWatch || ep === trackedProgress;
 	}
 	function prepareResumeTarget(force = false) {
 		const activeEp = provider?.getActiveEpisode?.() || 1;
@@ -4549,6 +4511,7 @@
 			const decision = resolveResumeAction({
 				trackedProgress,
 				activeEp,
+				status: currentMedia?.mediaListEntry?.status || null,
 				currentTime: lastObservedCurrentTime,
 				localResume: Resume.getLocal(currentMedia.id),
 				anilistResume: Resume.extract(currentMedia?.mediaListEntry?.notes)
@@ -4620,18 +4583,27 @@
 			duration: Math.round(duration),
 			percent: Math.round(percent)
 		});
+		const entryStatus = currentMedia?.mediaListEntry?.status;
 		if (isPaused) {
-			if (isEligible && settings.autoResume && currentUser?.id && currentTime > 5 && percent < 88) syncResumeToNotes(currentMedia.id, activeEp, currentTime, duration);
+			if (isEligible && entryStatus !== "COMPLETED" && settings.autoResume && currentUser?.id && currentTime > 5 && percent < 88) syncResumeToNotes(currentMedia.id, activeEp, currentTime, duration);
 			App.render();
 		}
 		const threshold = settings.completionThreshold || 85;
-		if (settings.autoTrack && (percent >= threshold || isEnded) && (activeEp > trackedProgress || currentMedia?.mediaListEntry?.status === "REPEATING") && !cancelledEps.has(activeEp)) {
+		if (settings.autoTrack && shouldAutoTrack({
+			activeEp,
+			trackedProgress,
+			status: entryStatus,
+			percent,
+			isEnded,
+			threshold,
+			isCancelled: cancelledEps.has(activeEp)
+		})) {
 			cancelledEps.add(activeEp);
 			Resume.clearLocal(currentMedia.id);
 			App.setProgress(activeEp);
 			return;
 		}
-		if (isEligible && settings.autoResume && currentUser?.id && currentTime > 15 && percent < 85) {
+		if (isEligible && entryStatus !== "COMPLETED" && settings.autoResume && currentUser?.id && currentTime > 15 && percent < 85) {
 			const now = Date.now();
 			const timeDiff = Math.abs(currentTime - lastSyncedResumeTime);
 			if (now - lastNotesSyncTime >= 6e4 && timeDiff >= 15) {
@@ -4867,25 +4839,15 @@
 			const isSinglePage = !targetMediaId && currentMedia;
 			const homeEntry = targetMediaId ? homeEntries?.find((e) => e.mediaId === targetMediaId || e.media?.id === targetMediaId) : null;
 			const entry = isSinglePage ? currentMedia.mediaListEntry : homeEntry || null;
-			const totalEp = isSinglePage ? currentMedia.episodes : homeEntry?.media?.episodes || 0;
-			const isReset = newProgress === 0;
-			const isCompleted = overrideStatus === "COMPLETED" || totalEp > 0 && newProgress >= totalEp;
-			const prevStatus = entry?.status;
-			const isRewatching = prevStatus === "REPEATING";
-			let targetStatus;
-			if (isCompleted) targetStatus = "COMPLETED";
-			else if (isReset) targetStatus = prevStatus === "COMPLETED" || isRewatching ? "REPEATING" : "CURRENT";
-			else targetStatus = prevStatus === "COMPLETED" || isRewatching ? "REPEATING" : "CURRENT";
-			const params = {
+			const { params, isCompleted, isRewatching, isReset } = computeProgressUpdate({
 				mediaId: id,
-				progress: newProgress,
-				status: targetStatus
-			};
-			if (!entry?.startedAt?.year) params.startedAt = getTodayDate();
-			if (isCompleted) {
-				if (!entry?.completedAt?.year) params.completedAt = getTodayDate();
-				if (isRewatching) params.repeat = (entry?.repeat || 0) + 1;
-			}
+				newProgress,
+				totalEp: isSinglePage ? currentMedia.episodes : homeEntry?.media?.episodes || 0,
+				entry,
+				overrideStatus,
+				today: getTodayDate()
+			});
+			const targetStatus = params.status;
 			if (entry?.notes && entry.notes.includes("[resume:")) {
 				const cleared = Resume.clear(entry.notes);
 				params.notes = cleared;
@@ -4941,12 +4903,6 @@
 						App.sync();
 					}
 				},
-				onScoreChange: async (score) => {
-					if (await AniListAPI.saveEntry({
-						mediaId: currentMedia.id,
-						score
-					})) showToast(score ? `Score: ${score}/10` : "Score removed");
-				},
 				onBuddyChange: async (newBuddy) => {
 					const curNotes = currentMedia?.mediaListEntry?.notes || "";
 					const updatedNotes = Buddy.apply(curNotes, newBuddy);
@@ -4957,12 +4913,6 @@
 						if (currentMedia.mediaListEntry) currentMedia.mediaListEntry.notes = updatedNotes;
 						if (newBuddy) Settings.set("defaultBuddy", newBuddy);
 						showToast(newBuddy ? `Sync Together set: ${newBuddy}` : "Sync Together removed");
-						App.sync();
-					}
-				},
-				onDelete: async () => {
-					if (confirm("Remove this anime from your AniList?") && await AniListAPI.deleteEntry(currentMedia.mediaListEntry.id)) {
-						showToast("Anime removed");
 						App.sync();
 					}
 				},
@@ -4979,11 +4929,6 @@
 					cancelAutoTrack();
 					if (currentActiveEp) cancelledEps.add(currentActiveEp);
 					App.setProgress(rewindTarget);
-				},
-				onNextEp: () => {
-					cancelAutoTrack();
-					const nextEp = (trackedProgress > 0 ? trackedProgress : activeEp) + 1;
-					App.setProgress(nextEp);
 				}
 			}, {
 				isLoading: isMediaLoading,
@@ -5137,7 +5082,7 @@
 				}
 			});
 			const handlePageExit = () => {
-				if (currentMedia && currentUser?.id) {
+				if (currentMedia && currentUser?.id && currentMedia.mediaListEntry?.status !== "COMPLETED") {
 					const local = Resume.getLocal(currentMedia.id);
 					if (local && local.time > 15 && local.percent < 85) syncResumeToNotes(currentMedia.id, local.ep, local.time, local.duration);
 				}

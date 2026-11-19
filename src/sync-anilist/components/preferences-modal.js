@@ -10,7 +10,6 @@ import {
   FastForward,
   SkipForward,
   ThumbsUp,
-  Languages,
   RotateCcw,
   Trash2,
   Play
@@ -113,17 +112,6 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
         </div>
 
         <div class="al-pref-sub">
-          <div class="al-pref-row">
-            <span class="al-pref-sub-label">
-              ${iconHtml(Languages, { width: 13, height: 13 })}
-              <span>Preferred language</span>
-            </span>
-            <select class="al-select-xs al-sel-language">
-              <option value="sub" ${settings.language === "sub" ? "selected" : ""}>SUB (Original)</option>
-              <option value="dub" ${settings.language === "dub" ? "selected" : ""}>ITA (Dubbed)</option>
-            </select>
-          </div>
-
           <div class="al-pref-row">
             <span class="al-pref-sub-label">
               ${iconHtml(Clock, { width: 13, height: 13 })}
@@ -241,13 +229,6 @@ export function openPreferencesModal({ onSave, viewer } = {}) {
   searchHeader?.addEventListener("click", () => {
     searchGroup?.classList.toggle("is-open");
   });
-
-  const langSelect = modal.querySelector(".al-sel-language");
-  if (langSelect) {
-    langSelect.addEventListener("change", (e) => {
-      Settings.set("language", e.target.value);
-    });
-  }
 
   const autoSelect = modal.querySelector(".al-sel-autoselect");
   if (autoSelect) {

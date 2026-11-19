@@ -110,17 +110,19 @@ export const Resume = {
 export function resolveResumeAction({
   trackedProgress,
   activeEp,
+  status = null,
   currentTime = 0,
   localResume = null,
   anilistResume = null
 }) {
   const expectedNext = trackedProgress < 0 ? 1 : trackedProgress + 1;
   const isTrackedCurrent = trackedProgress > 0 && activeEp === trackedProgress;
+  const isCompletedEp1Rewatch = status === "COMPLETED" && activeEp === 1;
   if (
     typeof trackedProgress !== "number" ||
     typeof activeEp !== "number" ||
     activeEp <= 0 ||
-    (activeEp !== expectedNext && !isTrackedCurrent)
+    (activeEp !== expectedNext && !isTrackedCurrent && !isCompletedEp1Rewatch)
   ) {
     return { action: "none", reason: "ineligible_episode" };
   }

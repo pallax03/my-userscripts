@@ -35,7 +35,7 @@ export const Settings = {
       skipFallbackDuration: skipFallback !== null && skipFallback !== undefined && !isNaN(parseInt(skipFallback, 10))
         ? parseInt(skipFallback, 10)
         : 85,
-      language: Storage.get("al_pref_language") || "sub",
+      language: "sub",
       homeShelf: true, // Always enabled
       shelfFilterUnwatched: shelfFilterUnwatched === true || shelfFilterUnwatched === "true",
       shelfFilterSync: shelfFilterSync === true || shelfFilterSync === "true",

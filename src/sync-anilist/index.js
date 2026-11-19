@@ -8,6 +8,7 @@ import { cleanTitle, extractSeason } from "./providers/base.js";
 import { getProvider, getCurrentProvider } from "./providers/index.js";
 import { Settings } from "./settings.js";
 import { Resume, resolveResumeAction } from "./resume.js";
+import { shouldAutoTrack, computeProgressUpdate } from "./domain/tracking.js";
 import { renderNav } from "./components/nav.js";
 import { renderActions } from "./components/actions.js";
 import { renderWatchingShelf } from "./components/watching-shelf.js";
@@ -73,14 +74,10 @@ function getResumeKey(activeEp) {
 function isEpisodeEligibleForResume(ep) {
   if (ep <= 0) return false;
   if (trackedProgress < 0) return true;
+  if (ep === 1 && currentMedia?.mediaListEntry?.status === "COMPLETED") return true;
   const nextToWatch = (trackedProgress > 0 ? trackedProgress : 0) + 1;
-  // Strictly disallow past re-watched episodes (ep < trackedProgress)
   if (trackedProgress > 0 && ep < trackedProgress) return false;
-  // Allow next unwatched episode
-  if (ep === nextToWatch) return true;
-  // Allow the current tracked episode if user is actively watching it
-  if (ep === trackedProgress) return true;
-  return false;
+  return ep === nextToWatch || ep === trackedProgress;
 }
 
 function prepareResumeTarget(force = false) {
@@ -110,6 +107,7 @@ function prepareResumeTarget(force = false) {
     const decision = resolveResumeAction({
       trackedProgress,
       activeEp,
+      status: currentMedia?.mediaListEntry?.status || null,
       currentTime: lastObservedCurrentTime,
       localResume: Resume.getLocal(currentMedia.id),
       anilistResume: Resume.extract(currentMedia?.mediaListEntry?.notes)
@@ -193,21 +191,28 @@ function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
     });
   }
 
-  // 2. Refresh UI on pause & sync resume to notes (strictly ONLY for eligible episodes)
+  // 2. Refresh UI on pause & sync resume to notes (only for active Watching/Rewatching, not COMPLETED Ep. 1 local-only trial)
+  const entryStatus = currentMedia?.mediaListEntry?.status;
   if (isPaused) {
-    if (isEligible && settings.autoResume && currentUser?.id && currentTime > 5 && percent < 88) {
+    if (isEligible && entryStatus !== "COMPLETED" && settings.autoResume && currentUser?.id && currentTime > 5 && percent < 88) {
       syncResumeToNotes(currentMedia.id, activeEp, currentTime, duration);
     }
     App.render();
   }
 
-  // 3. Trigger: Video Completion (>= 85% or isEnded)
+  // 3. Trigger: Video Completion (>= 85% or isEnded) via pure domain rule
   const threshold = settings.completionThreshold || 85;
   if (
     settings.autoTrack &&
-    (percent >= threshold || isEnded) &&
-    (activeEp > trackedProgress || currentMedia?.mediaListEntry?.status === "REPEATING") &&
-    !cancelledEps.has(activeEp)
+    shouldAutoTrack({
+      activeEp,
+      trackedProgress,
+      status: entryStatus,
+      percent,
+      isEnded,
+      threshold,
+      isCancelled: cancelledEps.has(activeEp)
+    })
   ) {
     cancelledEps.add(activeEp);
     Resume.clearLocal(currentMedia.id);
@@ -216,7 +221,7 @@ function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
   }
 
   // 4. Cloud Sync to notes (periodic while playing)
-  if (isEligible && settings.autoResume && currentUser?.id && currentTime > 15 && percent < 85) {
+  if (isEligible && entryStatus !== "COMPLETED" && settings.autoResume && currentUser?.id && currentTime > 15 && percent < 85) {
     const now = Date.now();
     const timeDiff = Math.abs(currentTime - lastSyncedResumeTime);
     if (now - lastNotesSyncTime >= 60000 && timeDiff >= 15) {
@@ -501,38 +506,15 @@ export const App = {
     const entry = isSinglePage ? currentMedia.mediaListEntry : (homeEntry || null);
     const totalEp = isSinglePage ? currentMedia.episodes : (homeEntry?.media?.episodes || 0);
 
-    const isReset = newProgress === 0;
-    const isCompleted = overrideStatus === "COMPLETED" || (totalEp > 0 && newProgress >= totalEp);
-    const prevStatus = entry?.status;
-    const isRewatching = prevStatus === "REPEATING";
-
-    let targetStatus;
-    if (isCompleted) {
-      targetStatus = "COMPLETED";
-    } else if (isReset) {
-      targetStatus = (prevStatus === "COMPLETED" || isRewatching) ? "REPEATING" : "CURRENT";
-    } else {
-      targetStatus = (prevStatus === "COMPLETED" || isRewatching) ? "REPEATING" : "CURRENT";
-    }
-
-    const params = {
+    const { params, isCompleted, isRewatching, isReset } = computeProgressUpdate({
       mediaId: id,
-      progress: newProgress,
-      status: targetStatus
-    };
-
-    if (!entry?.startedAt?.year) {
-      params.startedAt = getTodayDate();
-    }
-
-    if (isCompleted) {
-      if (!entry?.completedAt?.year) {
-        params.completedAt = getTodayDate();
-      }
-      if (isRewatching) {
-        params.repeat = (entry?.repeat || 0) + 1;
-      }
-    }
+      newProgress,
+      totalEp,
+      entry,
+      overrideStatus,
+      today: getTodayDate()
+    });
+    const targetStatus = params.status;
 
     if (entry?.notes && entry.notes.includes("[resume:")) {
       const cleared = Resume.clear(entry.notes);
@@ -606,11 +588,6 @@ export const App = {
           App.sync();
         }
       },
-      onScoreChange: async (score) => {
-        if (await AniListAPI.saveEntry({ mediaId: currentMedia.id, score })) {
-          showToast(score ? `Score: ${score}/10` : "Score removed");
-        }
-      },
       onBuddyChange: async (newBuddy) => {
         const curNotes = currentMedia?.mediaListEntry?.notes || "";
         const updatedNotes = Buddy.apply(curNotes, newBuddy);
@@ -622,15 +599,6 @@ export const App = {
           if (currentMedia.mediaListEntry) currentMedia.mediaListEntry.notes = updatedNotes;
           if (newBuddy) Settings.set("defaultBuddy", newBuddy);
           showToast(newBuddy ? `Sync Together set: ${newBuddy}` : "Sync Together removed");
-          App.sync();
-        }
-      },
-      onDelete: async () => {
-        if (
-          confirm("Remove this anime from your AniList?") &&
-          (await AniListAPI.deleteEntry(currentMedia.mediaListEntry.id))
-        ) {
-          showToast("Anime removed");
           App.sync();
         }
       },
@@ -647,11 +615,6 @@ export const App = {
         cancelAutoTrack();
         if (currentActiveEp) cancelledEps.add(currentActiveEp);
         App.setProgress(rewindTarget);
-      },
-      onNextEp: () => {
-        cancelAutoTrack();
-        const nextEp = (trackedProgress > 0 ? trackedProgress : activeEp) + 1;
-        App.setProgress(nextEp);
       }
     }, {
       isLoading: isMediaLoading,
@@ -846,7 +809,7 @@ export const App = {
     });
 
     const handlePageExit = () => {
-      if (currentMedia && currentUser?.id) {
+      if (currentMedia && currentUser?.id && currentMedia.mediaListEntry?.status !== "COMPLETED") {
         const local = Resume.getLocal(currentMedia.id);
         if (local && local.time > 15 && local.percent < 85) {
           syncResumeToNotes(currentMedia.id, local.ep, local.time, local.duration);
