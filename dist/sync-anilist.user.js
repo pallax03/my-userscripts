@@ -540,7 +540,7 @@
 				} catch (_) {}
 				if (state) try {
 					const returnUrl = new URL(decodeURIComponent(state));
-					if (/animeunity|animesaturn|saturncdn/.test(returnUrl.hostname)) {
+					if (/(?:^|\.)(?:animeunity|animesaturn|saturncdn)\./i.test(returnUrl.hostname)) {
 						returnUrl.searchParams.set("al_token", token);
 						window.location.href = returnUrl.toString();
 						return true;
@@ -1257,11 +1257,19 @@
 		}
 	};
 	var currentProvider$1 = null;
+	function detectProviderName(hostname = "") {
+		if (typeof hostname !== "string") return null;
+		const host = hostname.trim().toLowerCase();
+		if (!host) return null;
+		if (/(?:^|\.)animeunity\./i.test(host)) return "AnimeUnity";
+		if (/(?:^|\.)(?:animesaturn|saturncdn)\./i.test(host)) return "AnimeSaturn";
+		return null;
+	}
 	function getProvider() {
 		if (currentProvider$1) return currentProvider$1;
-		const host = window.location.hostname.toLowerCase();
-		if (host.includes("animeunity")) currentProvider$1 = new AnimeUnityProvider();
-		else if (host.includes("animesaturn") || host.includes("saturncdn")) currentProvider$1 = new AnimeSaturnProvider();
+		const providerName = detectProviderName(window.location.hostname);
+		if (providerName === "AnimeUnity") currentProvider$1 = new AnimeUnityProvider();
+		else if (providerName === "AnimeSaturn") currentProvider$1 = new AnimeSaturnProvider();
 		return currentProvider$1;
 	}
 	function getCurrentProvider() {
@@ -4217,8 +4225,58 @@
 			else fetch(url, options).then((r) => r.ok ? r.text() : null).then(resolve).catch(() => resolve(null));
 		});
 	}
+	var PROVIDER_DOMAINS = {
+		AnimeUnity: {
+			storageKey: "al_au_base",
+			hostPrefix: "https://www.animeunity.",
+			tlds: [
+				"cx",
+				"to",
+				"so",
+				"cc",
+				"co",
+				"tv",
+				"fun"
+			]
+		},
+		AnimeSaturn: {
+			storageKey: "al_as_base",
+			hostPrefix: "https://www.animesaturn.",
+			tlds: [
+				"cx",
+				"cc",
+				"net",
+				"to",
+				"in",
+				"me"
+			]
+		}
+	};
+	function extractTld(hostname = "") {
+		const parts = String(hostname || "").trim().toLowerCase().split(".").filter(Boolean);
+		return parts.length >= 2 ? parts[parts.length - 1] : "";
+	}
+	function getCandidateBaseUrls(providerName, storedBase = "", currentHostname = "") {
+		const config = PROVIDER_DOMAINS[providerName];
+		if (!config) return [];
+		const candidates = [];
+		const add = (url) => {
+			if (!url || typeof url !== "string") return;
+			const normalized = url.replace(/\/+$/, "");
+			if (normalized && !candidates.includes(normalized)) candidates.push(normalized);
+		};
+		if (storedBase && /^https?:\/\//i.test(storedBase)) add(storedBase);
+		const currentTld = extractTld(currentHostname);
+		if (currentTld) add(`${config.hostPrefix}${currentTld}`);
+		for (const tld of config.tlds) add(`${config.hostPrefix}${tld}`);
+		return candidates;
+	}
+	function getTargetBaseUrl(providerName) {
+		const config = PROVIDER_DOMAINS[providerName];
+		return getCandidateBaseUrls(providerName, config ? Storage.get(config.storageKey) : "", typeof window !== "undefined" ? window.location.hostname : "")[0] || "";
+	}
 	async function resolveSaturnUrl(media, targetEp = 1) {
-		const asBase = Storage.get("al_as_base") || "https://www.animesaturn.net";
+		const asBase = getTargetBaseUrl("AnimeSaturn");
 		if (!media?.id) return asBase;
 		const isDubPref = (Storage.get("al_pref_language") || "sub") === "dub";
 		const rawMap = Storage.get("al_as_map");
@@ -4256,7 +4314,7 @@
 		return `${asBase}/filter?key=${encodeURIComponent(cleanTitle$1(title))}`;
 	}
 	async function resolveUnityUrl(media, targetEp = 1) {
-		const auBase = Storage.get("al_au_base") || "https://www.animeunity.co";
+		const auBase = getTargetBaseUrl("AnimeUnity");
 		if (!media?.id) return auBase;
 		const prefDubInt = (Storage.get("al_pref_language") || "sub") === "dub" ? 1 : 0;
 		const rawMap = Storage.get("al_au_map");
@@ -4354,8 +4412,8 @@
 			} catch (err) {
 				Logger.error("Cross switch error:", err);
 			}
-			const auBase = Storage.get("al_au_base") || "https://www.animeunity.co";
-			const asBase = Storage.get("al_as_base") || "https://www.animesaturn.net";
+			const auBase = getTargetBaseUrl("AnimeUnity");
+			const asBase = getTargetBaseUrl("AnimeSaturn");
 			const title = media.title?.english || media.title?.romaji || media.title?.userPreferred || "";
 			if (isUnity) window.location.href = `${asBase}/filter?key=${encodeURIComponent(cleanTitle$1(title))}`;
 			else window.location.href = `${auBase}/archivio?title=${encodeURIComponent(cleanTitle$1(title))}`;

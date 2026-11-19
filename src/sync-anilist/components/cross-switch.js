@@ -76,6 +76,68 @@ function requestText(url, options = {}) {
   });
 }
 
+const PROVIDER_DOMAINS = {
+  AnimeUnity: {
+    storageKey: "al_au_base",
+    hostPrefix: "https://www.animeunity.",
+    tlds: ["cx", "to", "so", "cc", "co", "tv", "fun"]
+  },
+  AnimeSaturn: {
+    storageKey: "al_as_base",
+    hostPrefix: "https://www.animesaturn.",
+    tlds: ["cx", "cc", "net", "to", "in", "me"]
+  }
+};
+
+function extractTld(hostname = "") {
+  const parts = String(hostname || "").trim().toLowerCase().split(".").filter(Boolean);
+  return parts.length >= 2 ? parts[parts.length - 1] : "";
+}
+
+/**
+ * Returns ordered candidate base URLs for a target provider, prioritizing the stored origin
+ * and the current page's TLD before falling back to known domain TLDs.
+ * @param {"AnimeUnity" | "AnimeSaturn"} providerName
+ * @param {string} [storedBase]
+ * @param {string} [currentHostname]
+ * @returns {string[]}
+ */
+export function getCandidateBaseUrls(providerName, storedBase = "", currentHostname = "") {
+  const config = PROVIDER_DOMAINS[providerName];
+  if (!config) return [];
+
+  const candidates = [];
+  const add = (url) => {
+    if (!url || typeof url !== "string") return;
+    const normalized = url.replace(/\/+$/, "");
+    if (normalized && !candidates.includes(normalized)) {
+      candidates.push(normalized);
+    }
+  };
+
+  if (storedBase && /^https?:\/\//i.test(storedBase)) {
+    add(storedBase);
+  }
+
+  const currentTld = extractTld(currentHostname);
+  if (currentTld) {
+    add(`${config.hostPrefix}${currentTld}`);
+  }
+
+  for (const tld of config.tlds) {
+    add(`${config.hostPrefix}${tld}`);
+  }
+
+  return candidates;
+}
+
+function getTargetBaseUrl(providerName) {
+  const config = PROVIDER_DOMAINS[providerName];
+  const storedBase = config ? Storage.get(config.storageKey) : "";
+  const currentHost = typeof window !== "undefined" ? window.location.hostname : "";
+  return getCandidateBaseUrls(providerName, storedBase, currentHost)[0] || "";
+}
+
 /**
  * Resolves the absolute AnimeSaturn URL for a given AniList media and target episode
  * @param {Object} media
@@ -83,7 +145,7 @@ function requestText(url, options = {}) {
  * @returns {Promise<string>}
  */
 export async function resolveSaturnUrl(media, targetEp = 1) {
-  const asBase = Storage.get("al_as_base") || "https://www.animesaturn.net";
+  const asBase = getTargetBaseUrl("AnimeSaturn");
   if (!media?.id) return asBase;
 
   const pref = Storage.get("al_pref_language") || "sub";
@@ -147,7 +209,7 @@ export async function resolveSaturnUrl(media, targetEp = 1) {
  * @returns {Promise<string>}
  */
 export async function resolveUnityUrl(media, targetEp = 1) {
-  const auBase = Storage.get("al_au_base") || "https://www.animeunity.co";
+  const auBase = getTargetBaseUrl("AnimeUnity");
   if (!media?.id) return auBase;
 
   const pref = Storage.get("al_pref_language") || "sub";
@@ -280,8 +342,8 @@ export function renderCrossSwitch({ media, activeEp = 0, provider = null } = {})
     }
 
     // Fallback search redirection
-    const auBase = Storage.get("al_au_base") || "https://www.animeunity.co";
-    const asBase = Storage.get("al_as_base") || "https://www.animesaturn.net";
+    const auBase = getTargetBaseUrl("AnimeUnity");
+    const asBase = getTargetBaseUrl("AnimeSaturn");
     const title = media.title?.english || media.title?.romaji || media.title?.userPreferred || "";
     if (isUnity) {
       window.location.href = `${asBase}/filter?key=${encodeURIComponent(cleanTitle(title))}`;
