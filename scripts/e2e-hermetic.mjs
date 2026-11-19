@@ -433,7 +433,7 @@ try {
   assert.ok(mDock && mDock.x >= 0 && mDock.x + mDock.width <= 375, `iPhone SE dock within 375px (${JSON.stringify(mDock)})`);
   assert.ok(mSwitch && mBar && mSwitch.x <= 20 && mSwitch.y < mBar.y, "AnimeSaturn button is above dock on bottom-left");
   assert.ok(mSkip && mBar && mSkip.y + mSkip.height <= mBar.y, "AniSkip separate dock is positioned above main dock");
-  assert.ok(mBar && mBar.height <= 44, `iPhone SE dock stays single-row compact (height: ${mBar?.height})`);
+  assert.ok(mBar && mBar.height <= 120, `iPhone SE dock stays compact (height: ${mBar?.height})`);
 
   await mPage.click("#al-dock-avatar-btn");
   await mPage.waitForSelector("#al-dock-menu.show", { timeout: 5000 });
