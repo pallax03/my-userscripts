@@ -31,7 +31,7 @@ export const handleOAuthRedirect = () => {
       if (state) {
         try {
           const returnUrl = new URL(decodeURIComponent(state));
-          if (/animeunity|animesaturn|saturncdn/.test(returnUrl.hostname)) {
+          if (/(?:^|\.)(?:animeunity|animesaturn|saturncdn)\./i.test(returnUrl.hostname)) {
             returnUrl.searchParams.set("al_token", token);
             window.location.href = returnUrl.toString();
             return true;
