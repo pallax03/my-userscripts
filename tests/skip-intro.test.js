@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { resolveSkipSegment, resolveManualSkipTarget } from "../src/sync-anilist/skip-logic.js";
+import { resolveSkipSegment, resolveManualSkipTarget, buildTimelineHighlightGradient } from "../src/sync-anilist/skip-logic.js";
 
 describe("resolveSkipSegment (AniSkip -> Native intro priority)", () => {
   it("prioritizes AniSkip segment over native intro when both are present", () => {
@@ -97,5 +97,27 @@ describe("resolveManualSkipTarget (S key skip behavior)", () => {
       resolveManualSkipTarget({ currentPos: 100, duration: 1440, segment: null, fallbackDuration: 90 }),
       { target: 190, mode: "fallback", source: "fallback" }
     );
+  });
+});
+
+describe("buildTimelineHighlightGradient", () => {
+  it("builds a yellow linear-gradient covering both OP and ED segments", () => {
+    const grad = buildTimelineHighlightGradient(
+      [
+        { start: 100, end: 200 },
+        { start: 800, end: 900 }
+      ],
+      1000
+    );
+
+    assert.equal(
+      grad,
+      "linear-gradient(to right, transparent 0%, transparent 10%, rgba(250, 204, 21, 0.85) 10%, rgba(250, 204, 21, 0.85) 20%, transparent 20%, transparent 80%, rgba(250, 204, 21, 0.85) 80%, rgba(250, 204, 21, 0.85) 90%, transparent 90%, transparent 100%)"
+    );
+  });
+
+  it("returns null when duration is invalid or no valid segments exist", () => {
+    assert.equal(buildTimelineHighlightGradient([{ start: 10, end: 90 }], 0), null);
+    assert.equal(buildTimelineHighlightGradient([], 1000), null);
   });
 });

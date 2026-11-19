@@ -1,9 +1,12 @@
 import { Logger } from "../shared/logger.js";
-import { resolveManualSkipTarget } from "./skip-logic.js";
+import { resolveManualSkipTarget, buildTimelineHighlightGradient } from "./skip-logic.js";
 
 export function initPlayer() {
   let rawOp = null;
+  let rawEd = null;
   let currentOp = null;
+  let currentEd = null;
+  let lastHighlightKey = "";
   let autoSkip = false;
   let skipFallbackDuration = 85;
   let lastReportedDur = 0;
@@ -183,6 +186,7 @@ export function initPlayer() {
         } catch (_) {}
       }
 
+      computeAdjustedOp();
       if (pendingResumeSeek !== null) {
         applyResumeSeek(pendingResumeSeek);
       }
@@ -277,26 +281,68 @@ export function initPlayer() {
     }
   }
 
-  function computeAdjustedOp() {
-    if (!rawOp) {
-      currentOp = null;
-      return;
-    }
-    const dur = getDuration();
+  function adjustSegmentForBumper(rawSeg, dur) {
+    if (!rawSeg) return null;
     let offset = 0;
 
     // Adjust for pre-roll bumper if AniSkip file is longer by <= 35s
-    if (dur > 0 && rawOp.episodeLength > 0 && rawOp.start > 0) {
-      const diff = rawOp.episodeLength - dur;
-      if (diff >= 0.5 && diff <= 35 && rawOp.start >= diff) {
+    if (dur > 0 && rawSeg.episodeLength > 0 && rawSeg.start > 0) {
+      const diff = rawSeg.episodeLength - dur;
+      if (diff >= 0.5 && diff <= 35 && rawSeg.start >= diff) {
         offset = diff;
       }
     }
 
-    currentOp = {
-      start: Math.max(0, rawOp.start - offset),
-      end: Math.max(0, rawOp.end - offset)
+    return {
+      start: Math.max(0, rawSeg.start - offset),
+      end: Math.max(0, rawSeg.end - offset)
     };
+  }
+
+  function updateTimelineHighlight() {
+    const dur = getDuration();
+    const gradient = buildTimelineHighlightGradient([currentOp, currentEd], dur);
+    const key = gradient || "none";
+    if (key === lastHighlightKey) return;
+    lastHighlightKey = key;
+
+    let styleEl = document.getElementById("al-timeline-highlight-style");
+    if (!gradient) {
+      styleEl?.remove();
+      return;
+    }
+
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.id = "al-timeline-highlight-style";
+      (document.head || document.documentElement).appendChild(styleEl);
+    }
+
+    styleEl.textContent = `
+      .jw-cue.au-segment-intro,
+      .jw-cue.au-segment-outro {
+        background-color: rgba(250, 204, 21, 0.9) !important;
+      }
+      .jw-timesegment-container::after,
+      .jw-slider-time > .jw-slider-container > .jw-rail::after,
+      media-time-slider .vds-slider-track::after,
+      .vds-time-slider .vds-slider-track::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        border-radius: inherit;
+        z-index: 2;
+        background: ${gradient};
+      }
+    `;
+  }
+
+  function computeAdjustedOp() {
+    const dur = getDuration();
+    currentOp = adjustSegmentForBumper(rawOp, dur);
+    currentEd = adjustSegmentForBumper(rawEd, dur);
+    updateTimelineHighlight();
   }
 
   function checkNativeTimestamps() {
@@ -321,6 +367,16 @@ export function initPlayer() {
         episodeLength: getDuration(),
         source: "native"
       };
+    }
+    if (outro && !rawEd) {
+      rawEd = {
+        start: outro.start,
+        end: outro.end,
+        episodeLength: getDuration(),
+        source: "native"
+      };
+    }
+    if (intro || outro) {
       computeAdjustedOp();
     }
 
@@ -441,6 +497,7 @@ export function initPlayer() {
   window.addEventListener("message", (e) => {
     if (e.data?.type === "AU_SKIP_OP") {
       rawOp = e.data.op || null;
+      rawEd = e.data.ed || null;
       autoSkip = !!e.data.autoSkip;
       if (typeof e.data.skipFallbackDuration === "number" && e.data.skipFallbackDuration > 0) {
         skipFallbackDuration = e.data.skipFallbackDuration;

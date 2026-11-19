@@ -74,3 +74,54 @@ export function resolveManualSkipTarget({
     source: "fallback"
   };
 }
+
+/**
+ * Builds a CSS linear-gradient highlighting OP/ED ranges in yellow along a 0%-100% timeline.
+ */
+export function buildTimelineHighlightGradient(segments = [], duration = 0) {
+  if (typeof duration !== "number" || !Number.isFinite(duration) || duration <= 0) {
+    return null;
+  }
+
+  const ranges = (Array.isArray(segments) ? segments : [])
+    .filter(isValidSegment)
+    .map((s) => ({
+      start: Math.max(0, Math.min(duration, s.start)),
+      end: Math.max(0, Math.min(duration, s.end))
+    }))
+    .filter((r) => r.end > r.start)
+    .sort((a, b) => a.start - b.start);
+
+  if (ranges.length === 0) return null;
+
+  const merged = [ranges[0]];
+  for (let i = 1; i < ranges.length; i++) {
+    const prev = merged[merged.length - 1];
+    const cur = ranges[i];
+    if (cur.start <= prev.end) {
+      prev.end = Math.max(prev.end, cur.end);
+    } else {
+      merged.push(cur);
+    }
+  }
+
+  const color = "rgba(250, 204, 21, 0.85)";
+  const stops = [];
+  let cursorPct = 0;
+
+  for (const r of merged) {
+    const startPct = Number(((r.start / duration) * 100).toFixed(3));
+    const endPct = Number(((r.end / duration) * 100).toFixed(3));
+    if (startPct > cursorPct) {
+      stops.push(`transparent ${cursorPct}%`, `transparent ${startPct}%`);
+    }
+    stops.push(`${color} ${startPct}%`, `${color} ${endPct}%`);
+    cursorPct = endPct;
+  }
+
+  if (cursorPct < 100) {
+    stops.push(`transparent ${cursorPct}%`, "transparent 100%");
+  }
+
+  return `linear-gradient(to right, ${stops.join(", ")})`;
+}

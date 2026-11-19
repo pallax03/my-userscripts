@@ -2847,6 +2847,33 @@
 			source: "fallback"
 		};
 	}
+	function buildTimelineHighlightGradient(segments = [], duration = 0) {
+		if (typeof duration !== "number" || !Number.isFinite(duration) || duration <= 0) return null;
+		const ranges = (Array.isArray(segments) ? segments : []).filter(isValidSegment).map((s) => ({
+			start: Math.max(0, Math.min(duration, s.start)),
+			end: Math.max(0, Math.min(duration, s.end))
+		})).filter((r) => r.end > r.start).sort((a, b) => a.start - b.start);
+		if (ranges.length === 0) return null;
+		const merged = [ranges[0]];
+		for (let i = 1; i < ranges.length; i++) {
+			const prev = merged[merged.length - 1];
+			const cur = ranges[i];
+			if (cur.start <= prev.end) prev.end = Math.max(prev.end, cur.end);
+			else merged.push(cur);
+		}
+		const color = "rgba(250, 204, 21, 0.85)";
+		const stops = [];
+		let cursorPct = 0;
+		for (const r of merged) {
+			const startPct = Number((r.start / duration * 100).toFixed(3));
+			const endPct = Number((r.end / duration * 100).toFixed(3));
+			if (startPct > cursorPct) stops.push(`transparent ${cursorPct}%`, `transparent ${startPct}%`);
+			stops.push(`${color} ${startPct}%`, `${color} ${endPct}%`);
+			cursorPct = endPct;
+		}
+		if (cursorPct < 100) stops.push(`transparent ${cursorPct}%`, "transparent 100%");
+		return `linear-gradient(to right, ${stops.join(", ")})`;
+	}
 	var ANISKIP_API_URL = "https://api.aniskip.com/v2";
 	var PRESET_PROVIDERS = [
 		"Crunchyroll",
@@ -3336,8 +3363,11 @@
 	var activeMalId = null;
 	var activeEp = null;
 	var aniskipOp = null;
+	var aniskipEd = null;
 	var nativeIntro = null;
+	var nativeOutro = null;
 	var activeOp = null;
+	var activeEd = null;
 	var activeDuration = 0;
 	var fetchToken = 0;
 	var episodeAutoSkipOverride = null;
@@ -3348,6 +3378,10 @@
 		activeOp = resolveSkipSegment({
 			aniskipOp,
 			nativeIntro
+		});
+		activeEd = resolveSkipSegment({
+			aniskipOp: aniskipEd,
+			nativeIntro: nativeOutro
 		});
 	}
 	function isEpisodeAutoSkipActive() {
@@ -3372,7 +3406,10 @@
 		const { malId, epNum } = getEffectiveIds();
 		if (malId && epNum) {
 			const cacheKey = `${malId}_${epNum}`;
-			cache.set(cacheKey, aniskipOp);
+			cache.set(cacheKey, {
+				op: aniskipOp,
+				ed: aniskipEd
+			});
 		}
 		broadcastOp();
 		renderAutoSkipButton(currentProvider);
@@ -3520,6 +3557,7 @@
 		const msg = {
 			type: "AU_SKIP_OP",
 			op: activeOp,
+			ed: activeEd,
 			autoSkip: isEpisodeAutoSkipActive(),
 			skipFallbackDuration: settings.skipFallbackDuration
 		};
@@ -3537,7 +3575,9 @@
 			activeEp = epNum;
 			activeDuration = roundedDur;
 			aniskipOp = null;
+			aniskipEd = null;
 			nativeIntro = null;
+			nativeOutro = null;
 			syncActiveOp();
 			episodeAutoSkipOverride = null;
 			broadcastOp();
@@ -3545,7 +3585,9 @@
 		} else if (roundedDur > 0) activeDuration = roundedDur;
 		const cacheKey = `${malId}_${epNum}`;
 		if (cache.has(cacheKey)) {
-			aniskipOp = cache.get(cacheKey);
+			const cached = cache.get(cacheKey);
+			aniskipOp = cached?.op || null;
+			aniskipEd = cached?.ed || null;
 			syncActiveOp();
 			broadcastOp();
 			renderAutoSkipButton(currentProvider);
@@ -3553,31 +3595,37 @@
 		}
 		const token = ++fetchToken;
 		try {
-			const res = await fetch(`https://api.aniskip.com/v2/skip-times/${malId}/${epNum}?types=op&episodeLength=${activeDuration}`);
+			const res = await fetch(`https://api.aniskip.com/v2/skip-times/${malId}/${epNum}?types=op&types=ed&episodeLength=${activeDuration}`);
 			if (token !== fetchToken) return;
 			if (!res.ok) {
 				aniskipOp = null;
-				cache.set(cacheKey, null);
+				aniskipEd = null;
+				cache.set(cacheKey, {
+					op: null,
+					ed: null
+				});
 				syncActiveOp();
 				broadcastOp();
 				renderAutoSkipButton(currentProvider);
 				return;
 			}
-			const op = (await res.json()).results?.find((r) => r.skipType === "op" || r.skipType === "mixed-op");
-			if (op) {
-				aniskipOp = {
-					start: op.interval.startTime,
-					end: op.interval.endTime,
-					episodeLength: op.episodeLength || 0,
-					skipType: op.skipType,
-					skipId: op.skipId,
-					source: "aniskip"
-				};
-				cache.set(cacheKey, aniskipOp);
-			} else {
-				aniskipOp = null;
-				cache.set(cacheKey, null);
-			}
+			const data = await res.json();
+			const toSegment = (r) => r ? {
+				start: r.interval.startTime,
+				end: r.interval.endTime,
+				episodeLength: r.episodeLength || 0,
+				skipType: r.skipType,
+				skipId: r.skipId,
+				source: "aniskip"
+			} : null;
+			const op = data.results?.find((r) => r.skipType === "op" || r.skipType === "mixed-op");
+			const ed = data.results?.find((r) => r.skipType === "ed" || r.skipType === "mixed-ed");
+			aniskipOp = toSegment(op);
+			aniskipEd = toSegment(ed);
+			cache.set(cacheKey, {
+				op: aniskipOp,
+				ed: aniskipEd
+			});
 			syncActiveOp();
 			Logger.info(`📡 AniSkip result for Ep ${epNum}:`, activeOp || "No opening found");
 			broadcastOp();
@@ -3625,21 +3673,28 @@
 				const frameDur = e.data.duration ? Math.round(e.data.duration) : 0;
 				if (frameDur > 0 && !activeOp && activeMalId && activeEp) checkSkipIntro(activeMalId, activeEp, frameDur);
 				else broadcastOp();
-			} else if (e.data?.type === "AU_NATIVE_TIMESTAMPS" && e.data.intro) {
-				const prevKey = activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}` : "";
-				nativeIntro = {
+			} else if (e.data?.type === "AU_NATIVE_TIMESTAMPS" && (e.data.intro || e.data.outro)) {
+				const prevKey = `${activeOp?.start || ""}-${activeOp?.end || ""}|${activeEd?.start || ""}-${activeEd?.end || ""}`;
+				if (e.data.intro) nativeIntro = {
 					start: e.data.intro.start,
 					end: e.data.intro.end,
 					episodeLength: activeDuration || lastKnownDuration,
 					skipType: "op",
 					source: "native"
 				};
+				if (e.data.outro) nativeOutro = {
+					start: e.data.outro.start,
+					end: e.data.outro.end,
+					episodeLength: activeDuration || lastKnownDuration,
+					skipType: "ed",
+					source: "native"
+				};
 				syncActiveOp();
-				const nextKey = activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}` : "";
-				if (activeOp && nextKey !== prevKey) {
+				const nextKey = `${activeOp?.start || ""}-${activeOp?.end || ""}|${activeEd?.start || ""}-${activeEd?.end || ""}`;
+				if ((activeOp || activeEd) && nextKey !== prevKey) {
 					broadcastOp();
 					renderAutoSkipButton(currentProvider);
-					if (!document.getElementById("al-dock-banner")?.textContent) showToast(`⏩ Intro ready (${activeOp.source === "native" ? "Native" : "AniSkip"})`, false, 1800);
+					if (activeOp && !document.getElementById("al-dock-banner")?.textContent) showToast(`⏩ Intro ready (${activeOp.source === "native" ? "Native" : "AniSkip"})`, false, 1800);
 				}
 			} else if (e.data?.type === "AL_PLAYBACK_STATE") {
 				if (typeof e.data.currentTime === "number") lastKnownCurrentTime = e.data.currentTime;
@@ -3669,7 +3724,10 @@
 	}
 	function initPlayer() {
 		let rawOp = null;
+		let rawEd = null;
 		let currentOp = null;
+		let currentEd = null;
+		let lastHighlightKey = "";
 		let autoSkip = false;
 		let skipFallbackDuration = 85;
 		let lastReportedDur = 0;
@@ -3815,6 +3873,7 @@
 						}, "*");
 					} catch (_) {}
 				}
+				computeAdjustedOp();
 				if (pendingResumeSeek !== null) applyResumeSeek(pendingResumeSeek);
 			}
 		}
@@ -3903,21 +3962,58 @@
 				vds.addEventListener("ended", () => broadcastPlaybackState(true));
 			}
 		}
-		function computeAdjustedOp() {
-			if (!rawOp) {
-				currentOp = null;
+		function adjustSegmentForBumper(rawSeg, dur) {
+			if (!rawSeg) return null;
+			let offset = 0;
+			if (dur > 0 && rawSeg.episodeLength > 0 && rawSeg.start > 0) {
+				const diff = rawSeg.episodeLength - dur;
+				if (diff >= .5 && diff <= 35 && rawSeg.start >= diff) offset = diff;
+			}
+			return {
+				start: Math.max(0, rawSeg.start - offset),
+				end: Math.max(0, rawSeg.end - offset)
+			};
+		}
+		function updateTimelineHighlight() {
+			const dur = getDuration();
+			const gradient = buildTimelineHighlightGradient([currentOp, currentEd], dur);
+			const key = gradient || "none";
+			if (key === lastHighlightKey) return;
+			lastHighlightKey = key;
+			let styleEl = document.getElementById("al-timeline-highlight-style");
+			if (!gradient) {
+				styleEl?.remove();
 				return;
 			}
-			const dur = getDuration();
-			let offset = 0;
-			if (dur > 0 && rawOp.episodeLength > 0 && rawOp.start > 0) {
-				const diff = rawOp.episodeLength - dur;
-				if (diff >= .5 && diff <= 35 && rawOp.start >= diff) offset = diff;
+			if (!styleEl) {
+				styleEl = document.createElement("style");
+				styleEl.id = "al-timeline-highlight-style";
+				(document.head || document.documentElement).appendChild(styleEl);
 			}
-			currentOp = {
-				start: Math.max(0, rawOp.start - offset),
-				end: Math.max(0, rawOp.end - offset)
-			};
+			styleEl.textContent = `
+      .jw-cue.au-segment-intro,
+      .jw-cue.au-segment-outro {
+        background-color: rgba(250, 204, 21, 0.9) !important;
+      }
+      .jw-timesegment-container::after,
+      .jw-slider-time > .jw-slider-container > .jw-rail::after,
+      media-time-slider .vds-slider-track::after,
+      .vds-time-slider .vds-slider-track::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        border-radius: inherit;
+        z-index: 2;
+        background: ${gradient};
+      }
+    `;
+		}
+		function computeAdjustedOp() {
+			const dur = getDuration();
+			currentOp = adjustSegmentForBumper(rawOp, dur);
+			currentEd = adjustSegmentForBumper(rawEd, dur);
+			updateTimelineHighlight();
 		}
 		function checkNativeTimestamps() {
 			const timestamps = (typeof unsafeWindow !== "undefined" ? unsafeWindow : window).video?.timestamps || window.video?.timestamps;
@@ -3936,15 +4032,19 @@
 			const tsKey = `${intro?.start || ""}-${intro?.end || ""}|${outro?.start || ""}-${outro?.end || ""}`;
 			if (tsKey === lastNativeTimestampKey) return;
 			lastNativeTimestampKey = tsKey;
-			if (intro && !rawOp) {
-				rawOp = {
-					start: intro.start,
-					end: intro.end,
-					episodeLength: getDuration(),
-					source: "native"
-				};
-				computeAdjustedOp();
-			}
+			if (intro && !rawOp) rawOp = {
+				start: intro.start,
+				end: intro.end,
+				episodeLength: getDuration(),
+				source: "native"
+			};
+			if (outro && !rawEd) rawEd = {
+				start: outro.start,
+				end: outro.end,
+				episodeLength: getDuration(),
+				source: "native"
+			};
+			if (intro || outro) computeAdjustedOp();
 			try {
 				window.top.postMessage({
 					type: "AU_NATIVE_TIMESTAMPS",
@@ -4033,6 +4133,7 @@
 		window.addEventListener("message", (e) => {
 			if (e.data?.type === "AU_SKIP_OP") {
 				rawOp = e.data.op || null;
+				rawEd = e.data.ed || null;
 				autoSkip = !!e.data.autoSkip;
 				if (typeof e.data.skipFallbackDuration === "number" && e.data.skipFallbackDuration > 0) skipFallbackDuration = e.data.skipFallbackDuration;
 				hasAutoSkipped = false;

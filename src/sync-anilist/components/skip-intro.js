@@ -16,8 +16,11 @@ const cache = new Map();
 let activeMalId = null;
 let activeEp = null;
 let aniskipOp = null;
+let aniskipEd = null;
 let nativeIntro = null;
+let nativeOutro = null;
 let activeOp = null;
+let activeEd = null;
 let activeDuration = 0;
 let fetchToken = 0;
 let episodeAutoSkipOverride = null;
@@ -28,6 +31,7 @@ let lastKnownDuration = 0;
 
 function syncActiveOp() {
   activeOp = resolveSkipSegment({ aniskipOp, nativeIntro });
+  activeEd = resolveSkipSegment({ aniskipOp: aniskipEd, nativeIntro: nativeOutro });
 }
 
 export function isEpisodeAutoSkipActive() {
@@ -56,7 +60,7 @@ function handleSuccessfulContribution(newData) {
   const { malId, epNum } = getEffectiveIds();
   if (malId && epNum) {
     const cacheKey = `${malId}_${epNum}`;
-    cache.set(cacheKey, aniskipOp);
+    cache.set(cacheKey, { op: aniskipOp, ed: aniskipEd });
   }
   broadcastOp();
   renderAutoSkipButton(currentProvider);
@@ -202,6 +206,7 @@ export function broadcastOp() {
   const msg = {
     type: "AU_SKIP_OP",
     op: activeOp,
+    ed: activeEd,
     autoSkip: isEpisodeAutoSkipActive(),
     skipFallbackDuration: settings.skipFallbackDuration
   };
@@ -223,7 +228,9 @@ export async function checkSkipIntro(malId, epNum, duration = 0) {
     activeEp = epNum;
     activeDuration = roundedDur;
     aniskipOp = null;
+    aniskipEd = null;
     nativeIntro = null;
+    nativeOutro = null;
     syncActiveOp();
     episodeAutoSkipOverride = null;
     broadcastOp();
@@ -234,7 +241,9 @@ export async function checkSkipIntro(malId, epNum, duration = 0) {
 
   const cacheKey = `${malId}_${epNum}`;
   if (cache.has(cacheKey)) {
-    aniskipOp = cache.get(cacheKey);
+    const cached = cache.get(cacheKey);
+    aniskipOp = cached?.op || null;
+    aniskipEd = cached?.ed || null;
     syncActiveOp();
     broadcastOp();
     renderAutoSkipButton(currentProvider);
@@ -244,14 +253,15 @@ export async function checkSkipIntro(malId, epNum, duration = 0) {
   const token = ++fetchToken;
   try {
     const res = await fetch(
-      `https://api.aniskip.com/v2/skip-times/${malId}/${epNum}?types=op&episodeLength=${activeDuration}`
+      `https://api.aniskip.com/v2/skip-times/${malId}/${epNum}?types=op&types=ed&episodeLength=${activeDuration}`
     );
 
     if (token !== fetchToken) return;
 
     if (!res.ok) {
       aniskipOp = null;
-      cache.set(cacheKey, null);
+      aniskipEd = null;
+      cache.set(cacheKey, { op: null, ed: null });
       syncActiveOp();
       broadcastOp();
       renderAutoSkipButton(currentProvider);
@@ -259,21 +269,20 @@ export async function checkSkipIntro(malId, epNum, duration = 0) {
     }
 
     const data = await res.json();
+    const toSegment = (r) => r ? {
+      start: r.interval.startTime,
+      end: r.interval.endTime,
+      episodeLength: r.episodeLength || 0,
+      skipType: r.skipType,
+      skipId: r.skipId,
+      source: "aniskip"
+    } : null;
+
     const op = data.results?.find((r) => r.skipType === "op" || r.skipType === "mixed-op");
-    if (op) {
-      aniskipOp = {
-        start: op.interval.startTime,
-        end: op.interval.endTime,
-        episodeLength: op.episodeLength || 0,
-        skipType: op.skipType,
-        skipId: op.skipId,
-        source: "aniskip"
-      };
-      cache.set(cacheKey, aniskipOp);
-    } else {
-      aniskipOp = null;
-      cache.set(cacheKey, null);
-    }
+    const ed = data.results?.find((r) => r.skipType === "ed" || r.skipType === "mixed-ed");
+    aniskipOp = toSegment(op);
+    aniskipEd = toSegment(ed);
+    cache.set(cacheKey, { op: aniskipOp, ed: aniskipEd });
     syncActiveOp();
 
     Logger.info(`📡 AniSkip result for Ep ${epNum}:`, activeOp || "No opening found");
@@ -340,21 +349,32 @@ export function initSkipIntroTop() {
       } else {
         broadcastOp();
       }
-    } else if (e.data?.type === "AU_NATIVE_TIMESTAMPS" && e.data.intro) {
-      const prevKey = activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}` : "";
-      nativeIntro = {
-        start: e.data.intro.start,
-        end: e.data.intro.end,
-        episodeLength: activeDuration || lastKnownDuration,
-        skipType: "op",
-        source: "native"
-      };
+    } else if (e.data?.type === "AU_NATIVE_TIMESTAMPS" && (e.data.intro || e.data.outro)) {
+      const prevKey = `${activeOp?.start || ""}-${activeOp?.end || ""}|${activeEd?.start || ""}-${activeEd?.end || ""}`;
+      if (e.data.intro) {
+        nativeIntro = {
+          start: e.data.intro.start,
+          end: e.data.intro.end,
+          episodeLength: activeDuration || lastKnownDuration,
+          skipType: "op",
+          source: "native"
+        };
+      }
+      if (e.data.outro) {
+        nativeOutro = {
+          start: e.data.outro.start,
+          end: e.data.outro.end,
+          episodeLength: activeDuration || lastKnownDuration,
+          skipType: "ed",
+          source: "native"
+        };
+      }
       syncActiveOp();
-      const nextKey = activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}` : "";
-      if (activeOp && nextKey !== prevKey) {
+      const nextKey = `${activeOp?.start || ""}-${activeOp?.end || ""}|${activeEd?.start || ""}-${activeEd?.end || ""}`;
+      if ((activeOp || activeEd) && nextKey !== prevKey) {
         broadcastOp();
         renderAutoSkipButton(currentProvider);
-        if (!document.getElementById("al-dock-banner")?.textContent) {
+        if (activeOp && !document.getElementById("al-dock-banner")?.textContent) {
           showToast(`⏩ Intro ready (${activeOp.source === "native" ? "Native" : "AniSkip"})`, false, 1800);
         }
       }
