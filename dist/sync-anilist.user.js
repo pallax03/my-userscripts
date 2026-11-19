@@ -1399,7 +1399,8 @@
 		}
 	};
 	function resolveResumeAction({ trackedProgress, activeEp, currentTime = 0, localResume = null, anilistResume = null }) {
-		if (typeof trackedProgress !== "number" || typeof activeEp !== "number" || activeEp <= 0 || activeEp !== trackedProgress + 1) return {
+		const expectedNext = trackedProgress < 0 ? 1 : trackedProgress + 1;
+		if (typeof trackedProgress !== "number" || typeof activeEp !== "number" || activeEp <= 0 || activeEp !== expectedNext) return {
 			action: "none",
 			reason: "ineligible_episode"
 		};

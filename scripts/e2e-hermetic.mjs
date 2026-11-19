@@ -182,7 +182,7 @@ async function setupRoutes(ctx, state) {
                 format: "TV",
                 status: "RELEASING",
                 title: { romaji: "One Piece", english: "One Piece", userPreferred: "One Piece" },
-                mediaListEntry: {
+                mediaListEntry: state.untracked ? null : {
                   id: 100,
                   status: state.status,
                   score: 9,
@@ -228,6 +228,15 @@ async function setupRoutes(ctx, state) {
 
     if (url.startsWith("https://animeunity.cx/api/anime/12/episodes")) {
       return route.fulfill({ contentType: "application/json", body: JSON.stringify(EPISODES_DATA) });
+    }
+
+    if (url.startsWith("https://animeunity.cx/anime/12-one-piece/50570")) {
+      return route.fulfill({
+        contentType: "text/html",
+        body: inertiaHtml({
+          props: { anime: ANIME_DATA, episode: { number: "1" }, loadedEpisodes: EPISODES_DATA }
+        })
+      });
     }
 
     if (url.startsWith("https://animeunity.cx/anime/12-one-piece/50574")) {
@@ -318,6 +327,30 @@ try {
   await page.waitForTimeout(500);
   const wrongMut = state.mutations.slice(beforeOld).find((m) => typeof m.progress === "number");
   assert.equal(wrongMut, undefined, "Old episode (Ep 3 < 6) must NEVER overwrite AniList progress");
+
+  // Untracked anime Ep. 1: 30% saves local resume WITHOUT adding to AniList; 86% auto-adds as CURRENT Ep. 1
+  state.progress = -1;
+  state.untracked = true;
+  await page.goto("https://animeunity.cx/anime/12-one-piece/50570", { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("#al-control-bar .al-dock-title", { timeout: 10000 });
+  await page.waitForTimeout(200);
+
+  const beforeUntracked = state.mutations.length;
+  await page.evaluate(() => {
+    window.postMessage({ type: "PLAYER_EVENT", data: { event: "playerstate", position: 450, duration: 1500, paused: true } }, "*");
+  });
+  await page.waitForTimeout(300);
+  assert.equal(state.mutations.length, beforeUntracked, "Pausing at 30% on Ep. 1 must NOT add untracked anime to AniList");
+  const localSaved = await page.evaluate(() => JSON.parse(window.localStorage.getItem("al_resume_21") || "null"));
+  assert.equal(localSaved?.ep, 1, "Local-only resume saved for untracked Ep. 1");
+  assert.equal(localSaved?.time, 450, "Local-only resume timestamp matches 450s");
+
+  await page.evaluate(() => {
+    window.postMessage({ type: "PLAYER_EVENT", data: { event: "playerstate", position: 1290, duration: 1500, paused: false } }, "*");
+  });
+  await page.waitForTimeout(500);
+  const autoAddMut = state.mutations.slice(beforeUntracked).find((m) => m.progress === 1 && m.status === "CURRENT");
+  assert.ok(autoAddMut, "Finishing Ep. 1 (>= 85%) auto-adds untracked anime to AniList as CURRENT Ep. 1");
 
   assert.deepEqual(errors, [], "Zero uncaught pageerrors on desktop");
   await ctx.close();
