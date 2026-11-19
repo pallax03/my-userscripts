@@ -282,7 +282,7 @@ export function renderActions(
     }
   });
   bar.querySelector("#al-ep-rewind")?.addEventListener("click", () => {
-    const rewindTarget = Math.max(0, (activeEp || progress || 1) - 1);
+    const rewindTarget = Math.max(0, (progress > 0 ? progress : activeEp || 1) - 1);
     actions.onRewind?.(rewindTarget, activeEp);
   });
   bar.querySelector("#al-ep-next")?.addEventListener("click", () => {

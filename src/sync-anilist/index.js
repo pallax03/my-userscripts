@@ -654,15 +654,31 @@ export const App = {
         cancelAutoTrack();
         App.render();
       },
-      onRewind: (rewindTarget, currentActiveEp) => {
+      onRewind: async (rewindTarget, currentActiveEp) => {
         cancelAutoTrack();
         if (currentActiveEp) cancelledEps.add(currentActiveEp);
-        App.setProgress(rewindTarget);
+        await App.setProgress(rewindTarget);
+        const total = currentMedia?.episodes || 0;
+        const selectEp = total > 0 ? Math.min(total, rewindTarget + 1) : rewindTarget + 1;
+        if (currentMedia && provider?.resolveTargetUrl && selectEp > 0) {
+          const targetUrl = await provider.resolveTargetUrl(currentMedia, selectEp);
+          if (targetUrl && targetUrl !== window.location.pathname && targetUrl !== window.location.href) {
+            window.location.href = targetUrl;
+          }
+        }
       },
-      onNextEp: () => {
+      onNextEp: async () => {
         cancelAutoTrack();
         const nextEp = (trackedProgress > 0 ? trackedProgress : activeEp) + 1;
-        App.setProgress(nextEp);
+        await App.setProgress(nextEp);
+        const total = currentMedia?.episodes || 0;
+        const selectEp = total > 0 ? Math.min(total, nextEp + 1) : nextEp + 1;
+        if (currentMedia && provider?.resolveTargetUrl && selectEp > 0) {
+          const targetUrl = await provider.resolveTargetUrl(currentMedia, selectEp);
+          if (targetUrl && targetUrl !== window.location.pathname && targetUrl !== window.location.href) {
+            window.location.href = targetUrl;
+          }
+        }
       }
     }, {
       isLoading: isMediaLoading,
