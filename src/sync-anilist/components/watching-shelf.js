@@ -352,22 +352,28 @@ function createCard(entry, buddySync = null, onSyncEntry = null, onClearResume =
     btn.classList.add("al-btn-caughtup");
     btn.innerHTML = `${iconHtml(Check, { width: 12, height: 12 })} Caught up`;
   }
-  actions.appendChild(btn);
-
   if (isResumeActive && typeof onClearResume === "function") {
+    const splitWrap = document.createElement("div");
+    splitWrap.className = "al-card-resume-split";
+
     const clearBtn = document.createElement("button");
     clearBtn.type = "button";
     clearBtn.className = "al-card-btn al-btn-clear-resume";
     clearBtn.title = "Clear saved resume";
-    clearBtn.innerHTML = iconHtml(X, { width: 12, height: 12 });
+    clearBtn.innerHTML = iconHtml(X, { width: 13, height: 13 });
     clearBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
       clearBtn.disabled = true;
-      clearBtn.innerHTML = iconHtml(Loader2, { width: 12, height: 12, class: "al-spin" });
+      clearBtn.innerHTML = iconHtml(Loader2, { width: 13, height: 13, class: "al-spin" });
       await onClearResume(entry);
     });
-    actions.appendChild(clearBtn);
+
+    splitWrap.appendChild(btn);
+    splitWrap.appendChild(clearBtn);
+    actions.appendChild(splitWrap);
+  } else {
+    actions.appendChild(btn);
   }
 
   cardBody.appendChild(actions);
