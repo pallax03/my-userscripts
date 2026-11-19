@@ -1,6 +1,6 @@
 import { showToast } from "../../shared/toast.js";
 import { Logger } from "../../shared/logger.js";
-import { iconHtml, ANILIST_ICON_SVG, Play, Clock, Check, Zap, Loader2, Link, Users } from "../../shared/icons.js";
+import { iconHtml, ANILIST_ICON_SVG, Play, Clock, Check, Zap, Loader2, Link, Users, X } from "../../shared/icons.js";
 import { openTokenModal } from "../../shared/anilist/auth.js";
 import { simulateAgenticSearch } from "./agent-search.js";
 import { Settings } from "../settings.js";
@@ -138,7 +138,7 @@ export function compareShelfEntries(a, b) {
  * @param {Function|null} onSyncEntry
  * @returns {HTMLElement}
  */
-function createCard(entry, buddySync = null, onSyncEntry = null) {
+function createCard(entry, buddySync = null, onSyncEntry = null, onClearResume = null) {
   const media = entry.media || {};
   const state = calculateEntryState(entry);
   const resume = Resume.extract(entry.notes) || Resume.getLocal(media.id);
@@ -353,12 +353,29 @@ function createCard(entry, buddySync = null, onSyncEntry = null) {
     btn.innerHTML = `${iconHtml(Check, { width: 12, height: 12 })} Caught up`;
   }
   actions.appendChild(btn);
+
+  if (isResumeActive && typeof onClearResume === "function") {
+    const clearBtn = document.createElement("button");
+    clearBtn.type = "button";
+    clearBtn.className = "al-card-btn al-btn-clear-resume";
+    clearBtn.title = "Clear saved resume";
+    clearBtn.innerHTML = iconHtml(X, { width: 12, height: 12 });
+    clearBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      clearBtn.disabled = true;
+      clearBtn.innerHTML = iconHtml(Loader2, { width: 12, height: 12, class: "al-spin" });
+      await onClearResume(entry);
+    });
+    actions.appendChild(clearBtn);
+  }
+
   cardBody.appendChild(actions);
   card.appendChild(cardBody);
 
   // Unified Card Navigation
   async function handleCardNavigate(e) {
-    if (e.target.closest(".al-card-al-link, .al-btn-buddy-sync")) return;
+    if (e.target.closest(".al-card-al-link, .al-btn-buddy-sync, .al-btn-clear-resume")) return;
     e.preventDefault();
 
     const provider = getCurrentProvider();
@@ -431,7 +448,8 @@ export function renderWatchingShelf({
   viewer = null,
   onLogin = null,
   syncNotifs = [],
-  onSyncEntry = null
+  onSyncEntry = null,
+  onClearResume = null
 } = {}) {
   let unwatchedOnly = Settings.get().shelfFilterUnwatched;
   let syncOnly = Settings.get().shelfFilterSync;
@@ -594,7 +612,7 @@ export function renderWatchingShelf({
 
     visibleEntries.forEach((entry) => {
       const buddySync = syncMap.get(entry.mediaId) || null;
-      const card = createCard(entry, buddySync, onSyncEntry);
+      const card = createCard(entry, buddySync, onSyncEntry, onClearResume);
       track.appendChild(card);
     });
   }

@@ -3385,7 +3385,7 @@ video-player,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 6px;
   height: 30px;
   padding: 0 12px;
   font-size: 11.5px;
@@ -3393,62 +3393,37 @@ video-player,
   letter-spacing: 0.01em;
   border-radius: 9999px;
   border: none;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.08);
   color: #e2e8f0;
   cursor: pointer;
   white-space: nowrap;
   transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), background 0.16s ease, color 0.16s ease;
 
-  &::before {
-    content: "";
-    width: 7px;
-    height: 7px;
-    border-radius: 9999px;
-    flex-shrink: 0;
-    background: rgba(148, 163, 184, 0.4);
-    transition: background 0.2s ease, box-shadow 0.2s ease;
-  }
-
   &.is-pending {
-    background: rgba(255, 255, 255, 0.06);
-    color: #cbd5e1;
-    &::before {
-      background: rgba(148, 163, 184, 0.45);
-      box-shadow: none;
-    }
+    background: rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
   }
   &.is-tracked {
-    background: rgba(45, 212, 191, 0.12);
-    color: #f0fdfa;
-    &::before {
-      background: #2dd4bf;
-      box-shadow: 0 0 8px #2dd4bf, 0 0 14px rgba(45, 212, 191, 0.55);
-    }
+    background: rgba(45, 212, 191, 0.16);
+    color: #5eead4;
   }
   &.is-add {
     background: linear-gradient(135deg, #2dd4bf, #0d9488);
     color: #042f2e;
     box-shadow: 0 2px 12px rgba(20, 184, 166, 0.32);
-    &::before {
-      display: none;
-    }
   }
   &.is-counting {
-    background: rgba(56, 189, 248, 0.14);
-    color: #e0f2fe;
+    background: rgba(56, 189, 248, 0.18);
+    color: #7dd3fc;
     animation: al-dock-pulse 1.2s infinite alternate;
-    &::before {
-      background: #38bdf8;
-      box-shadow: 0 0 8px #38bdf8, 0 0 14px rgba(56, 189, 248, 0.6);
-    }
   }
   &:hover {
     transform: translateY(-1px);
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.14);
     color: #ffffff;
   }
   &.is-tracked:hover {
-    background: rgba(45, 212, 191, 0.2);
+    background: rgba(45, 212, 191, 0.24);
   }
   &.is-add:hover {
     filter: brightness(1.08);
@@ -3586,7 +3561,7 @@ video-player,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 6px;
   height: 28px;
   padding: 0 11px;
   border-radius: 9999px;
@@ -3594,33 +3569,33 @@ video-player,
   font-weight: 700;
   letter-spacing: 0.01em;
   border: none;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.08);
   color: #e2e8f0;
   cursor: pointer;
   transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), background 0.16s ease, color 0.16s ease;
 
-  &::before {
+  &.al-is-toggle::before {
     content: "";
     width: 7px;
     height: 7px;
     border-radius: 9999px;
     flex-shrink: 0;
-    background: rgba(148, 163, 184, 0.4);
+    background: rgba(148, 163, 184, 0.45);
     transition: background 0.2s ease, box-shadow 0.2s ease;
   }
 
   &.is-tracked {
-    background: rgba(45, 212, 191, 0.12);
+    background: rgba(45, 212, 191, 0.14);
     color: #f0fdfa;
-    &::before {
+    &.al-is-toggle::before {
       background: #2dd4bf;
       box-shadow: 0 0 8px #2dd4bf, 0 0 14px rgba(45, 212, 191, 0.55);
     }
   }
   &.is-pending {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.08);
     color: #cbd5e1;
-    &::before {
+    &.al-is-toggle::before {
       background: rgba(148, 163, 184, 0.45);
       box-shadow: none;
     }
@@ -3629,26 +3604,23 @@ video-player,
     background: linear-gradient(135deg, #2dd4bf, #0d9488);
     color: #042f2e;
     font-weight: 700;
-    &::before {
-      display: none;
-    }
   }
   &.is-counting {
     background: rgba(56, 189, 248, 0.14);
     color: #e0f2fe;
     animation: al-dock-pulse 1.2s infinite alternate;
-    &::before {
+    &.al-is-toggle::before {
       background: #38bdf8;
       box-shadow: 0 0 8px #38bdf8, 0 0 14px rgba(56, 189, 248, 0.6);
     }
   }
   &:hover {
     transform: translateY(-1px);
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.14);
     color: #ffffff;
   }
   &.is-tracked:hover {
-    background: rgba(45, 212, 191, 0.2);
+    background: rgba(45, 212, 191, 0.22);
   }
   &:active {
     transform: scale(0.97);
@@ -3983,6 +3955,29 @@ video-player,
   &:hover {
     transform: scale(1.08);
     border-color: rgba(59, 130, 246, 0.8);
+  }
+  &.for-saturn {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.28), rgba(109, 40, 217, 0.22));
+    border-color: rgba(167, 139, 250, 0.58);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 14px rgba(139, 92, 246, 0.3);
+    &:hover {
+      border-color: rgba(196, 181, 253, 0.9);
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.55), 0 0 18px rgba(167, 139, 250, 0.5);
+    }
+  }
+}
+
+.al-btn-clear-resume {
+  flex: 0 0 28px !important;
+  width: 28px !important;
+  padding: 0 !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #cbd5e1 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  &:hover {
+    background: rgba(239, 68, 68, 0.22) !important;
+    color: #fca5a5 !important;
+    border-color: rgba(248, 113, 113, 0.45) !important;
   }
 }
 

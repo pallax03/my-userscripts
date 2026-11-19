@@ -146,7 +146,7 @@ export function renderAutoSkipButton(provider) {
           <span>Skip</span>
         </button>
       ` : ""}
-      <button type="button" class="al-dock-chip ${isActive ? "is-tracked" : "is-pending"}" id="al-skip-toggle-btn" title="${srcLabel}: ${isActive ? "Auto-skip ON" : "Auto-skip OFF"}">
+      <button type="button" class="al-dock-chip al-is-toggle ${isActive ? "is-tracked" : "is-pending"}" id="al-skip-toggle-btn" title="${srcLabel}: ${isActive ? "Auto-skip ON" : "Auto-skip OFF"}">
         ${iconHtml(SkipForward, { width: 11, height: 11 })}
         <span>${isActive ? "Skip: ON" : "Skip: OFF"}</span>
       </button>

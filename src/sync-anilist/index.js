@@ -461,6 +461,18 @@ function renderHome() {
     onSyncEntry: async (mediaId, ep, isCompleted = false) => {
       await App.setProgress(ep, mediaId, isCompleted ? "COMPLETED" : null);
       await loadHomeWatching();
+    },
+    onClearResume: async (entry) => {
+      const mediaId = entry?.media?.id;
+      if (!mediaId) return;
+      Resume.clearLocal(mediaId);
+      sessionStorage.removeItem("al_resume_time");
+      if (entry.notes && entry.notes.includes("[resume:")) {
+        const cleared = Resume.clear(entry.notes);
+        await AniListAPI.saveEntry({ mediaId, notes: cleared });
+      }
+      showToast("Resume cleared");
+      await loadHomeWatching();
     }
   });
   injectHomeShelf(shelf);
