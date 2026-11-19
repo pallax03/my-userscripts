@@ -3161,6 +3161,41 @@ video-player,
     max-width: 100%;
     &:empty { display: none; }
   }
+  > #al-slot-switch {
+    order: -1;
+  }
+}
+
+.al-dock-banner {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  background: rgba(11, 20, 28, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+  color: #e0f2fe;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  max-width: calc(100vw - 24px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 2147483647;
+
+  &.is-alert {
+    border-color: rgba(239, 68, 68, 0.6);
+    color: #fecaca;
+  }
 }
 
 .al-compact-pill {
@@ -3789,23 +3824,27 @@ video-player,
     gap: 6px;
   }
   .al-compact-pill {
-    height: auto;
-    min-height: 40px;
-    padding: 5px 8px;
-    gap: 5px;
+    height: 40px;
+    padding: 0 8px;
+    gap: 6px;
     font-size: 11px;
-    max-width: calc(100vw - 56px);
-    border-radius: 16px;
-    flex-wrap: wrap;
-    justify-content: center;
+    max-width: calc(100vw - 54px);
+    border-radius: 9999px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+    &::-webkit-scrollbar { display: none; }
   }
-  .al-dock-title {
-    max-width: 96px;
-    font-size: 11px;
+  .al-dock-title,
+  #al-ep-rewind,
+  #al-ep-next,
+  .al-dock-buddy-picker-trigger {
+    display: none !important;
   }
   .al-switch-pill-btn {
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
     flex-shrink: 0;
   }
   .al-dock-btn {

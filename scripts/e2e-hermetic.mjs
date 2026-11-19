@@ -419,7 +419,11 @@ try {
   await mPage.waitForSelector("#al-slot-switch #al-cross-switch-btn", { timeout: 10000 });
 
   const mDock = await mPage.locator("#al-dock").boundingBox();
+  const mSwitch = await mPage.locator("#al-slot-switch").boundingBox();
+  const mBar = await mPage.locator("#al-control-bar").boundingBox();
   assert.ok(mDock && mDock.x >= 0 && mDock.x + mDock.width <= 375, `iPhone SE dock within 375px (${JSON.stringify(mDock)})`);
+  assert.ok(mSwitch && mBar && mSwitch.x < mBar.x, "AnimeSaturn button is positioned to the LEFT of the dock bar");
+  assert.ok(mBar && mBar.height <= 44, `iPhone SE dock stays single-row compact (height: ${mBar?.height})`);
 
   await mPage.click("#al-dock-avatar-btn");
   await mPage.waitForSelector("#al-dock-menu.show", { timeout: 5000 });
