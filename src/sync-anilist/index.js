@@ -61,6 +61,8 @@ let pendingResumeTarget = null;
 let pendingResumeEp = null;
 let resumedEpKey = null;
 let lastObservedCurrentTime = 0;
+let lastPlayerWindow = null;
+let lastSyncedMediaId = null;
 
 function getResumeKey(activeEp) {
   const ep = activeEp || provider?.getActiveEpisode?.() || 1;
@@ -137,10 +139,11 @@ function dispatchResumeSeek(targetWindow = null) {
   if (!pendingResumeTarget || !Settings.get().autoResume || resumedEpKey === getResumeKey(activeEp)) return;
 
   const payload = { type: "AL_RESUME_SEEK", target: pendingResumeTarget };
+  const win = targetWindow || lastPlayerWindow;
 
-  if (targetWindow) {
+  if (win) {
     try {
-      targetWindow.postMessage(payload, "*");
+      win.postMessage(payload, "*");
     } catch (_) {}
   } else {
     document.querySelectorAll("iframe").forEach((frame) => {
@@ -168,14 +171,14 @@ async function syncResumeToNotes(mediaId, ep, currentTime, duration) {
 
 function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
   lastObservedCurrentTime = typeof currentTime === "number" ? currentTime : 0;
-  if (!currentMedia || isHome()) return;
+  if (!currentMedia || isHome() || !provider?.isWatchPage?.()) return;
   const activeEp = provider?.getActiveEpisode?.() || 1;
   const settings = Settings.get();
   const percent = duration > 0 ? (currentTime / duration) * 100 : 0;
   const isEligible = isEpisodeEligibleForResume(activeEp);
 
-  // Companion mode: if video is already playing past 5s, site native resume is active
-  if (currentTime > 5) {
+  // Companion mode: yield only if video is already near target or playing deep past 20s
+  if (currentTime > 5 && (!pendingResumeTarget || Math.abs(currentTime - pendingResumeTarget) <= 15 || currentTime > 20)) {
     resumedEpKey = getResumeKey(activeEp);
     pendingResumeTarget = null;
   }
@@ -738,6 +741,16 @@ export const App = {
         }
       }
 
+      if (currentMedia?.id && currentMedia.id !== lastSyncedMediaId) {
+        lastSyncedMediaId = currentMedia.id;
+        lastActiveEp = 0;
+        lastObservedCurrentTime = 0;
+        hasTriggeredPlayTrack = false;
+        lastPlayerWindow = null;
+        cancelledEps.clear();
+        cancelAutoTrack();
+      }
+
       trackedProgress = currentMedia?.mediaListEntry ? currentMedia.mediaListEntry.progress : -1;
 
       // Extract and fetch buddy progress for this media
@@ -757,7 +770,7 @@ export const App = {
         currentBuddyData = null;
       }
 
-      if (!isHome()) {
+      if (!isHome() && provider?.isWatchPage?.()) {
         const ep = provider?.getActiveEpisode?.() || 0;
         const malId = currentMedia?.idMal || info.malId;
         if (malId && ep > 0) {
@@ -799,19 +812,21 @@ export const App = {
           isEnded: d.reason === "complete"
         });
       } else if (e.data?.type === "AL_PLAYER_READY" || e.data?.type === "AU_FRAME_READY") {
-        const ep = provider?.getActiveEpisode?.() || 1;
-        if (resumedEpKey !== getResumeKey(ep)) {
+        if (e.source) lastPlayerWindow = e.source;
+        if (!provider?.isWatchPage?.()) return;
+        const ep = provider?.getActiveEpisode?.() || 0;
+        if (ep > 0 && resumedEpKey !== getResumeKey(ep)) {
           if (!pendingResumeTarget) {
             prepareResumeTarget();
           }
-          // Give native site resume 1s grace period before applying cross-device AniList fallback
+          // Give native site resume brief grace period before applying cross-device AniList fallback
           if (pendingResumeTarget) {
-            const targetWin = e.source;
+            const targetWin = e.source || lastPlayerWindow;
             setTimeout(() => {
               if (resumedEpKey !== getResumeKey(ep) && pendingResumeTarget) {
                 dispatchResumeSeek(targetWin);
               }
-            }, 1000);
+            }, 600);
           }
         }
       } else if (e.data?.type === "AL_RESUME_CONFIRMED") {

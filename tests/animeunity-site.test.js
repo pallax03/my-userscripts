@@ -36,8 +36,9 @@ describe("shared/animeunity/site", () => {
     });
   });
 
-  it("extracts active episode from props.episode.number", () => {
+  it("extracts active episode only on watch URLs, returning 0 on detail pages even if props.episode is set", () => {
     assert.equal(getCurrentEpisode(samplePage, "/anime/12-one-piece/50573"), 105);
+    assert.equal(getCurrentEpisode(samplePage, "/anime/12-one-piece"), 0);
   });
 
   it("falls back to videoId lookup in loadedEpisodes when props.episode is absent", () => {

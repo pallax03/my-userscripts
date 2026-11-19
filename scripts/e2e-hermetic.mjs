@@ -298,14 +298,30 @@ try {
 
   // Detail
   await page.goto("https://animeunity.cx/anime/12-one-piece", { waitUntil: "domcontentloaded" });
-  await page.waitForSelector("#al-control-bar .al-dock-title", { timeout: 10000 });
+  await page.waitForSelector("#al-control-bar #al-dock-avatar-btn", { timeout: 10000 });
+  await page.waitForSelector("#al-dock-switch-slot #al-cross-switch-btn", { timeout: 10000 });
   const detailText = await page.locator("#al-control-bar").innerText();
-  assert.ok(detailText.includes("One Piece"), "Detail dock displays anime title");
+  assert.ok(detailText.includes("Tracciato: Ep. 5 / 1122"), "Detail dock displays tracked progress");
+  assert.ok(detailText.includes("Saturn"), "Detail dock displays Go to AnimeSaturn button");
 
-  // Watch Ep 6 (next unwatched when progress=5) -> simulate 86% playback
+  // Watch Ep 6 (next unwatched when progress=5) -> verify resume seek dispatch + 86% playback sync
+  await page.evaluate(() => {
+    window.localStorage.setItem("al_resume_21", JSON.stringify({ ep: 6, time: 420, duration: 1500, percent: 28, updatedAt: Date.now() }));
+  });
   await page.goto("https://animeunity.cx/anime/12-one-piece/50574", { waitUntil: "domcontentloaded" });
-  await page.waitForSelector("#al-control-bar .al-dock-title", { timeout: 10000 });
+  await page.waitForSelector("#al-control-bar #al-ep-save", { timeout: 10000 });
+  await page.waitForSelector("#al-dock-switch-slot #al-cross-switch-btn", { timeout: 10000 });
   await page.waitForTimeout(200);
+
+  // Verify AL_RESUME_SEEK dispatch when iframe posts AL_PLAYER_READY
+  const resumeSeekTarget = await page.evaluate(async () => {
+    const iframe = document.createElement("iframe");
+    iframe.srcdoc = "<script>window.receivedSeek = null; window.addEventListener('message', e => { if (e.data?.type === 'AL_RESUME_SEEK') window.receivedSeek = e.data.target; }); window.top.postMessage({ type: 'AL_PLAYER_READY', duration: 1500 }, '*');</" + "script>";
+    document.body.appendChild(iframe);
+    await new Promise((r) => setTimeout(r, 850));
+    return iframe.contentWindow?.receivedSeek ?? null;
+  });
+  assert.equal(resumeSeekTarget, 420, "Opening Ep 6 with saved resume dispatches AL_RESUME_SEEK to 420s");
 
   const beforeMutations = state.mutations.length;
   await page.evaluate(() => {
@@ -317,7 +333,7 @@ try {
 
   // Watch Ep 3 (older episode when progress=6) -> simulate 90% playback -> MUST NOT overwrite progress
   await page.goto("https://animeunity.cx/anime/12-one-piece/50571", { waitUntil: "domcontentloaded" });
-  await page.waitForSelector("#al-control-bar .al-dock-title", { timeout: 10000 });
+  await page.waitForSelector("#al-control-bar #al-ep-save", { timeout: 10000 });
   await page.waitForTimeout(200);
 
   const beforeOld = state.mutations.length;
@@ -332,7 +348,7 @@ try {
   state.progress = -1;
   state.untracked = true;
   await page.goto("https://animeunity.cx/anime/12-one-piece/50570", { waitUntil: "domcontentloaded" });
-  await page.waitForSelector("#al-control-bar .al-dock-title", { timeout: 10000 });
+  await page.waitForSelector("#al-control-bar #al-ep-save", { timeout: 10000 });
   await page.waitForTimeout(200);
 
   const beforeUntracked = state.mutations.length;
@@ -362,6 +378,7 @@ try {
   const mPage = await mobileCtx.newPage();
   await mPage.goto("https://animeunity.cx/anime/12-one-piece/50574", { waitUntil: "domcontentloaded" });
   await mPage.waitForSelector("#al-dock-avatar-btn", { timeout: 10000 });
+  await mPage.waitForSelector("#al-dock-switch-slot #al-cross-switch-btn", { timeout: 10000 });
 
   const mDock = await mPage.locator("#al-dock").boundingBox();
   assert.ok(mDock && mDock.x >= 0 && mDock.x + mDock.width <= 390, `Mobile dock within 390px (${JSON.stringify(mDock)})`);

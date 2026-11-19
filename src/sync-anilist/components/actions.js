@@ -1,4 +1,3 @@
-import { AniListAPI } from "../../shared/anilist/api.js";
 import {
   iconHtml,
   Trash2,
@@ -10,12 +9,14 @@ import {
   User,
   LogOut,
   RotateCcw,
-  Bookmark,
-  ExternalLink
+  ExternalLink,
+  SkipForward
 } from "../../shared/icons.js";
 import { Buddy } from "../buddy.js";
 import { initBuddyPicker } from "./buddy-picker.js";
 import { openPreferencesModal } from "./preferences-modal.js";
+import { openSkipContribute } from "./skip-intro.js";
+import { deriveDockState } from "../dock-model.js";
 import { slot } from "../slots.js";
 
 /**
@@ -117,14 +118,17 @@ export function renderActions(
   }
 
   const title = media.title?.english || media.title?.romaji || media.title?.userPreferred || `Anime #${media.id}`;
-  const total = media.episodes || 0;
-  const isCurrentTracked = progress > 0 && activeEp === progress;
-  const isAhead = activeEp > progress;
-  const isPast = progress > 0 && activeEp < progress;
-  const isCounting = autoTrackState?.isActive && autoTrackState.targetEp === activeEp;
-  const isBuddyCompleted = !!buddyData?.isCompleted;
-  const isBuddyAhead = !!(buddyData?.name && (buddyData.progress || 0) > progress);
-  const canSyncBuddy = isBuddyAhead || (isBuddyCompleted && entry?.status !== "COMPLETED");
+  const {
+    total,
+    isRewatching,
+    isWatchEp,
+    isCounting,
+    isCurrentTracked,
+    isAhead,
+    isPast,
+    isBuddyCompleted,
+    canSyncBuddy
+  } = deriveDockState({ media, activeEp, isWatch, autoTrackState, buddyData });
   const buddyAvatar = Buddy.getAvatar(currentBuddy) || buddyData?.avatar || "https://anilist.co/img/icons/icon.svg";
 
   const statusMap = {
@@ -142,135 +146,76 @@ export function renderActions(
     actionBtnHtml = `
       <button type="button" class="al-dock-btn is-add" id="al-ep-save" title="Aggiungi anime alla tua libreria AniList">
         ${iconHtml(Plus, { width: 12, height: 12 })}
-        <span>Aggiungi alla lista</span>
+        <span>Aggiungi</span>
       </button>
     `;
   } else if (isCounting) {
     actionBtnHtml = `
       <button type="button" class="al-dock-btn is-counting" id="al-ep-save" title="Salvataggio automatico in ${autoTrackState.countdown}s • Clicca per salvare subito">
         ${iconHtml(Zap, { width: 12, height: 12, class: "al-pulse" })}
-        <span>Salva subito (${autoTrackState.countdown}s)</span>
+        <span>Salva (${autoTrackState.countdown}s)</span>
       </button>
       <button type="button" class="al-dock-step-btn danger" id="al-ep-cancel-track" title="Annulla salvataggio automatico">✕</button>
     `;
   } else if (isAhead || progress === 0) {
     actionBtnHtml = `
-      <button type="button" class="al-dock-btn is-pending" id="al-ep-save" title="Segna l'episodio ${activeEp} come visto su AniList (Attuale: Ep. ${progress})">
+      <button type="button" class="al-dock-btn is-pending" id="al-ep-save" title="Segna Ep. ${activeEp} visto su AniList (Attuale: Ep. ${progress})">
         ${iconHtml(Zap, { width: 12, height: 12 })}
-        <span>Segna Ep. ${activeEp} visto</span>
+        <span>Segna Ep. ${activeEp}</span>
       </button>
     `;
   } else if (isCurrentTracked) {
     actionBtnHtml = `
-      <button type="button" class="al-dock-btn is-tracked" id="al-ep-save" title="Sincronizzato: Ep. ${progress} • Clicca per riconfermare">
+      <button type="button" class="al-dock-btn is-tracked" id="al-ep-save" title="Sincronizzato su AniList: Ep. ${progress} • Clicca per riconfermare">
         ${iconHtml(Check, { width: 12, height: 12 })}
-        <span>In pari (Ep. ${activeEp})</span>
+        <span>In pari · Ep. ${activeEp}</span>
       </button>
     `;
   } else if (isPast) {
     actionBtnHtml = `
-      <button type="button" class="al-dock-btn is-tracked" id="al-ep-save" title="Episodio già visto (AniList è a Ep. ${progress}) • Clicca per allineare AniList all'Ep. ${activeEp}">
+      <button type="button" class="al-dock-btn is-tracked" id="al-ep-save" title="Episodio precedente (AniList è a Ep. ${progress}) • Clicca per allineare a Ep. ${activeEp}">
         ${iconHtml(Check, { width: 12, height: 12 })}
-        <span>Visto (AniList: Ep. ${progress})</span>
+        <span>Ep. ${activeEp} (AniList: ${progress})</span>
       </button>
     `;
   }
 
   bar.innerHTML = `
-    <!-- Pulse dot -->
-    <div class="al-dock-dot ${isCounting ? "is-counting" : (isCurrentTracked || !isWatch) ? "is-synced" : "is-pending"}"></div>
-
-    <!-- Anime Title + AniList Link -->
-    <a class="al-dock-title" href="https://anilist.co/anime/${media.id}" target="_blank" rel="noopener noreferrer" title="${title} su AniList">
-      <span class="al-title-name">${title}</span>
-      <span class="al-ext-icon">${iconHtml(ExternalLink, { width: 10, height: 10 })}</span>
-    </a>
-
-    <div class="al-dock-divider"></div>
-
     <!-- Gruppo 1: Controllo Episodio (Watch) o Progresso (Detail) -->
     <div class="al-dock-group al-dock-ep-group">
-      ${isWatch ? `
-        <div class="al-dock-ep-badge">Ep. ${activeEp}</div>
+      ${isWatchEp ? `
         ${actionBtnHtml}
-        <div class="al-dock-step-controls">
-          <button type="button" class="al-dock-step-btn" id="al-ep-rewind" title="Riavvolgi tracciamento a Ep. ${Math.max(0, activeEp - 1)}">
-            ${iconHtml(RotateCcw, { width: 11, height: 11 })}
-          </button>
-          <button type="button" class="al-dock-step-btn" id="al-ep-next" title="Avanza tracciamento ad AniList ad Ep. ${activeEp + 1}">
-            ${iconHtml(Plus, { width: 11, height: 11 })}
-          </button>
-        </div>
       ` : `
         ${entry ? `
-          <div class="al-dock-ep-badge" title="Progresso tracciato su AniList">
-            Tracciato: Ep. ${progress} / ${total || "?"}
+          <div class="al-dock-ep-badge" title="${title} su AniList">
+            ${isRewatching ? "Rewatch" : "Tracciato"}: Ep. ${progress} / ${total || "?"}
           </div>
         ` : `
           <button type="button" class="al-dock-btn is-add" id="al-ep-save" title="Aggiungi anime alla tua libreria AniList">
             ${iconHtml(Plus, { width: 12, height: 12 })}
-            <span>Aggiungi alla lista</span>
+            <span>Aggiungi</span>
           </button>
         `}
       `}
     </div>
 
-    <div class="al-dock-divider"></div>
+    <!-- Gruppo 2: Slot Skip Intro (Watch Page, solo quando esiste segmento) -->
+    ${isWatchEp ? `<div class="al-dock-group al-dock-skip-slot" id="al-dock-skip-slot"></div>` : ""}
 
-    <!-- Gruppo 2: Stato Libreria AniList (+ Score on detail page) -->
-    <div class="al-dock-group al-dock-status-group">
-      ${entry ? `
-        <div class="al-dock-select-box">
-          ${iconHtml(Bookmark, { width: 11, height: 11, class: "al-dock-icon-muted" })}
-          <select class="al-dock-select" id="al-bar-status" title="Stato su AniList">
-            ${Object.entries(statusMap).map(([k, label]) => `
-              <option value="${k}" ${entry.status === k ? "selected" : ""}>${label}</option>
-            `).join("")}
-          </select>
-        </div>
-        ${!isWatch ? `
-          <div class="al-dock-select-box" title="Voto su AniList">
-            <select class="al-dock-select" id="al-bar-score">
-              <option value="0" ${!entry.score ? "selected" : ""}>Voto: -</option>
-              ${[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((s) => `
-                <option value="${s}" ${entry.score === s ? "selected" : ""}>★ ${s}</option>
-              `).join("")}
-            </select>
-          </div>
-        ` : ""}
-      ` : ""}
-    </div>
-
-    <!-- Gruppo 3: Slot Skip Intro (Watch Page) -->
-    ${isWatch ? `<div class="al-dock-group al-dock-skip-slot" id="al-dock-skip-slot"></div>` : ""}
-
-    <!-- Gruppo 4: Provider Switch (AnimeSaturn) -->
+    <!-- Gruppo 3: Provider Switch (Go to AnimeSaturn / AnimeUnity) -->
     <div class="al-dock-group al-dock-switch-box" id="al-dock-switch-slot"></div>
 
-    <!-- Gruppo 5: Buddy Watching & Account -->
+    <!-- Gruppo 4: Buddy Ahead Sync (solo se l'amico è più avanti!) + Menu Account -->
     <div class="al-dock-group al-dock-user-group">
-      ${entry ? `
-        <div class="al-dock-buddy-cluster" id="al-dock-buddy-box">
-          ${currentBuddy && buddyData ? `
-            ${canSyncBuddy ? `
-              <button type="button" class="al-dock-buddy-btn is-ahead" id="al-bar-buddy-sync" title="Allineati a ${buddyData.name} (${isBuddyCompleted ? "Completato" : `Ep. ${buddyData.progress}`})">
-                <img src="${buddyAvatar}" class="al-dock-buddy-avatar" alt="${currentBuddy}" />
-                <span>${isBuddyCompleted ? "Fine" : `Ep. ${buddyData.progress}`}</span>
-              </button>
-            ` : `
-              <div class="al-dock-buddy-btn" title="Insieme a ${currentBuddy} (Ep. ${buddyData.progress || 0})">
-                <img src="${buddyAvatar}" class="al-dock-buddy-avatar" alt="${currentBuddy}" />
-                <span>Ep. ${buddyData.progress || 0}</span>
-              </div>
-            `}
-          ` : `
-            <div class="al-dock-buddy-picker-trigger" id="al-bar-buddy-picker-mount"></div>
-          `}
-        </div>
+      ${entry && currentBuddy && buddyData && canSyncBuddy ? `
+        <button type="button" class="al-dock-buddy-btn is-ahead" id="al-bar-buddy-sync" title="Allineati a ${buddyData.name} (${isBuddyCompleted ? "Completato" : `Ep. ${buddyData.progress}`})">
+          <img src="${buddyAvatar}" class="al-dock-buddy-avatar" alt="${currentBuddy}" />
+          <span>${isBuddyCompleted ? "Fine" : `Ep. ${buddyData.progress}`}</span>
+        </button>
       ` : ""}
 
       <div class="al-dock-user-wrap">
-        <button type="button" class="al-dock-avatar-btn" id="al-dock-avatar-btn" title="${viewer?.name || "Account AniList"}">
+        <button type="button" class="al-dock-avatar-btn" id="al-dock-avatar-btn" title="${title} • ${viewer?.name || "Account AniList"}">
           <img src="${viewer?.avatar?.medium || "https://anilist.co/img/icons/icon.svg"}" class="al-dock-avatar" />
         </button>
         <div class="al-dock-menu" id="al-dock-menu">
@@ -278,10 +223,45 @@ export function renderActions(
             <img src="${viewer?.avatar?.medium || "https://anilist.co/img/icons/icon.svg"}" class="al-dock-menu-avatar" />
             <div class="al-dock-menu-user">
               <span class="al-dock-menu-name">${viewer?.name || "Connesso"}</span>
-              <span class="al-dock-menu-sub">AniList • ${entry ? `Ep. ${progress}/${total || "?"}` : "Libreria"}</span>
+              <span class="al-dock-menu-sub">${entry ? `Ep. ${progress}/${total || "?"}` : "Non in lista"}</span>
             </div>
           </div>
           <div class="al-dock-menu-body">
+            <a class="al-dock-menu-item" href="https://anilist.co/anime/${media.id}" target="_blank" rel="noopener noreferrer">
+              ${iconHtml(ExternalLink, { width: 13, height: 13 })}
+              <span class="al-title-name">${title}</span>
+            </a>
+            ${entry ? `
+              <div class="al-dock-menu-controls" style="display:flex;gap:6px;padding:4px 6px;align-items:center;">
+                <button type="button" class="al-dock-step-btn" id="al-ep-rewind" title="Riavvolgi a Ep. ${Math.max(0, (activeEp || progress || 1) - 1)}">
+                  ${iconHtml(RotateCcw, { width: 11, height: 11 })}
+                </button>
+                <span style="font-size:11px;opacity:0.85;flex:1;text-align:center;">Ep. ${progress}/${total || "?"}</span>
+                <button type="button" class="al-dock-step-btn" id="al-ep-next" title="Avanza ad Ep. ${(progress || 0) + 1}">
+                  ${iconHtml(Plus, { width: 11, height: 11 })}
+                </button>
+              </div>
+              <div style="display:flex;gap:6px;padding:4px 6px;">
+                <select class="al-dock-select" id="al-bar-status" title="Stato su AniList" style="flex:1;">
+                  ${Object.entries(statusMap).map(([k, label]) => `
+                    <option value="${k}" ${entry.status === k ? "selected" : ""}>${label}</option>
+                  `).join("")}
+                </select>
+                <select class="al-dock-select" id="al-bar-score" title="Voto su AniList">
+                  <option value="0" ${!entry.score ? "selected" : ""}>Voto: -</option>
+                  ${[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((s) => `
+                    <option value="${s}" ${entry.score === s ? "selected" : ""}>★ ${s}</option>
+                  `).join("")}
+                </select>
+              </div>
+              <div class="al-dock-buddy-picker-trigger" id="al-bar-buddy-picker-mount" style="padding:2px 6px;"></div>
+            ` : ""}
+            ${isWatchEp ? `
+              <button type="button" class="al-dock-menu-item" id="al-dock-menu-skip">
+                ${iconHtml(SkipForward, { width: 13, height: 13 })}
+                <span>Calibra / + Intro</span>
+              </button>
+            ` : ""}
             <a class="al-dock-menu-item" href="https://anilist.co/user/${viewer?.name || ""}" target="_blank" rel="noopener noreferrer">
               ${iconHtml(User, { width: 13, height: 13 })}
               <span>Profilo AniList</span>
@@ -289,10 +269,6 @@ export function renderActions(
             <button type="button" class="al-dock-menu-item" id="al-dock-menu-prefs">
               ${iconHtml(Sliders, { width: 13, height: 13 })}
               <span>Impostazioni</span>
-            </button>
-            <button type="button" class="al-dock-menu-item" id="al-dock-menu-token">
-              ${iconHtml(KeyRound, { width: 13, height: 13 })}
-              <span>Cambia Token</span>
             </button>
             ${entry ? `
               <button type="button" class="al-dock-menu-item danger" id="al-dock-menu-del">
@@ -321,7 +297,7 @@ export function renderActions(
     }
   });
   bar.querySelector("#al-ep-rewind")?.addEventListener("click", () => {
-    const rewindTarget = Math.max(0, (activeEp || 1) - 1);
+    const rewindTarget = Math.max(0, (activeEp || progress || 1) - 1);
     actions.onRewind?.(rewindTarget, activeEp);
   });
   bar.querySelector("#al-ep-next")?.addEventListener("click", () => {
@@ -334,6 +310,10 @@ export function renderActions(
     if (typeof actions.onBuddySync === "function" && buddyData) {
       actions.onBuddySync(buddyData.progress, isBuddyCompleted);
     }
+  });
+  bar.querySelector("#al-dock-menu-skip")?.addEventListener("click", () => {
+    menu?.classList.remove("show");
+    openSkipContribute();
   });
 
   // User Avatar Dropdown Handling
@@ -350,10 +330,6 @@ export function renderActions(
   bar.querySelector("#al-dock-menu-prefs")?.addEventListener("click", () => {
     menu?.classList.remove("show");
     openPreferencesModal({ viewer });
-  });
-  bar.querySelector("#al-dock-menu-token")?.addEventListener("click", () => {
-    menu?.classList.remove("show");
-    actions.onChangeToken?.();
   });
   bar.querySelector("#al-dock-menu-del")?.addEventListener("click", () => {
     menu?.classList.remove("show");

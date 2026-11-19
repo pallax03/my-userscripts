@@ -1,10 +1,8 @@
 import { Settings } from "../settings.js";
 import { Logger } from "../../shared/logger.js";
-import { iconHtml, SkipForward, ThumbsUp, ThumbsDown, Plus, Pencil } from "../../shared/icons.js";
+import { iconHtml, SkipForward } from "../../shared/icons.js";
 import { resolveSkipSegment } from "../skip-logic.js";
 import {
-  voteSkipTime,
-  getVoteStatus,
   openAniSkipDock,
   handleAniSkipHotkey,
   handleAniSkipArrow
@@ -60,93 +58,58 @@ function handleSuccessfulContribution(newData) {
   renderAutoSkipButton(currentProvider);
 }
 
+export function openSkipContribute() {
+  const { malId, epNum } = getEffectiveIds();
+  if (!malId) {
+    Logger.warn("Cannot open AniSkip dock: MAL ID missing");
+    return false;
+  }
+  openAniSkipDock({
+    malId,
+    epNum,
+    currentTime: lastKnownCurrentTime,
+    duration: activeDuration || lastKnownDuration,
+    initialStart: activeOp?.start,
+    initialEnd: activeOp?.end,
+    skipType: activeOp?.skipType || "op",
+    provider: currentProvider,
+    onSuccess: handleSuccessfulContribution
+  });
+  return true;
+}
+
 export function renderAutoSkipButton(provider) {
   if (provider) currentProvider = provider;
-  document.getElementById("al-aniskip-wrapper")?.remove();
 
   const container = document.getElementById("al-dock-skip-slot") || currentProvider?.getVideoBottomAnchor?.();
   if (!container) return;
 
-  const settings = Settings.get();
   const isActive = isEpisodeAutoSkipActive();
+  const renderKey = `${activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}` : "none"}|${isActive}`;
+  if (container.__lastSkipKey === renderKey && container.dataset.rendered === "1") return;
+  container.__lastSkipKey = renderKey;
+  container.dataset.rendered = "1";
 
-  // 1. If Opening is present on AniSkip
-  if (activeOp) {
-    const currentVote = (settings.communityAniSkip && activeOp.skipId)
-      ? getVoteStatus(activeOp.skipId)
-      : null;
-
-    container.innerHTML = `
-      <div class="al-dock-skip-cluster">
-        <button type="button" class="al-dock-chip ${isActive ? "is-tracked" : "is-pending"}" id="al-skip-toggle-btn" title="${isActive ? "Auto-Skip attivo (Clicca per disattivare)" : "Auto-Skip disattivato (Clicca per attivare)"}">
-          ${iconHtml(SkipForward, { width: 11, height: 11 })}
-          <span>${isActive ? "Auto-Skip: ON" : "Auto-Skip: OFF"}</span>
-        </button>
-        ${settings.communityAniSkip ? `
-          <button type="button" class="al-dock-step-btn" id="al-skip-edit-btn" title="Calibra timestamp intro (Key: [ o ])">
-            ${iconHtml(Pencil, { width: 10, height: 10 })}
-          </button>
-        ` : ""}
-      </div>
-    `;
-
-    container.querySelector("#al-skip-toggle-btn")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      toggleEpisodeAutoSkip();
-    });
-
-    container.querySelector("#al-skip-edit-btn")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const { malId, epNum } = getEffectiveIds();
-      openAniSkipDock({
-        malId,
-        epNum,
-        currentTime: lastKnownCurrentTime,
-        duration: activeDuration || lastKnownDuration,
-        initialStart: activeOp.start,
-        initialEnd: activeOp.end,
-        skipType: activeOp.skipType || "op",
-        provider: currentProvider,
-        onSuccess: handleSuccessfulContribution
-      });
-    });
-
+  if (!activeOp) {
+    container.innerHTML = "";
     return;
   }
 
-  // 2. If NO Opening is present on AniSkip
-  if (settings.communityAniSkip) {
-    container.innerHTML = `
-      <div class="al-dock-skip-cluster">
-        <button type="button" class="al-dock-chip is-pending" id="al-skip-add-btn" title="Nessuna intro trovata su AniSkip. Aggiungi timestamp (Key: [ o ])">
-          ${iconHtml(Plus, { width: 10, height: 10 })}
-          <span>+ Intro</span>
-        </button>
-      </div>
-    `;
+  const srcLabel = activeOp.source === "native" ? "Native" : "AniSkip";
+  container.innerHTML = `
+    <div class="al-dock-skip-cluster">
+      <button type="button" class="al-dock-chip ${isActive ? "is-tracked" : "is-pending"}" id="al-skip-toggle-btn" title="${srcLabel}: ${isActive ? "Auto-Skip attivo (Clicca per disattivare)" : "Auto-Skip disattivato (Clicca per attivare)"}">
+        ${iconHtml(SkipForward, { width: 11, height: 11 })}
+        <span>${isActive ? "Auto-Skip: ON" : "Auto-Skip: OFF"}</span>
+      </button>
+    </div>
+  `;
 
-    container.querySelector("#al-skip-add-btn")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const { malId, epNum } = getEffectiveIds();
-      if (!malId) {
-        Logger.warn("Cannot open AniSkip dock: MAL ID missing");
-        return;
-      }
-      openAniSkipDock({
-        malId,
-        epNum,
-        currentTime: lastKnownCurrentTime,
-        duration: activeDuration || lastKnownDuration,
-        provider: currentProvider,
-        onSuccess: handleSuccessfulContribution
-      });
-    });
-  } else {
-    container.innerHTML = "";
-  }
+  container.querySelector("#al-skip-toggle-btn")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleEpisodeAutoSkip();
+  });
 }
 
 export function broadcastOp() {
@@ -257,7 +220,7 @@ function handleHotkeyAction(action, timeOverride = null) {
 
 export function initSkipIntroTop() {
   window.addEventListener("message", (e) => {
-    if (e.data?.type === "AU_FRAME_READY") {
+    if (e.data?.type === "AU_FRAME_READY" || e.data?.type === "AL_PLAYER_READY") {
       const frameDur = e.data.duration ? Math.round(e.data.duration) : 0;
       if (frameDur > 0 && !activeOp && activeMalId && activeEp) {
         checkSkipIntro(activeMalId, activeEp, frameDur);
@@ -265,6 +228,7 @@ export function initSkipIntroTop() {
         broadcastOp();
       }
     } else if (e.data?.type === "AU_NATIVE_TIMESTAMPS" && e.data.intro) {
+      const prevKey = activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}` : "";
       nativeIntro = {
         start: e.data.intro.start,
         end: e.data.intro.end,
@@ -272,9 +236,9 @@ export function initSkipIntroTop() {
         skipType: "op",
         source: "native"
       };
-      const prevOp = activeOp;
       syncActiveOp();
-      if (activeOp && activeOp !== prevOp) {
+      const nextKey = activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}` : "";
+      if (activeOp && nextKey !== prevKey) {
         broadcastOp();
         renderAutoSkipButton(currentProvider);
       }
@@ -284,9 +248,6 @@ export function initSkipIntroTop() {
       }
       if (typeof e.data.duration === "number" && e.data.duration > 0) {
         lastKnownDuration = e.data.duration;
-      }
-      if (e.data.isPaused) {
-        document.getElementById("al-aniskip-wrapper")?.classList.remove("al-aniskip-idle");
       }
     } else if (e.data?.type === "AU_ANISKIP_HOTKEY") {
       const action = e.data.action || (e.data.key === "]" || e.data.key === "o" ? "end" : "start");

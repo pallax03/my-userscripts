@@ -43,19 +43,20 @@ export function getCurrentEpisode(
   page = getPage(),
   pathname = typeof location !== "undefined" ? location.pathname : ""
 ) {
+  // Only watch URLs (/anime/{id}-{slug}/{videoId}) have an active episode
+  const match = pathname.match(/\/anime\/\d+[^/]*\/(\d+)/);
+  if (!match) return 0;
+
   const epNum = parseInt(page?.props?.episode?.number, 10);
   if (epNum > 0) return epNum;
 
   // Fallback: match videoId from URL and look up in loadedEpisodes
-  const match = pathname.match(/\/anime\/\d+[^/]*\/(\d+)/);
-  if (match) {
-    const videoId = parseInt(match[1], 10);
-    const episodes = page?.props?.loadedEpisodes?.episodes || [];
-    for (const ep of episodes) {
-      if (ep.videos?.some((v) => v.id === videoId)) {
-        const found = parseInt(ep.number, 10);
-        if (found > 0) return found;
-      }
+  const videoId = parseInt(match[1], 10);
+  const episodes = page?.props?.loadedEpisodes?.episodes || [];
+  for (const ep of episodes) {
+    if (ep.videos?.some((v) => v.id === videoId)) {
+      const found = parseInt(ep.number, 10);
+      if (found > 0) return found;
     }
   }
   return 0;

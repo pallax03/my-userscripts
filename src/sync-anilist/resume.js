@@ -115,11 +115,12 @@ export function resolveResumeAction({
   anilistResume = null
 }) {
   const expectedNext = trackedProgress < 0 ? 1 : trackedProgress + 1;
+  const isTrackedCurrent = trackedProgress > 0 && activeEp === trackedProgress;
   if (
     typeof trackedProgress !== "number" ||
     typeof activeEp !== "number" ||
     activeEp <= 0 ||
-    activeEp !== expectedNext
+    (activeEp !== expectedNext && !isTrackedCurrent)
   ) {
     return { action: "none", reason: "ineligible_episode" };
   }
