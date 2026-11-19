@@ -324,6 +324,8 @@ try {
   const watchText = await page.locator("#al-control-bar").innerText();
   assert.ok(watchText.includes("Ep. 6 / 1122"), "Watch dock displays current/max episode");
   assert.ok(watchText.includes("7:00"), "Watch dock displays in-dock resume loading chip");
+  await page.waitForSelector("#al-skip-toggle-btn", { timeout: 10000 });
+  await page.waitForSelector(".al-skip-pill-votes .is-upvote", { timeout: 5000 });
   await page.waitForTimeout(200);
 
   // Verify AL_RESUME_SEEK dispatch when iframe posts AL_PLAYER_READY
@@ -335,6 +337,12 @@ try {
     return iframe.contentWindow?.receivedSeek ?? null;
   });
   assert.equal(resumeSeekTarget, 420, "Opening Ep 6 with saved resume dispatches AL_RESUME_SEEK to 420s");
+
+  // Inside intro window [90, 180] with Auto-Skip OFF -> in-dock Skip button appears
+  await page.evaluate(() => {
+    window.postMessage({ type: "AL_PLAYBACK_STATE", currentTime: 95, duration: 1500, isPaused: false }, "*");
+  });
+  await page.waitForSelector("#al-skip-now-btn", { timeout: 5000 });
 
   const beforeMutations = state.mutations.length;
   await page.evaluate(() => {

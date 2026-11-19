@@ -1,8 +1,11 @@
 import { Settings } from "../settings.js";
 import { Logger } from "../../shared/logger.js";
-import { iconHtml, SkipForward, Plus, Pencil } from "../../shared/icons.js";
+import { showToast } from "../../shared/toast.js";
+import { iconHtml, SkipForward, Plus, Pencil, ThumbsUp, ThumbsDown } from "../../shared/icons.js";
 import { resolveSkipSegment } from "../skip-logic.js";
 import {
+  voteSkipTime,
+  getVoteStatus,
   openAniSkipDock,
   handleAniSkipHotkey,
   handleAniSkipArrow
@@ -86,7 +89,16 @@ export function renderAutoSkipButton(provider) {
 
   const settings = Settings.get();
   const isActive = isEpisodeAutoSkipActive();
-  const renderKey = `${activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}` : "none"}|${isActive}|${settings.communityAniSkip}`;
+  const inSkipWindow = Boolean(
+    activeOp &&
+    !isActive &&
+    lastKnownCurrentTime >= Math.max(0, activeOp.start - 1.5) &&
+    lastKnownCurrentTime <= Math.max(activeOp.start, activeOp.end - 2)
+  );
+  const currentVote = (settings.communityAniSkip && activeOp?.skipId)
+    ? getVoteStatus(activeOp.skipId)
+    : null;
+  const renderKey = `${activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}-${activeOp.skipId || ""}` : "none"}|${isActive}|${settings.communityAniSkip}|${inSkipWindow}|${currentVote || ""}`;
   if (container.__lastSkipKey === renderKey && container.dataset.rendered === "1") return;
   container.__lastSkipKey = renderKey;
   container.dataset.rendered = "1";
@@ -115,10 +127,26 @@ export function renderAutoSkipButton(provider) {
   const srcLabel = activeOp.source === "native" ? "Native" : "AniSkip";
   container.innerHTML = `
     <div class="al-dock-skip-cluster">
+      ${inSkipWindow ? `
+        <button type="button" class="al-dock-btn is-pending" id="al-skip-now-btn" title="Skip Intro (Key: S)">
+          ${iconHtml(SkipForward, { width: 11, height: 11 })}
+          <span>Skip</span>
+        </button>
+      ` : ""}
       <button type="button" class="al-dock-chip ${isActive ? "is-tracked" : "is-pending"}" id="al-skip-toggle-btn" title="${srcLabel}: ${isActive ? "Auto-skip ON" : "Auto-skip OFF"}">
         ${iconHtml(SkipForward, { width: 11, height: 11 })}
         <span>${isActive ? "Skip: ON" : "Skip: OFF"}</span>
       </button>
+      ${settings.communityAniSkip && activeOp.skipId ? `
+        <div class="al-skip-pill-votes" title="Vote skip timing">
+          <button type="button" class="al-skip-vote-btn is-upvote ${currentVote === "upvote" ? "is-voted" : ""}" title="Accurate (+1)">
+            ${iconHtml(ThumbsUp, { width: 11, height: 11 })}
+          </button>
+          <button type="button" class="al-skip-vote-btn is-downvote ${currentVote === "downvote" ? "is-voted" : ""}" title="Inaccurate (-1)">
+            ${iconHtml(ThumbsDown, { width: 11, height: 11 })}
+          </button>
+        </div>
+      ` : ""}
       ${settings.communityAniSkip ? `
         <button type="button" class="al-dock-step-btn" id="al-skip-edit-btn" title="Calibrate intro (Key: [ / ])">
           ${iconHtml(Pencil, { width: 10, height: 10 })}
@@ -127,10 +155,34 @@ export function renderAutoSkipButton(provider) {
     </div>
   `;
 
+  container.querySelector("#al-skip-now-btn")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    document.querySelectorAll("iframe").forEach((frame) => {
+      try {
+        frame.contentWindow?.postMessage({ type: "AU_TRIGGER_SKIP" }, "*");
+      } catch (_) {}
+    });
+  });
+
   container.querySelector("#al-skip-toggle-btn")?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
     toggleEpisodeAutoSkip();
+  });
+
+  container.querySelector(".is-upvote")?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const ok = await voteSkipTime({ skipId: activeOp.skipId, voteType: "upvote" });
+    if (ok) renderAutoSkipButton(currentProvider);
+  });
+
+  container.querySelector(".is-downvote")?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const ok = await voteSkipTime({ skipId: activeOp.skipId, voteType: "downvote" });
+    if (ok) renderAutoSkipButton(currentProvider);
   });
 
   container.querySelector("#al-skip-edit-btn")?.addEventListener("click", (e) => {
@@ -277,6 +329,14 @@ export function initSkipIntroTop() {
       if (typeof e.data.duration === "number" && e.data.duration > 0) {
         lastKnownDuration = e.data.duration;
       }
+      if (activeOp && !isEpisodeAutoSkipActive()) {
+        renderAutoSkipButton(currentProvider);
+      }
+    } else if (e.data?.type === "AU_SKIP_EXECUTED") {
+      const label = e.data.source === "fallback"
+        ? `⏩ Skipped +${e.data.fallbackDuration || 85}s`
+        : `⏩ ${e.data.mode === "auto" ? "Auto-skipped" : "Skipped"} intro (${e.data.source === "native" ? "Native" : "AniSkip"})`;
+      showToast(label, false, 2000);
     } else if (e.data?.type === "AU_ANISKIP_HOTKEY") {
       const action = e.data.action || (e.data.key === "]" || e.data.key === "o" ? "end" : "start");
       handleHotkeyAction(action, e.data.currentTime);
