@@ -20,7 +20,7 @@ export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay =
   Logger.info(`Searching best query for media ID ${media.id}...`);
 
   // 1. Resolve exact match using candidate titles against AnimeUnity's internal database
-  let resolved = await resolveAnimeUnityAnime(media);
+  const resolved = await resolveAnimeUnityAnime(media);
   let query = resolved?.matchingQuery;
 
   if (!query) {
@@ -135,7 +135,7 @@ export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay =
   const prefDubInt = pref === "dub" ? 1 : 0;
 
   let targetIndex = -1;
-  const searchVue = document.querySelector(".search-backdrop")?.__vue__ || currentVue;
+  const searchVue = backdrop?.__vue__ || currentVue;
 
   if (searchVue?.animes && Array.isArray(searchVue.animes)) {
     const records = searchVue.animes;
@@ -154,7 +154,7 @@ export async function simulateAgenticSearch(media, { epTarget, autoSelectDelay =
   if (targetIndex < 0 || targetIndex >= items.length) {
     const cleanQ = query.toLowerCase().replace(/[^a-z0-9]/g, "");
     const matchIdx = items.findIndex((el) => {
-      const text = el.innerText.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const text = (el.textContent || "").toLowerCase().replace(/[^a-z0-9]/g, "");
       return text.includes(cleanQ) || cleanQ.includes(text);
     });
     targetIndex = matchIdx >= 0 ? matchIdx : 0;

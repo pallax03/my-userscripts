@@ -195,15 +195,6 @@ export class AnimeSaturnProvider extends BaseProvider {
     return null;
   }
 
-  getNavAnchor() {
-    const headerTools = document.querySelector("header .ml-auto.flex, header [x-show='!mobileSearch'].ml-auto");
-    if (headerTools) {
-      return { desktop: headerTools, mobile: headerTools };
-    }
-    const nav = document.querySelector("header nav, header .container-page");
-    return { desktop: nav, mobile: nav };
-  }
-
   getActionsAnchor() {
     const epSection = document.querySelector("section[x-data*='epList'], section:has(.ep-tile), .episodes-list, .ag-episodes");
     if (epSection) return { element: epSection, position: "before" };

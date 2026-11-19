@@ -1167,18 +1167,6 @@
 			};
 			return null;
 		}
-		getNavAnchor() {
-			const headerTools = document.querySelector("header .ml-auto.flex, header [x-show='!mobileSearch'].ml-auto");
-			if (headerTools) return {
-				desktop: headerTools,
-				mobile: headerTools
-			};
-			const nav = document.querySelector("header nav, header .container-page");
-			return {
-				desktop: nav,
-				mobile: nav
-			};
-		}
 		getActionsAnchor() {
 			const epSection = document.querySelector("section[x-data*='epList'], section:has(.ep-tile), .episodes-list, .ag-episodes");
 			if (epSection) return {
@@ -2491,7 +2479,7 @@
 	async function simulateAgenticSearch(media, { epTarget, autoSelectDelay = 5 } = {}) {
 		if (!media) return false;
 		Logger.info(`Searching best query for media ID ${media.id}...`);
-		let resolved = await resolveAnimeUnityAnime(media);
+		const resolved = await resolveAnimeUnityAnime(media);
 		let query = resolved?.matchingQuery;
 		if (!query) {
 			const candidates = generateSearchCandidates(media);
@@ -2563,7 +2551,7 @@
 		Logger.info(`Search results rendered: ${items.length} items`);
 		const prefDubInt = (Storage.get("al_pref_language") || "sub") === "dub" ? 1 : 0;
 		let targetIndex = -1;
-		const searchVue = document.querySelector(".search-backdrop")?.__vue__ || currentVue;
+		const searchVue = backdrop?.__vue__ || currentVue;
 		if (searchVue?.animes && Array.isArray(searchVue.animes)) {
 			const records = searchVue.animes;
 			const matches = [];
@@ -2582,7 +2570,7 @@
 		if (targetIndex < 0 || targetIndex >= items.length) {
 			const cleanQ = query.toLowerCase().replace(/[^a-z0-9]/g, "");
 			const matchIdx = items.findIndex((el) => {
-				const text = el.innerText.toLowerCase().replace(/[^a-z0-9]/g, "");
+				const text = (el.textContent || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 				return text.includes(cleanQ) || cleanQ.includes(text);
 			});
 			targetIndex = matchIdx >= 0 ? matchIdx : 0;
@@ -2932,7 +2920,7 @@
 		card.addEventListener("click", handleCardNavigate);
 		return card;
 	}
-	function renderWatchingShelf({ entries = [], viewer = null, onRefresh = null, onLogin = null, syncNotifs = [], onSyncEntry = null } = {}) {
+	function renderWatchingShelf({ entries = [], viewer = null, onLogin = null, syncNotifs = [], onSyncEntry = null } = {}) {
 		let unwatchedOnly = Settings.get().shelfFilterUnwatched;
 		let syncOnly = Settings.get().shelfFilterSync;
 		const shelfContainer = document.createElement("div");
@@ -3053,10 +3041,7 @@
 					if (typeof onLogin === "function") onLogin();
 					else openTokenModal();
 				};
-				if (authBtn) {
-					authBtn.onclick = handleShelfLogin;
-					authBtn.addEventListener("click", handleShelfLogin, true);
-				}
+				if (authBtn) authBtn.addEventListener("click", handleShelfLogin);
 				track.appendChild(empty);
 				return;
 			}
