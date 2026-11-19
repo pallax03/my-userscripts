@@ -565,6 +565,8 @@ export const App = {
       if (actionsSlot) actionsSlot.style.display = "none";
       const switchSlot = document.getElementById("al-slot-switch");
       if (switchSlot) switchSlot.style.display = "none";
+      const skipSlot = document.getElementById("al-slot-skip");
+      if (skipSlot) skipSlot.style.display = "none";
       const navSlot = document.getElementById("al-slot-nav");
       if (navSlot) navSlot.style.display = "";
       renderHome();
@@ -575,6 +577,8 @@ export const App = {
     if (actionsSlot) actionsSlot.style.display = "";
     const switchSlot = document.getElementById("al-slot-switch");
     if (switchSlot) switchSlot.style.display = "";
+    const skipSlot = document.getElementById("al-slot-skip");
+    if (skipSlot) skipSlot.style.display = isWatch ? "" : "none";
     const navSlot = document.getElementById("al-slot-nav");
     if (navSlot) navSlot.style.display = "none";
 

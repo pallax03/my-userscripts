@@ -1,6 +1,7 @@
 import { Settings } from "../settings.js";
 import { Logger } from "../../shared/logger.js";
 import { showToast } from "../../shared/toast.js";
+import { slot } from "../slots.js";
 import { iconHtml, SkipForward, Plus, Pencil, ThumbsUp, ThumbsDown } from "../../shared/icons.js";
 import { resolveSkipSegment } from "../skip-logic.js";
 import {
@@ -84,8 +85,14 @@ export function openSkipContribute() {
 export function renderAutoSkipButton(provider) {
   if (provider) currentProvider = provider;
 
-  const container = document.getElementById("al-dock-skip-slot") || currentProvider?.getVideoBottomAnchor?.();
+  const container = slot("skip");
   if (!container) return;
+
+  if (!currentProvider?.isWatchPage?.()) {
+    container.innerHTML = "";
+    container.dataset.rendered = "0";
+    return;
+  }
 
   const settings = Settings.get();
   const isActive = isEpisodeAutoSkipActive();

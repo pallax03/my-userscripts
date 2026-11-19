@@ -428,15 +428,17 @@ try {
 
   const mDock = await mPage.locator("#al-dock").boundingBox();
   const mSwitch = await mPage.locator("#al-slot-switch").boundingBox();
+  const mSkip = await mPage.locator("#al-slot-skip").boundingBox();
   const mBar = await mPage.locator("#al-control-bar").boundingBox();
   assert.ok(mDock && mDock.x >= 0 && mDock.x + mDock.width <= 375, `iPhone SE dock within 375px (${JSON.stringify(mDock)})`);
-  assert.ok(mSwitch && mBar && mSwitch.x < mBar.x, "AnimeSaturn button is positioned to the LEFT of the dock bar");
+  assert.ok(mSwitch && mBar && mSwitch.x <= 20 && mSwitch.y < mBar.y, "AnimeSaturn button is above dock on bottom-left");
+  assert.ok(mSkip && mBar && mSkip.y + mSkip.height <= mBar.y, "AniSkip separate dock is positioned above main dock");
   assert.ok(mBar && mBar.height <= 44, `iPhone SE dock stays single-row compact (height: ${mBar?.height})`);
 
   await mPage.click("#al-dock-avatar-btn");
   await mPage.waitForSelector("#al-dock-menu.show", { timeout: 5000 });
   const mMenu = await mPage.locator("#al-dock-menu").boundingBox();
-  assert.ok(mMenu && mMenu.x >= 0 && mMenu.x + mMenu.width <= 375, `iPhone SE menu within 375px (${JSON.stringify(mMenu)})`);
+  assert.ok(mMenu && mMenu.x >= 0 && mMenu.x + mMenu.width <= 375 && mMenu.height > 100, `iPhone SE PFP menu fully visible within 375px (${JSON.stringify(mMenu)})`);
 
   await mobileCtx.close();
   console.log("✅ Hermetic E2E suite passed (Home, Detail, Resume Chip, 85% Sync, Old-Ep Guard, iPhone SE 375px Bounds)");

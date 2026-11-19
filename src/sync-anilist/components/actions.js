@@ -231,9 +231,6 @@ export function renderActions(
       `}
     </div>
 
-    <!-- Watch Skip Controls -->
-    ${isWatchEp ? `<div class="al-dock-group al-dock-skip-slot" id="al-dock-skip-slot"></div>` : ""}
-
     <!-- Right: Buddy + User PFP (Only 1 Dropdown) -->
     <div class="al-dock-group al-dock-user-group">
       ${entry ? `
