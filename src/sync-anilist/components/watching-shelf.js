@@ -1,6 +1,6 @@
 import { showToast } from "../../shared/toast.js";
 import { Logger } from "../../shared/logger.js";
-import { iconHtml, ANILIST_ICON_SVG, Play, Clock, Check, Zap, Loader2, Link, Users, X, Minus, Plus, Trash2 } from "../../shared/icons.js";
+import { iconHtml, Play, Clock, Check, Zap, Loader2, Link, Users, X, Minus, Plus, Trash2, MoreHorizontal } from "../../shared/icons.js";
 import { openTokenModal } from "../../shared/anilist/auth.js";
 import { simulateAgenticSearch } from "./agent-search.js";
 import { Settings } from "../settings.js";
@@ -158,7 +158,6 @@ function createCard(
   const epTarget = state.hasUnwatchedAired ? state.nextToWatch : (state.progress || 1);
   const title = media.title?.english || media.title?.romaji || media.title?.userPreferred || "Untitled";
   const coverUrl = media.coverImage?.large || media.coverImage?.medium || "";
-  const alUrl = media.siteUrl || `https://anilist.co/anime/${media.id}`;
 
   const card = document.createElement("div");
   card.className = "al-shelf-card";
@@ -193,31 +192,37 @@ function createCard(
     coverWrap.appendChild(buddyPill);
   }
 
-  // Top-left status badge moved to right info panel; keep cover clean with AniList link & buddy overlay
-  const alLinkWrap = document.createElement("div");
-  alLinkWrap.className = "al-card-badge-top-right";
-  const alLink = document.createElement("a");
-  alLink.href = alUrl;
-  alLink.target = "_blank";
-  alLink.rel = "noopener noreferrer";
-  alLink.className = "al-card-al-link";
-  alLink.title = "View on AniList";
-  alLink.innerHTML = ANILIST_ICON_SVG;
-  alLinkWrap.appendChild(alLink);
-  coverWrap.appendChild(alLinkWrap);
-
   card.appendChild(coverWrap);
+
+  const isBuddyCompleted = !!buddySync?.isBuddyCompleted;
+  const canBuddySync = Boolean(buddySync && (buddySync.isAhead || (isBuddyCompleted && entry.status !== "COMPLETED")));
 
   // Card Body (Right panel)
   const cardBody = document.createElement("div");
   cardBody.className = "al-card-body";
+
+  const headerRow = document.createElement("div");
+  headerRow.className = "al-card-header-row";
 
   const titleLink = document.createElement("a");
   titleLink.href = "#";
   titleLink.className = "al-card-title";
   titleLink.title = title;
   titleLink.textContent = title;
-  cardBody.appendChild(titleLink);
+  headerRow.appendChild(titleLink);
+
+  const moreBtn = document.createElement("button");
+  moreBtn.type = "button";
+  moreBtn.className = `al-card-more-btn ${canBuddySync ? "has-sync-alert" : ""}`;
+  moreBtn.title = canBuddySync ? "Actions (Buddy sync available)" : "Anime actions";
+  moreBtn.innerHTML = iconHtml(MoreHorizontal, { width: 14, height: 14 });
+  moreBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    cardBody.classList.toggle("is-actions-open");
+  });
+  headerRow.appendChild(moreBtn);
+  cardBody.appendChild(headerRow);
 
   // Meta & Status row (Episode / Seek time + Airing countdown or status pill)
   const metaWrap = document.createElement("div");
@@ -272,30 +277,6 @@ function createCard(
   const actions = document.createElement("div");
   actions.className = "al-card-actions";
 
-  // If buddy is ahead or completed, place sync button directly above watch button
-  if (buddySync) {
-    const isCompleted = !!buddySync.isBuddyCompleted;
-    const canSync = !!buddySync.isAhead || (isCompleted && entry.status !== "COMPLETED");
-    if (canSync) {
-      const syncBtn = document.createElement("button");
-      syncBtn.type = "button";
-      syncBtn.className = "al-card-btn al-btn-buddy-sync";
-      syncBtn.title = `Sync AniList to ${isCompleted ? "Completed" : `Ep. ${buddySync.buddyEp}`} (${buddySync.buddy})`;
-      syncBtn.innerHTML = `${iconHtml(Link, { width: 12, height: 12 })} <span>${isCompleted ? "Sync Completed" : `Sync Ep. ${buddySync.buddyEp}`}</span>`;
-      syncBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        syncBtn.style.pointerEvents = "none";
-        syncBtn.style.opacity = "0.7";
-        syncBtn.innerHTML = `${iconHtml(Loader2, { width: 12, height: 12, class: "al-spin" })} <span>Syncing...</span>`;
-        if (typeof onSyncEntry === "function") {
-          onSyncEntry(buddySync.mediaId, buddySync.buddyEp, isCompleted);
-        }
-      });
-      actions.appendChild(syncBtn);
-    }
-  }
-
   const btn = document.createElement("a");
   btn.href = "#";
   btn.className = "al-card-btn";
@@ -344,65 +325,107 @@ function createCard(
     actionsRow.appendChild(btn);
   }
 
-  // Subtle compact list edit micro-controls (-1 / +1 / Remove)
-  if (typeof onAdjustProgress === "function" || typeof onRemoveEntry === "function") {
-    const miniTools = document.createElement("div");
-    miniTools.className = "al-card-mini-tools";
-
-    if (typeof onAdjustProgress === "function") {
-      const decBtn = document.createElement("button");
-      decBtn.type = "button";
-      decBtn.className = "al-card-mini-btn";
-      decBtn.title = `Previous episode (Ep. ${Math.max(0, state.progress - 1)})`;
-      decBtn.disabled = state.progress <= 0;
-      decBtn.innerHTML = iconHtml(Minus, { width: 11, height: 11 });
-      decBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        decBtn.disabled = true;
-        await onAdjustProgress(media.id, Math.max(0, state.progress - 1));
-      });
-      miniTools.appendChild(decBtn);
-
-      const incBtn = document.createElement("button");
-      incBtn.type = "button";
-      incBtn.className = "al-card-mini-btn";
-      incBtn.title = `Mark Ep. ${state.progress + 1} watched`;
-      incBtn.disabled = Boolean(state.totalEp && state.progress >= state.totalEp);
-      incBtn.innerHTML = iconHtml(Plus, { width: 11, height: 11 });
-      incBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        incBtn.disabled = true;
-        await onAdjustProgress(media.id, state.progress + 1);
-      });
-      miniTools.appendChild(incBtn);
-    }
-
-    if (typeof onRemoveEntry === "function") {
-      const delBtn = document.createElement("button");
-      delBtn.type = "button";
-      delBtn.className = "al-card-mini-btn is-danger";
-      delBtn.title = "Remove from AniList";
-      delBtn.innerHTML = iconHtml(Trash2, { width: 11, height: 11 });
-      delBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        await onRemoveEntry(entry);
-      });
-      miniTools.appendChild(delBtn);
-    }
-
-    actionsRow.appendChild(miniTools);
-  }
-
   actions.appendChild(actionsRow);
   cardBody.appendChild(actions);
+
+  // Action Overlay (opened via ⋯ button, hides normal info underneath)
+  const overlayPanel = document.createElement("div");
+  overlayPanel.className = "al-card-action-overlay";
+
+  const overlayHead = document.createElement("div");
+  overlayHead.className = "al-card-overlay-head";
+  overlayHead.innerHTML = `<span class="al-card-overlay-title">Actions</span>`;
+
+  const closeOverlayBtn = document.createElement("button");
+  closeOverlayBtn.type = "button";
+  closeOverlayBtn.className = "al-card-mini-btn";
+  closeOverlayBtn.title = "Close actions";
+  closeOverlayBtn.innerHTML = iconHtml(X, { width: 12, height: 12 });
+  closeOverlayBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    cardBody.classList.remove("is-actions-open");
+  });
+  overlayHead.appendChild(closeOverlayBtn);
+  overlayPanel.appendChild(overlayHead);
+
+  const overlayBody = document.createElement("div");
+  overlayBody.className = "al-card-overlay-body";
+
+  if (canBuddySync) {
+    const syncBtn = document.createElement("button");
+    syncBtn.type = "button";
+    syncBtn.className = "al-card-btn al-btn-buddy-sync";
+    syncBtn.title = `Sync AniList to ${isBuddyCompleted ? "Completed" : `Ep. ${buddySync.buddyEp}`} (${buddySync.buddy})`;
+    syncBtn.innerHTML = `${iconHtml(Link, { width: 12, height: 12 })} <span>${isBuddyCompleted ? "Sync Completed" : `Sync Ep. ${buddySync.buddyEp}`}</span>`;
+    syncBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      syncBtn.style.pointerEvents = "none";
+      syncBtn.style.opacity = "0.7";
+      syncBtn.innerHTML = `${iconHtml(Loader2, { width: 12, height: 12, class: "al-spin" })} <span>Syncing...</span>`;
+      if (typeof onSyncEntry === "function") {
+        onSyncEntry(buddySync.mediaId, buddySync.buddyEp, isBuddyCompleted);
+      }
+    });
+    overlayBody.appendChild(syncBtn);
+  }
+
+  const editRow = document.createElement("div");
+  editRow.className = "al-card-overlay-edit-row";
+
+  if (typeof onAdjustProgress === "function") {
+    const decBtn = document.createElement("button");
+    decBtn.type = "button";
+    decBtn.className = "al-card-overlay-btn";
+    decBtn.title = `Previous episode (Ep. ${Math.max(0, state.progress - 1)})`;
+    decBtn.disabled = state.progress <= 0;
+    decBtn.innerHTML = `${iconHtml(Minus, { width: 12, height: 12 })}<span>-1</span>`;
+    decBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      decBtn.disabled = true;
+      await onAdjustProgress(media.id, Math.max(0, state.progress - 1));
+    });
+    editRow.appendChild(decBtn);
+
+    const incBtn = document.createElement("button");
+    incBtn.type = "button";
+    incBtn.className = "al-card-overlay-btn";
+    incBtn.title = `Mark Ep. ${state.progress + 1} watched`;
+    incBtn.disabled = Boolean(state.totalEp && state.progress >= state.totalEp);
+    incBtn.innerHTML = `${iconHtml(Plus, { width: 12, height: 12 })}<span>+1</span>`;
+    incBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      incBtn.disabled = true;
+      await onAdjustProgress(media.id, state.progress + 1);
+    });
+    editRow.appendChild(incBtn);
+  }
+
+  if (typeof onRemoveEntry === "function") {
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "al-card-overlay-btn is-danger";
+    delBtn.title = "Remove from AniList";
+    delBtn.innerHTML = `${iconHtml(Trash2, { width: 12, height: 12 })}<span>Remove</span>`;
+    delBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      await onRemoveEntry(entry);
+    });
+    editRow.appendChild(delBtn);
+  }
+
+  overlayBody.appendChild(editRow);
+  overlayPanel.appendChild(overlayBody);
+  cardBody.appendChild(overlayPanel);
   card.appendChild(cardBody);
 
   // Unified Card Navigation
   async function handleCardNavigate(e) {
-    if (e.target.closest(".al-card-al-link, .al-btn-buddy-sync, .al-btn-clear-resume, .al-card-mini-btn")) return;
+    if (e.target.closest(".al-card-more-btn, .al-card-action-overlay, .al-btn-buddy-sync, .al-btn-clear-resume, .al-card-mini-btn")) return;
     e.preventDefault();
 
     const provider = getCurrentProvider();
@@ -520,7 +543,7 @@ export function renderWatchingShelf({
 
   const unwatchedBtn = document.createElement("button");
   unwatchedBtn.type = "button";
-  unwatchedBtn.className = `al-shelf-chip-btn ${unwatchedOnly ? "is-active" : ""}`;
+  unwatchedBtn.className = `al-shelf-chip-btn al-is-toggle ${unwatchedOnly ? "is-active" : ""}`;
   unwatchedBtn.title = "Show only anime with unwatched aired episodes";
   unwatchedBtn.innerHTML = `
     ${iconHtml(Zap, { width: 12, height: 12 })}
@@ -544,7 +567,7 @@ export function renderWatchingShelf({
   if (syncEntries.length > 0) {
     syncBtn = document.createElement("button");
     syncBtn.type = "button";
-    syncBtn.className = `al-shelf-chip-btn is-sync ${syncOnly ? "is-active" : ""}`;
+    syncBtn.className = `al-shelf-chip-btn al-is-toggle is-sync ${syncOnly ? "is-active" : ""}`;
     syncBtn.title = "Show only anime with Sync Together friend";
     syncBtn.innerHTML = `
       ${iconHtml(Users, { width: 12, height: 12 })}

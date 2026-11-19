@@ -148,7 +148,7 @@ export function renderAutoSkipButton(provider) {
       ` : ""}
       <button type="button" class="al-dock-chip al-is-toggle ${isActive ? "is-tracked" : "is-pending"}" id="al-skip-toggle-btn" title="${srcLabel}: ${isActive ? "Auto-skip ON" : "Auto-skip OFF"}">
         ${iconHtml(SkipForward, { width: 11, height: 11 })}
-        <span>${isActive ? "Skip: ON" : "Skip: OFF"}</span>
+        <span>Skip</span>
       </button>
       ${settings.communityAniSkip && activeOp.skipId ? `
         <div class="al-skip-pill-votes" title="Vote skip timing">
