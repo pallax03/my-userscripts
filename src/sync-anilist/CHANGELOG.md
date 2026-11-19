@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.7.0](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.6.0...sync-anilist-v1.7.0) (2026-11-19)
+
+
+### Features
+
+* **aniskip:** restore community votes, add in-dock Skip button during intro, and show skip banner ([7b7556a](https://github.com/pallax03/my-userscripts/commit/7b7556af4f03c046698d7b653c5ebb48a0978be6))
+* **domain:** add domain-agnostic provider detection and cross-switch base resolution ([9bfa0c2](https://github.com/pallax03/my-userscripts/commit/9bfa0c27660c009c90f8201abca4d9b1fb752b65))
+* **resume:** extract pure resolveResumeAction and wire into prepareResumeTarget ([#18](https://github.com/pallax03/my-userscripts/issues/18)) ([d7dc2bf](https://github.com/pallax03/my-userscripts/commit/d7dc2bf7af02c8d2f337594427104bbf17065962))
+* **skip:** hybrid AniSkip -&gt; native -&gt; +85s skip resolution (issue [#19](https://github.com/pallax03/my-userscripts/issues/19)) ([63f462f](https://github.com/pallax03/my-userscripts/commit/63f462f6a36ea6d453e08d71a7fd3065333c060f))
+* **sync-anilist:** add animeunity.cx domain, Inertia site.js extractor, and e2e smoke runner ([2ba398f](https://github.com/pallax03/my-userscripts/commit/2ba398f00c950574de40e08386a9f653f4621c74))
+* **sync-anilist:** allow local-only resume on untracked Ep. 1 before 85% auto-add ([#21](https://github.com/pallax03/my-userscripts/issues/21)) ([7e5c189](https://github.com/pallax03/my-userscripts/commit/7e5c189e31e14b8740d050ae1e45dfad9be16527))
+* **sync-anilist:** center dock for iPhone SE, blue title link, standalone favicon switch, and fix resume chip ([b9c25ab](https://github.com/pallax03/my-userscripts/commit/b9c25ab94f89d8069d36438cd6a852b119323670))
+* **sync-anilist:** lock tracking to 85% completion and unify auto-resume preferences ([bb399a8](https://github.com/pallax03/my-userscripts/commit/bb399a84c5cc0ae859e901e364a26c1b68410f80))
+* **sync-anilist:** polish dock size/layout, single-icon -/+, in-dock resume loader, English copy, and AGENTS.md ([4407376](https://github.com/pallax03/my-userscripts/commit/44073760e75589b6b371ee74477d5b0e7f54277e))
+* **sync-anilist:** restore bottom-right dock, native timestamps, and zero-dom provider ([c8c0b40](https://github.com/pallax03/my-userscripts/commit/c8c0b4077c783740aabe5685f5b71b3ccd2ed3c6))
+* **sync-anilist:** separate User PFP and Anime menus, restore bar Status/Ep/Skip, and add resume loading & auto-ep selection ([f67f5b9](https://github.com/pallax03/my-userscripts/commit/f67f5b95f49d466193a7d40dcd8fa54efef48b00))
+
+
+### Bug Fixes
+
+* **sync-anilist:** detect embedded player on anime detail URLs for AniSkip & S-key, remove remaining Italian strings ([c7159b1](https://github.com/pallax03/my-userscripts/commit/c7159b1142a85685173dea02bf31748f0e5a640f))
+* **sync-anilist:** keep full desktop feature parity on mobile iPhone SE with clean wrapped layout ([ea0f26f](https://github.com/pallax03/my-userscripts/commit/ea0f26fbe621bc5fcddddfae621b916cea5bb72a))
+* **sync-anilist:** move AS button left, single-row iPhone SE dock, and add live status banner above dock ([d5a5d2b](https://github.com/pallax03/my-userscripts/commit/d5a5d2bcc0db6e8760ceb57a9776641dd126bb5b))
+* **sync-anilist:** repair resume auto-seek, cross-switch mount, REPEATING state, and streamline dock via dock-model ([8e460fd](https://github.com/pallax03/my-userscripts/commit/8e460fdef05d8e01067bf9c07894939747c3325b))
+* **sync-anilist:** separate AniSkip dock above main dock, move AS icon top-left, fix mobile PFP menu clipping ([dcb8d2f](https://github.com/pallax03/my-userscripts/commit/dcb8d2ff8649231b519c1bb9aee931fad9977189))
+
 ## [1.6.0](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.5.0...sync-anilist-v1.6.0) (2026-10-31)
 
 
