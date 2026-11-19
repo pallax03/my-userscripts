@@ -473,6 +473,18 @@ function renderHome() {
       }
       showToast("Resume cleared");
       await loadHomeWatching();
+    },
+    onAdjustProgress: async (mediaId, targetEp) => {
+      if (!mediaId) return;
+      await App.setProgress(Math.max(0, targetEp), mediaId);
+      await loadHomeWatching();
+    },
+    onRemoveEntry: async (entry) => {
+      if (!entry?.id) return;
+      if (confirm("Remove this anime from your AniList?") && (await AniListAPI.deleteEntry(entry.id))) {
+        showToast("Anime removed");
+        await loadHomeWatching();
+      }
     }
   });
   injectHomeShelf(shelf);

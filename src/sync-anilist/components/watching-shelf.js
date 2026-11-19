@@ -1,6 +1,6 @@
 import { showToast } from "../../shared/toast.js";
 import { Logger } from "../../shared/logger.js";
-import { iconHtml, ANILIST_ICON_SVG, Play, Clock, Check, Zap, Loader2, Link, Users, X } from "../../shared/icons.js";
+import { iconHtml, ANILIST_ICON_SVG, Play, Clock, Check, Zap, Loader2, Link, Users, X, Minus, Plus, Trash2 } from "../../shared/icons.js";
 import { openTokenModal } from "../../shared/anilist/auth.js";
 import { simulateAgenticSearch } from "./agent-search.js";
 import { Settings } from "../settings.js";
@@ -138,7 +138,14 @@ export function compareShelfEntries(a, b) {
  * @param {Function|null} onSyncEntry
  * @returns {HTMLElement}
  */
-function createCard(entry, buddySync = null, onSyncEntry = null, onClearResume = null) {
+function createCard(
+  entry,
+  buddySync = null,
+  onSyncEntry = null,
+  onClearResume = null,
+  onAdjustProgress = null,
+  onRemoveEntry = null
+) {
   const media = entry.media || {};
   const state = calculateEntryState(entry);
   const resume = Resume.extract(entry.notes) || Resume.getLocal(media.id);
@@ -186,54 +193,7 @@ function createCard(entry, buddySync = null, onSyncEntry = null, onClearResume =
     coverWrap.appendChild(buddyPill);
   }
 
-  // Top-left status badge
-  const badgeWrap = document.createElement("div");
-  badgeWrap.className = "al-card-badge-top-left";
-
-  if (state.isRepeating) {
-    const badge = document.createElement("span");
-    badge.className = "al-badge al-badge-REPEATING";
-    const dot = document.createElement("span");
-    dot.className = "al-dot";
-    badge.appendChild(dot);
-    const txt = document.createElement("span");
-    txt.textContent = state.unwatchedCount > 1 ? `+${state.unwatchedCount} eps` : "Caught up";
-    badge.appendChild(txt);
-    badgeWrap.appendChild(badge);
-  } else if (state.hasUnwatchedAired) {
-    const badge = document.createElement("span");
-    badge.className = "al-badge al-badge-CURRENT";
-    const dot = document.createElement("span");
-    dot.className = "al-dot";
-    badge.appendChild(dot);
-    const txt = document.createElement("span");
-    txt.textContent = state.unwatchedCount > 1 ? `+${state.unwatchedCount} eps` : `Caught up`;
-    badge.appendChild(txt);
-    badgeWrap.appendChild(badge);
-  } else if (state.nextAir && state.nextAir.timeUntilAiring > 0) {
-    const badge = document.createElement("span");
-    badge.className = "al-badge al-badge-PAUSED";
-    const dot = document.createElement("span");
-    dot.className = "al-dot";
-    badge.appendChild(dot);
-    const txt = document.createElement("span");
-    txt.textContent = `Ep. ${state.nextAir.episode} in ${formatCountdown(state.nextAir.timeUntilAiring)}`;
-    badge.appendChild(txt);
-    badgeWrap.appendChild(badge);
-  } else {
-    const badge = document.createElement("span");
-    badge.className = "al-badge al-badge-COMPLETED";
-    const dot = document.createElement("span");
-    dot.className = "al-dot";
-    badge.appendChild(dot);
-    const txt = document.createElement("span");
-    txt.textContent = "Caught up";
-    badge.appendChild(txt);
-    badgeWrap.appendChild(badge);
-  }
-  coverWrap.appendChild(badgeWrap);
-
-  // Top-right AniList link
+  // Top-left status badge moved to right info panel; keep cover clean with AniList link & buddy overlay
   const alLinkWrap = document.createElement("div");
   alLinkWrap.className = "al-card-badge-top-right";
   const alLink = document.createElement("a");
@@ -246,33 +206,51 @@ function createCard(entry, buddySync = null, onSyncEntry = null, onClearResume =
   alLinkWrap.appendChild(alLink);
   coverWrap.appendChild(alLinkWrap);
 
-  // Cover bottom overlay (Progress text and bar)
-  const overlay = document.createElement("div");
-  overlay.className = "al-card-cover-overlay";
+  card.appendChild(coverWrap);
 
-  const progressText = document.createElement("div");
-  progressText.className = "al-card-progress-text";
+  // Card Body (Right panel)
+  const cardBody = document.createElement("div");
+  cardBody.className = "al-card-body";
+
+  const titleLink = document.createElement("a");
+  titleLink.href = "#";
+  titleLink.className = "al-card-title";
+  titleLink.title = title;
+  titleLink.textContent = title;
+  cardBody.appendChild(titleLink);
+
+  // Meta & Status row (Episode / Seek time + Airing countdown or status pill)
+  const metaWrap = document.createElement("div");
+  metaWrap.className = "al-card-meta-wrap";
+
+  const statusRow = document.createElement("div");
+  statusRow.className = "al-card-meta-row";
+
   const progressLabel = document.createElement("span");
-
+  progressLabel.className = "al-card-ep-label";
   if (isResumeActive) {
     progressLabel.textContent = `Ep. ${resume.ep} • ${Resume.formatTime(resume.time)} / ${Resume.formatTime(resume.duration)}`;
   } else {
     progressLabel.textContent = `Ep. ${state.progress} / ${state.totalEp || state.latestAired || "?"}`;
   }
-  progressText.appendChild(progressLabel);
+  statusRow.appendChild(progressLabel);
 
-  if (isResumeActive) {
-    const resumeTag = document.createElement("span");
-    resumeTag.style.color = "#c084fc";
-    resumeTag.textContent = `${resume.percent}%`;
-    progressText.appendChild(resumeTag);
-  } else if (state.hasUnwatchedAired || state.isRepeating) {
-    const readyTag = document.createElement("span");
-    readyTag.style.color = state.isRepeating ? "#06b6d4" : "#3db4f2";
-    readyTag.textContent = state.isRepeating ? "Rewatching" : "Ready";
-    progressText.appendChild(readyTag);
+  const statusPill = document.createElement("span");
+  if (state.isRepeating) {
+    statusPill.className = "al-badge al-badge-REPEATING";
+    statusPill.innerHTML = `<span class="al-dot"></span><span>${state.unwatchedCount > 1 ? `+${state.unwatchedCount} eps` : "Rewatch"}</span>`;
+  } else if (state.hasUnwatchedAired) {
+    statusPill.className = "al-badge al-badge-CURRENT";
+    statusPill.innerHTML = `<span class="al-dot"></span><span>${state.unwatchedCount > 1 ? `+${state.unwatchedCount} eps` : "Ready"}</span>`;
+  } else if (state.nextAir && state.nextAir.timeUntilAiring > 0) {
+    statusPill.className = "al-badge al-badge-PAUSED";
+    statusPill.innerHTML = `<span class="al-dot"></span><span>Ep. ${state.nextAir.episode} in ${formatCountdown(state.nextAir.timeUntilAiring)}</span>`;
+  } else {
+    statusPill.className = "al-badge al-badge-COMPLETED";
+    statusPill.innerHTML = `<span class="al-dot"></span><span>Caught up</span>`;
   }
-  overlay.appendChild(progressText);
+  statusRow.appendChild(statusPill);
+  metaWrap.appendChild(statusRow);
 
   const progressBar = document.createElement("div");
   progressBar.className = "al-card-progress-bar";
@@ -288,21 +266,8 @@ function createCard(entry, buddySync = null, onSyncEntry = null, onClearResume =
     progressFill.style.width = `${percent}%`;
   }
   progressBar.appendChild(progressFill);
-  overlay.appendChild(progressBar);
-
-  coverWrap.appendChild(overlay);
-  card.appendChild(coverWrap);
-
-  // Card Body
-  const cardBody = document.createElement("div");
-  cardBody.className = "al-card-body";
-
-  const titleLink = document.createElement("a");
-  titleLink.href = "#";
-  titleLink.className = "al-card-title";
-  titleLink.title = title;
-  titleLink.textContent = title;
-  cardBody.appendChild(titleLink);
+  metaWrap.appendChild(progressBar);
+  cardBody.appendChild(metaWrap);
 
   const actions = document.createElement("div");
   actions.className = "al-card-actions";
@@ -352,6 +317,9 @@ function createCard(entry, buddySync = null, onSyncEntry = null, onClearResume =
     btn.classList.add("al-btn-caughtup");
     btn.innerHTML = `${iconHtml(Check, { width: 12, height: 12 })} Caught up`;
   }
+  const actionsRow = document.createElement("div");
+  actionsRow.className = "al-card-actions-bar";
+
   if (isResumeActive && typeof onClearResume === "function") {
     const splitWrap = document.createElement("div");
     splitWrap.className = "al-card-resume-split";
@@ -371,17 +339,70 @@ function createCard(entry, buddySync = null, onSyncEntry = null, onClearResume =
 
     splitWrap.appendChild(btn);
     splitWrap.appendChild(clearBtn);
-    actions.appendChild(splitWrap);
+    actionsRow.appendChild(splitWrap);
   } else {
-    actions.appendChild(btn);
+    actionsRow.appendChild(btn);
   }
 
+  // Subtle compact list edit micro-controls (-1 / +1 / Remove)
+  if (typeof onAdjustProgress === "function" || typeof onRemoveEntry === "function") {
+    const miniTools = document.createElement("div");
+    miniTools.className = "al-card-mini-tools";
+
+    if (typeof onAdjustProgress === "function") {
+      const decBtn = document.createElement("button");
+      decBtn.type = "button";
+      decBtn.className = "al-card-mini-btn";
+      decBtn.title = `Previous episode (Ep. ${Math.max(0, state.progress - 1)})`;
+      decBtn.disabled = state.progress <= 0;
+      decBtn.innerHTML = iconHtml(Minus, { width: 11, height: 11 });
+      decBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        decBtn.disabled = true;
+        await onAdjustProgress(media.id, Math.max(0, state.progress - 1));
+      });
+      miniTools.appendChild(decBtn);
+
+      const incBtn = document.createElement("button");
+      incBtn.type = "button";
+      incBtn.className = "al-card-mini-btn";
+      incBtn.title = `Mark Ep. ${state.progress + 1} watched`;
+      incBtn.disabled = Boolean(state.totalEp && state.progress >= state.totalEp);
+      incBtn.innerHTML = iconHtml(Plus, { width: 11, height: 11 });
+      incBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        incBtn.disabled = true;
+        await onAdjustProgress(media.id, state.progress + 1);
+      });
+      miniTools.appendChild(incBtn);
+    }
+
+    if (typeof onRemoveEntry === "function") {
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "al-card-mini-btn is-danger";
+      delBtn.title = "Remove from AniList";
+      delBtn.innerHTML = iconHtml(Trash2, { width: 11, height: 11 });
+      delBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        await onRemoveEntry(entry);
+      });
+      miniTools.appendChild(delBtn);
+    }
+
+    actionsRow.appendChild(miniTools);
+  }
+
+  actions.appendChild(actionsRow);
   cardBody.appendChild(actions);
   card.appendChild(cardBody);
 
   // Unified Card Navigation
   async function handleCardNavigate(e) {
-    if (e.target.closest(".al-card-al-link, .al-btn-buddy-sync, .al-btn-clear-resume")) return;
+    if (e.target.closest(".al-card-al-link, .al-btn-buddy-sync, .al-btn-clear-resume, .al-card-mini-btn")) return;
     e.preventDefault();
 
     const provider = getCurrentProvider();
@@ -455,7 +476,9 @@ export function renderWatchingShelf({
   onLogin = null,
   syncNotifs = [],
   onSyncEntry = null,
-  onClearResume = null
+  onClearResume = null,
+  onAdjustProgress = null,
+  onRemoveEntry = null
 } = {}) {
   let unwatchedOnly = Settings.get().shelfFilterUnwatched;
   let syncOnly = Settings.get().shelfFilterSync;
@@ -618,7 +641,7 @@ export function renderWatchingShelf({
 
     visibleEntries.forEach((entry) => {
       const buddySync = syncMap.get(entry.mediaId) || null;
-      const card = createCard(entry, buddySync, onSyncEntry, onClearResume);
+      const card = createCard(entry, buddySync, onSyncEntry, onClearResume, onAdjustProgress, onRemoveEntry);
       track.appendChild(card);
     });
   }
