@@ -183,10 +183,7 @@ function createCard(
     const epDisplay = `Ep. ${buddySync.buddyEp || 0}`;
 
     buddyPill.innerHTML = `
-      <div class="al-card-buddy-left">
-        <img src="${buddySync.avatar || "https://anilist.co/img/icons/icon.svg"}" class="al-card-buddy-avatar" alt="${buddySync.buddy}" />
-        <span class="al-card-buddy-name">${buddySync.buddy}</span>
-      </div>
+      <img src="${buddySync.avatar || "https://anilist.co/img/icons/icon.svg"}" class="al-card-buddy-avatar" alt="${buddySync.buddy}" />
       <span class="al-card-buddy-status">${epDisplay}</span>
     `;
 
@@ -214,8 +211,8 @@ function createCard(
 
   const moreBtn = document.createElement("button");
   moreBtn.type = "button";
-  moreBtn.className = `al-card-more-btn ${canBuddySync ? "has-sync-alert" : ""}`;
-  moreBtn.title = canBuddySync ? "Actions (Buddy sync available)" : "Anime actions";
+  moreBtn.className = "al-card-more-btn";
+  moreBtn.title = "Anime actions";
   moreBtn.innerHTML = iconHtml(MoreHorizontal, { width: 14, height: 14 });
   moreBtn.addEventListener("click", (e) => {
     e.preventDefault();
@@ -322,6 +319,23 @@ function createCard(
     splitWrap.appendChild(btn);
     splitWrap.appendChild(clearBtn);
     actionsRow.appendChild(splitWrap);
+  } else if (canBuddySync) {
+    const syncBtn = document.createElement("button");
+    syncBtn.type = "button";
+    syncBtn.className = "al-card-btn al-btn-buddy-sync";
+    syncBtn.title = `Sync AniList to ${isBuddyCompleted ? "Completed" : `Ep. ${buddySync.buddyEp}`} (${buddySync.buddy})`;
+    syncBtn.innerHTML = `${iconHtml(Link, { width: 12, height: 12 })} <span>${isBuddyCompleted ? "Sync Completed" : `Sync Ep. ${buddySync.buddyEp}`}</span>`;
+    syncBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      syncBtn.style.pointerEvents = "none";
+      syncBtn.style.opacity = "0.7";
+      syncBtn.innerHTML = `${iconHtml(Loader2, { width: 12, height: 12, class: "al-spin" })} <span>Syncing...</span>`;
+      if (typeof onSyncEntry === "function") {
+        onSyncEntry(buddySync.mediaId, buddySync.buddyEp, isBuddyCompleted);
+      }
+    });
+    actionsRow.appendChild(syncBtn);
   } else {
     actionsRow.appendChild(btn);
   }
@@ -352,25 +366,6 @@ function createCard(
 
   const overlayBody = document.createElement("div");
   overlayBody.className = "al-card-overlay-body";
-
-  if (canBuddySync) {
-    const syncBtn = document.createElement("button");
-    syncBtn.type = "button";
-    syncBtn.className = "al-card-btn al-btn-buddy-sync";
-    syncBtn.title = `Sync AniList to ${isBuddyCompleted ? "Completed" : `Ep. ${buddySync.buddyEp}`} (${buddySync.buddy})`;
-    syncBtn.innerHTML = `${iconHtml(Link, { width: 12, height: 12 })} <span>${isBuddyCompleted ? "Sync Completed" : `Sync Ep. ${buddySync.buddyEp}`}</span>`;
-    syncBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      syncBtn.style.pointerEvents = "none";
-      syncBtn.style.opacity = "0.7";
-      syncBtn.innerHTML = `${iconHtml(Loader2, { width: 12, height: 12, class: "al-spin" })} <span>Syncing...</span>`;
-      if (typeof onSyncEntry === "function") {
-        onSyncEntry(buddySync.mediaId, buddySync.buddyEp, isBuddyCompleted);
-      }
-    });
-    overlayBody.appendChild(syncBtn);
-  }
 
   const editRow = document.createElement("div");
   editRow.className = "al-card-overlay-edit-row";
