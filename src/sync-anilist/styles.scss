@@ -3165,22 +3165,74 @@ video-player,
   }
 
   @media (max-width: 640px) {
+    left: 6px !important;
+    right: 6px !important;
+    transform: none !important;
+    width: calc(100vw - 12px) !important;
+    max-width: calc(100vw - 12px) !important;
+    bottom: calc(104px + env(safe-area-inset-bottom)) !important;
+
     .al-dock-inner {
+      width: 100%;
       flex-direction: column;
-      white-space: normal;
+      white-space: nowrap;
       height: auto;
       border-radius: 14px;
-      padding: 8px 12px;
-      gap: 8px;
+      padding: 6px 8px;
+      gap: 5px;
     }
 
     .al-dock-contrib-row {
       display: flex;
       align-items: center;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 8px;
+      justify-content: space-between;
+      flex-wrap: nowrap;
+      gap: 5px;
       width: 100%;
+    }
+
+    .al-dock-kbd {
+      display: none !important;
+    }
+
+    .al-dock-type {
+      padding: 2px 6px !important;
+      font-size: 10.5px !important;
+    }
+
+    .al-dock-provider-wrap {
+      min-width: 0;
+      flex: 1;
+      max-width: 96px;
+    }
+
+    .al-dock-provider-select {
+      font-size: 10.5px !important;
+      max-width: 100%;
+    }
+
+    .al-dock-dur-badge {
+      font-size: 10.5px !important;
+      padding: 3px 7px !important;
+    }
+
+    .al-dock-submit-btn {
+      height: 26px !important;
+      padding: 0 9px !important;
+      font-size: 11px !important;
+    }
+
+    .al-dock-close-btn {
+      width: 26px !important;
+      height: 26px !important;
+      flex-shrink: 0;
+    }
+
+    .al-dock-split-pill {
+      flex: 1;
+      justify-content: space-between;
+      height: 28px !important;
+      min-width: 0;
     }
   }
 
