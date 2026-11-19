@@ -1,4 +1,8 @@
 #!/bin/sh
-# Automatically build, validate, sync to iCloud, and stage bundles before commit
-npm run build && npm run validate
+# Automatically lint, test, build, validate, sync to iCloud, and stage bundles before commit
+set -e
+npm run lint
+npm test
+npm run build
+npm run validate
 git add dist/
