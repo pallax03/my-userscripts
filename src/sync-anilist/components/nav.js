@@ -36,10 +36,11 @@ export function renderNav(currentUser, callbacks, provider = null) {
   const avatar = currentUser?.avatar?.medium || "https://anilist.co/img/icons/icon.svg";
 
   if (!currentUser) {
+    pill.classList.remove("is-expanded");
+    pill.classList.add("is-guest");
     pill.innerHTML = `
-      <div class="al-dock-dot is-offline" title="Not connected"></div>
       <button type="button" class="al-pill-btn primary" id="al-home-login-btn">
-        ${iconHtml(KeyRound, { width: 13, height: 13 })}
+        ${iconHtml(KeyRound, { width: 14, height: 14 })}
         <span>Login AniList</span>
       </button>
     `;
@@ -50,6 +51,7 @@ export function renderNav(currentUser, callbacks, provider = null) {
     });
     return;
   }
+  pill.classList.remove("is-guest");
 
   pill.innerHTML = `
     <div class="al-home-pill-side is-left">

@@ -3629,21 +3629,27 @@ video-player,
     font-weight: 600;
   }
   .al-pill-btn.primary {
-    background: #14b8a6;
-    color: #0b131e;
-    font-weight: 700;
-    font-size: 11px;
-    height: 26px;
-    padding: 0 12px;
+    background: linear-gradient(135deg, #2dd4bf, #0284c7);
+    color: #042f2e;
+    font-weight: 800;
+    font-size: 12px;
+    height: 34px;
+    padding: 0 15px;
     border-radius: 9999px;
     border: none;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
+    box-shadow: 0 2px 12px rgba(45, 212, 191, 0.3);
+    transition: transform 0.16s $al-ease-spring, filter 0.16s ease, box-shadow 0.16s ease;
     &:hover {
-      background: #2dd4bf;
-      transform: scale(1.04);
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(45, 212, 191, 0.45);
+    }
+    &:active {
+      transform: scale(0.97);
     }
   }
 }

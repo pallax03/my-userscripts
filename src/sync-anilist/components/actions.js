@@ -78,16 +78,13 @@ export function renderActions(
   }
   bar.__lastRenderKey = renderKey;
 
-  // 1. Not Logged In State
+  // 1. Not Logged In State (matches Home guest pill)
   if (!hasToken) {
     bar.innerHTML = `
-      <div class="al-pill-item al-dock-dot is-offline" title="Disconnected"></div>
-      <span class="al-pill-label">AniList</span>
       <button type="button" class="al-pill-btn primary" id="al-bar-login">
-        ${iconHtml(KeyRound, { width: 13, height: 13 })}
-        <span>Login</span>
+        ${iconHtml(KeyRound, { width: 14, height: 14 })}
+        <span>Login AniList</span>
       </button>
-      <div class="al-dock-switch-box" id="al-dock-switch-slot"></div>
     `;
     bar.querySelector("#al-bar-login")?.addEventListener("click", (e) => {
       e.preventDefault();

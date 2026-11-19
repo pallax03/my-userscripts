@@ -124,8 +124,8 @@ export function renderAutoSkipButton(provider) {
     container.innerHTML = `
       <div class="al-dock-skip-cluster">
         <button type="button" class="al-dock-chip is-pending" id="al-skip-add-btn" title="Add intro timestamps (Key: [ / ])">
-          ${iconHtml(Plus, { width: 10, height: 10 })}
-          <span>+ Intro</span>
+          ${iconHtml(Plus, { width: 11, height: 11 })}
+          <span>Intro</span>
         </button>
       </div>
     `;
