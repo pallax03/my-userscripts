@@ -26,7 +26,7 @@ export function renderNav(currentUser, callbacks, provider = null) {
   if (!pill) {
     pill = document.createElement("div");
     pill.id = "al-home-user-pill";
-    pill.className = "al-compact-pill";
+    pill.className = "al-compact-pill al-home-user-pill";
   }
 
   if (pill.parentElement !== navSlot) {
@@ -52,49 +52,35 @@ export function renderNav(currentUser, callbacks, provider = null) {
   }
 
   pill.innerHTML = `
-    <div class="al-dock-dot is-synced" title="Connected to AniList"></div>
-    <div class="al-dock-user-wrap">
-      <button type="button" class="al-dock-avatar-btn" id="al-home-avatar-btn" title="${currentUser.name}">
-        <img src="${avatar}" class="al-dock-avatar" alt="${currentUser.name}" />
+    <div class="al-home-pill-side is-left">
+      <a class="al-home-pill-action" href="https://anilist.co/user/${currentUser.name}" target="_blank" rel="noopener noreferrer" title="AniList Profile">
+        ${iconHtml(User, { width: 13, height: 13 })}
+        <span>Profile</span>
+      </a>
+    </div>
+    <button type="button" class="al-home-avatar-btn" id="al-home-avatar-btn" title="${currentUser.name}">
+      <img src="${avatar}" class="al-home-avatar" alt="${currentUser.name}" />
+    </button>
+    <div class="al-home-pill-side is-right">
+      <button type="button" class="al-home-pill-action is-danger" id="al-home-menu-logout" title="Logout">
+        <span>Logout</span>
+        ${iconHtml(LogOut, { width: 13, height: 13 })}
       </button>
-      <div class="al-dock-menu" id="al-home-menu">
-        <div class="al-dock-menu-header">
-          <img src="${avatar}" class="al-dock-menu-avatar" alt="${currentUser.name}" />
-          <div class="al-dock-menu-user">
-            <span class="al-dock-menu-name">${currentUser.name}</span>
-            <span class="al-dock-menu-sub">AniList Account</span>
-          </div>
-        </div>
-        <div class="al-dock-menu-body">
-          <a class="al-dock-menu-item" href="https://anilist.co/user/${currentUser.name}" target="_blank" rel="noopener noreferrer">
-            ${iconHtml(User, { width: 13, height: 13 })}
-            <span>Profile</span>
-          </a>
-          <button type="button" class="al-dock-menu-item danger" id="al-home-menu-logout">
-            ${iconHtml(LogOut, { width: 13, height: 13 })}
-            <span>Logout</span>
-          </button>
-        </div>
-      </div>
     </div>
   `;
 
   const avatarBtn = pill.querySelector("#al-home-avatar-btn");
-  const menu = pill.querySelector("#al-home-menu");
   avatarBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
-    menu?.classList.toggle("show");
+    pill.classList.toggle("is-expanded");
   });
   document.addEventListener("click", (e) => {
-    if (!pill.contains(e.target)) menu?.classList.remove("show");
+    if (!pill.contains(e.target)) pill.classList.remove("is-expanded");
   });
 
-  pill.querySelector("#al-home-menu-token")?.addEventListener("click", () => {
-    menu?.classList.remove("show");
-    callbacks.onChangeToken?.();
-  });
-  pill.querySelector("#al-home-menu-logout")?.addEventListener("click", () => {
-    menu?.classList.remove("show");
+  pill.querySelector("#al-home-menu-logout")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    pill.classList.remove("is-expanded");
     callbacks.onLogout?.();
   });
 }
