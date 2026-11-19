@@ -98,7 +98,7 @@ export function renderAutoSkipButton(provider) {
     }
     container.innerHTML = `
       <div class="al-dock-skip-cluster">
-        <button type="button" class="al-dock-chip is-pending" id="al-skip-add-btn" title="Nessuna intro trovata. Contribuisci ad AniSkip (Key: [ o ])">
+        <button type="button" class="al-dock-chip is-pending" id="al-skip-add-btn" title="Add intro timestamps (Key: [ / ])">
           ${iconHtml(Plus, { width: 10, height: 10 })}
           <span>+ Intro</span>
         </button>
@@ -115,12 +115,12 @@ export function renderAutoSkipButton(provider) {
   const srcLabel = activeOp.source === "native" ? "Native" : "AniSkip";
   container.innerHTML = `
     <div class="al-dock-skip-cluster">
-      <button type="button" class="al-dock-chip ${isActive ? "is-tracked" : "is-pending"}" id="al-skip-toggle-btn" title="${srcLabel}: ${isActive ? "Auto-Skip attivo (Clicca per disattivare)" : "Auto-Skip disattivato (Clicca per attivare)"}">
+      <button type="button" class="al-dock-chip ${isActive ? "is-tracked" : "is-pending"}" id="al-skip-toggle-btn" title="${srcLabel}: ${isActive ? "Auto-skip ON" : "Auto-skip OFF"}">
         ${iconHtml(SkipForward, { width: 11, height: 11 })}
-        <span>${isActive ? "Auto-Skip: ON" : "Auto-Skip: OFF"}</span>
+        <span>${isActive ? "Skip: ON" : "Skip: OFF"}</span>
       </button>
       ${settings.communityAniSkip ? `
-        <button type="button" class="al-dock-step-btn" id="al-skip-edit-btn" title="Calibra timestamp intro (Key: [ o ])">
+        <button type="button" class="al-dock-step-btn" id="al-skip-edit-btn" title="Calibrate intro (Key: [ / ])">
           ${iconHtml(Pencil, { width: 10, height: 10 })}
         </button>
       ` : ""}

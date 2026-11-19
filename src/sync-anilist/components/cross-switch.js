@@ -303,10 +303,10 @@ export function renderCrossSwitch({ media, activeEp = 0, provider = null } = {})
     container.appendChild(btn);
   }
 
-  btn.title = `Switch to ${targetSiteName} · Open Ep. ${targetEp}`;
+  btn.title = `Switch to ${targetSiteName} (Ep. ${targetEp})`;
   btn.innerHTML = `
     ${iconHtml(targetIcon, { width: 13, height: 13 })}
-    <span>Guarda su ${targetSiteName} (Ep. ${targetEp})</span>
+    <span>Watch on ${targetSiteName}</span>
     ${iconHtml(ExternalLink, { width: 11, height: 11, style: "margin-left:auto;opacity:0.7;" })}
   `;
 

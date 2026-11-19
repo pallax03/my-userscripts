@@ -39,10 +39,10 @@ export function renderNav(currentUser, callbacks, provider = null) {
 
   if (!currentUser) {
     pill.innerHTML = `
-      <div class="al-dock-dot is-offline" title="Non connesso ad AniList"></div>
+      <div class="al-dock-dot is-offline" title="Not connected"></div>
       <button type="button" class="al-pill-btn primary" id="al-home-login-btn">
         ${iconHtml(KeyRound, { width: 13, height: 13 })}
-        <span>Accedi ad AniList</span>
+        <span>Login AniList</span>
       </button>
     `;
     pill.querySelector("#al-home-login-btn")?.addEventListener("click", (e) => {
@@ -54,7 +54,7 @@ export function renderNav(currentUser, callbacks, provider = null) {
   }
 
   pill.innerHTML = `
-    <div class="al-dock-dot is-synced" title="Connesso ad AniList"></div>
+    <div class="al-dock-dot is-synced" title="Connected to AniList"></div>
     <div class="al-dock-user-wrap">
       <button type="button" class="al-dock-avatar-btn" id="al-home-avatar-btn" title="${currentUser.name}">
         <img src="${avatar}" class="al-dock-avatar" alt="${currentUser.name}" />
@@ -64,25 +64,21 @@ export function renderNav(currentUser, callbacks, provider = null) {
           <img src="${avatar}" class="al-dock-menu-avatar" alt="${currentUser.name}" />
           <div class="al-dock-menu-user">
             <span class="al-dock-menu-name">${currentUser.name}</span>
-            <span class="al-dock-menu-sub">AniList • Connesso</span>
+            <span class="al-dock-menu-sub">AniList Account</span>
           </div>
         </div>
         <div class="al-dock-menu-body">
           <a class="al-dock-menu-item" href="https://anilist.co/user/${currentUser.name}" target="_blank" rel="noopener noreferrer">
             ${iconHtml(User, { width: 13, height: 13 })}
-            <span>Profilo AniList</span>
+            <span>Profile</span>
           </a>
           <button type="button" class="al-dock-menu-item" id="al-home-menu-prefs">
             ${iconHtml(Sliders, { width: 13, height: 13 })}
-            <span>Impostazioni</span>
-          </button>
-          <button type="button" class="al-dock-menu-item" id="al-home-menu-token">
-            ${iconHtml(KeyRound, { width: 13, height: 13 })}
-            <span>Cambia Token</span>
+            <span>Settings</span>
           </button>
           <button type="button" class="al-dock-menu-item danger" id="al-home-menu-logout">
             ${iconHtml(LogOut, { width: 13, height: 13 })}
-            <span>Disconnetti Account</span>
+            <span>Logout</span>
           </button>
         </div>
       </div>

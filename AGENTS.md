@@ -50,3 +50,14 @@ npm run validate
 When modifying providers, player, iframe messaging, or UI dock/shelf:
 - Also run E2E verification with `node scripts/e2e.mjs <url> [out.png] [--mobile]` (or the hermetic Playwright suite once added) and verify **0 console/page errors**, `#al-dock` inside viewport bounds (`x >= 0`, `right <= viewportWidth`), and player visibility.
 - Never claim tests pass unless you ran them after your final edit.
+
+---
+
+## 4. UI Copy, Icons & Menu Separation
+
+1. **Short English + Semantic Icons & Colors**:
+   - Keep all UI strings, tooltips, and status labels in **short, crisp English** (no mixed-language text or verbose instructions).
+   - Prefer intuitive icons and semantic colors (`green` = synced/ON, `amber` = pending/rewatch, `teal/blue` = loading/restoring, `red` = destructive).
+2. **Strict User vs. Anime Menu Separation**:
+   - **User PFP Menu (`#al-dock-menu`)**: strictly User Account only (`Profile`, `Settings`, `Logout`). Never mix anime data or actions.
+   - **Anime Menu (`#al-dock-anime-menu`, `⋯`)**: secondary anime overrides (`-` / `+`, `AniList ↗`, secondary provider fallback like `Watch on AnimeSaturn`, `Buddy`, `Remove`).
