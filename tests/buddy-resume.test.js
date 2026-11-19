@@ -92,7 +92,7 @@ describe("resolveResumeAction", () => {
     );
   });
 
-  it("allows local-only resume on Ep. 1 when anime is not yet in AniList (trackedProgress: -1)", () => {
+  it("allows local-only resume on Ep. 1 when anime is not yet in AniList or COMPLETED", () => {
     assert.deepEqual(
       resolveResumeAction({
         trackedProgress: -1,
@@ -100,6 +100,15 @@ describe("resolveResumeAction", () => {
         localResume: { ep: 1, time: 240, duration: 1440, percent: 17 }
       }),
       { action: "seek", time: 240 }
+    );
+    assert.deepEqual(
+      resolveResumeAction({
+        trackedProgress: 12,
+        activeEp: 1,
+        status: "COMPLETED",
+        localResume: { ep: 1, time: 300, duration: 1440, percent: 21 }
+      }),
+      { action: "seek", time: 300 }
     );
   });
 

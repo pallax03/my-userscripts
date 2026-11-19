@@ -1,6 +1,5 @@
 import {
   iconHtml,
-  Trash2,
   Plus,
   KeyRound,
   Check,
@@ -233,24 +232,13 @@ export function renderActions(
             </a>
             ${entry ? `
               <div class="al-dock-menu-controls" style="display:flex;gap:6px;padding:4px 6px;align-items:center;">
-                <button type="button" class="al-dock-step-btn" id="al-ep-rewind" title="Riavvolgi a Ep. ${Math.max(0, (activeEp || progress || 1) - 1)}">
+                <button type="button" class="al-dock-step-btn" id="al-ep-rewind" title="Riavvolgi tracciamento a Ep. ${Math.max(0, (activeEp || progress || 1) - 1)}">
                   ${iconHtml(RotateCcw, { width: 11, height: 11 })}
+                  <span style="font-size:10px;margin-left:3px;">-1</span>
                 </button>
-                <span style="font-size:11px;opacity:0.85;flex:1;text-align:center;">Ep. ${progress}/${total || "?"}</span>
-                <button type="button" class="al-dock-step-btn" id="al-ep-next" title="Avanza ad Ep. ${(progress || 0) + 1}">
-                  ${iconHtml(Plus, { width: 11, height: 11 })}
-                </button>
-              </div>
-              <div style="display:flex;gap:6px;padding:4px 6px;">
                 <select class="al-dock-select" id="al-bar-status" title="Stato su AniList" style="flex:1;">
                   ${Object.entries(statusMap).map(([k, label]) => `
                     <option value="${k}" ${entry.status === k ? "selected" : ""}>${label}</option>
-                  `).join("")}
-                </select>
-                <select class="al-dock-select" id="al-bar-score" title="Voto su AniList">
-                  <option value="0" ${!entry.score ? "selected" : ""}>Voto: -</option>
-                  ${[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((s) => `
-                    <option value="${s}" ${entry.score === s ? "selected" : ""}>★ ${s}</option>
                   `).join("")}
                 </select>
               </div>
@@ -270,12 +258,6 @@ export function renderActions(
               ${iconHtml(Sliders, { width: 13, height: 13 })}
               <span>Impostazioni</span>
             </button>
-            ${entry ? `
-              <button type="button" class="al-dock-menu-item danger" id="al-dock-menu-del">
-                ${iconHtml(Trash2, { width: 13, height: 13 })}
-                <span>Rimuovi da AniList</span>
-              </button>
-            ` : ""}
             <button type="button" class="al-dock-menu-item danger" id="al-dock-menu-logout">
               ${iconHtml(LogOut, { width: 13, height: 13 })}
               <span>Disconnetti Account</span>
@@ -288,7 +270,6 @@ export function renderActions(
 
   // Bind Actions
   bar.querySelector("#al-bar-status")?.addEventListener("change", (e) => actions.onStatusChange(e.target.value));
-  bar.querySelector("#al-bar-score")?.addEventListener("change", (e) => actions.onScoreChange?.(parseInt(e.target.value, 10)));
   bar.querySelector("#al-ep-save")?.addEventListener("click", () => {
     if (!entry) {
       actions.onAdd?.();
@@ -299,9 +280,6 @@ export function renderActions(
   bar.querySelector("#al-ep-rewind")?.addEventListener("click", () => {
     const rewindTarget = Math.max(0, (activeEp || progress || 1) - 1);
     actions.onRewind?.(rewindTarget, activeEp);
-  });
-  bar.querySelector("#al-ep-next")?.addEventListener("click", () => {
-    actions.onNextEp?.();
   });
   bar.querySelector("#al-ep-cancel-track")?.addEventListener("click", () => {
     actions.onCancelCountdown?.();
@@ -330,10 +308,6 @@ export function renderActions(
   bar.querySelector("#al-dock-menu-prefs")?.addEventListener("click", () => {
     menu?.classList.remove("show");
     openPreferencesModal({ viewer });
-  });
-  bar.querySelector("#al-dock-menu-del")?.addEventListener("click", () => {
-    menu?.classList.remove("show");
-    actions.onDelete?.();
   });
   bar.querySelector("#al-dock-menu-logout")?.addEventListener("click", () => {
     menu?.classList.remove("show");

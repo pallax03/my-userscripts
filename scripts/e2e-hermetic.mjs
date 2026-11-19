@@ -368,6 +368,31 @@ try {
   const autoAddMut = state.mutations.slice(beforeUntracked).find((m) => m.progress === 1 && m.status === "CURRENT");
   assert.ok(autoAddMut, "Finishing Ep. 1 (>= 85%) auto-adds untracked anime to AniList as CURRENT Ep. 1");
 
+  // COMPLETED anime Ep. 1: 30% saves local resume WITHOUT touching AniList; 86% auto-switches to REPEATING Ep. 1
+  state.untracked = false;
+  state.status = "COMPLETED";
+  state.progress = 12;
+  await page.evaluate(() => window.localStorage.removeItem("al_resume_21"));
+  await page.goto("https://animeunity.cx/anime/12-one-piece/50570", { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("#al-control-bar #al-ep-save", { timeout: 10000 });
+  await page.waitForTimeout(200);
+
+  const beforeCompletedRewatch = state.mutations.length;
+  await page.evaluate(() => {
+    window.postMessage({ type: "PLAYER_EVENT", data: { event: "playerstate", position: 450, duration: 1500, paused: true } }, "*");
+  });
+  await page.waitForTimeout(300);
+  assert.equal(state.mutations.length, beforeCompletedRewatch, "Pausing at 30% on COMPLETED Ep. 1 keeps AniList COMPLETED untouched");
+  const rewatchLocal = await page.evaluate(() => JSON.parse(window.localStorage.getItem("al_resume_21") || "null"));
+  assert.equal(rewatchLocal?.ep, 1, "Local-only resume saved for COMPLETED Ep. 1");
+
+  await page.evaluate(() => {
+    window.postMessage({ type: "PLAYER_EVENT", data: { event: "playerstate", position: 1290, duration: 1500, paused: false } }, "*");
+  });
+  await page.waitForTimeout(500);
+  const rewatchMut = state.mutations.slice(beforeCompletedRewatch).find((m) => m.progress === 1 && m.status === "REPEATING");
+  assert.ok(rewatchMut, "Finishing Ep. 1 (>= 85%) of a COMPLETED anime auto-switches AniList to REPEATING Ep. 1");
+
   assert.deepEqual(errors, [], "Zero uncaught pageerrors on desktop");
   await ctx.close();
 
