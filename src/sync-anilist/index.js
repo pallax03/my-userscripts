@@ -787,6 +787,15 @@ export const App = {
           }
         }
       }
+      if (!isHome() && currentMedia && !pendingResumeTarget) {
+        showToast(
+          trackedProgress >= 0
+            ? `✓ AniList: Ep. ${trackedProgress}/${currentMedia.episodes || "?"}`
+            : `✓ AniList: ${currentMedia.title?.english || currentMedia.title?.romaji || "Ready"}`,
+          false,
+          2000
+        );
+      }
     } catch (err) {
       Logger.warn("Error during AniList sync:", err);
     } finally {

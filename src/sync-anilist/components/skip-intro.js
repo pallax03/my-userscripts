@@ -328,6 +328,9 @@ export function initSkipIntroTop() {
       if (activeOp && nextKey !== prevKey) {
         broadcastOp();
         renderAutoSkipButton(currentProvider);
+        if (!document.getElementById("al-dock-banner")?.textContent) {
+          showToast(`⏩ Intro ready (${activeOp.source === "native" ? "Native" : "AniSkip"})`, false, 1800);
+        }
       }
     } else if (e.data?.type === "AL_PLAYBACK_STATE") {
       if (typeof e.data.currentTime === "number") {

@@ -9,6 +9,17 @@ function ensureDock() {
   return dock;
 }
 
+function ensureMainRow(dock) {
+  let row = document.getElementById("al-dock-row");
+  if (!row) {
+    row = document.createElement("div");
+    row.id = "al-dock-row";
+    row.className = "al-dock-row";
+    dock.appendChild(row);
+  }
+  return row;
+}
+
 export function slot(name) {
   const id = `al-slot-${name}`;
   let el = document.getElementById(id);
@@ -17,35 +28,11 @@ export function slot(name) {
     el = document.createElement("div");
     el.id = id;
     el.className = "al-slot";
-    dock.appendChild(el);
+    if (name === "actions" || name === "switch" || name === "nav") {
+      ensureMainRow(dock).appendChild(el);
+    } else {
+      dock.appendChild(el);
+    }
   }
   return el;
-}
-
-let bannerTimer = null;
-
-/** Renders a live status log pill directly above #al-dock. */
-export function setDockBanner(text, { isAlert = false, sticky = false, duration = 2600 } = {}) {
-  if (!text) return;
-  const dock = ensureDock();
-  let banner = document.getElementById("al-dock-banner");
-  if (!banner) {
-    banner = document.createElement("div");
-    banner.id = "al-dock-banner";
-    dock.appendChild(banner);
-  }
-  if (bannerTimer) clearTimeout(bannerTimer);
-  banner.className = `al-dock-banner ${isAlert ? "is-alert" : ""}`;
-  banner.textContent = text;
-  banner.style.opacity = "1";
-  banner.style.display = "inline-flex";
-
-  if (!sticky) {
-    bannerTimer = setTimeout(() => {
-      banner.style.opacity = "0";
-      setTimeout(() => {
-        if (banner.style.opacity === "0") banner.style.display = "none";
-      }, 250);
-    }, duration);
-  }
 }
