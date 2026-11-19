@@ -1402,6 +1402,40 @@
 			Storage.del(`al_resume_${mediaId}`);
 		}
 	};
+	function resolveResumeAction({ trackedProgress, activeEp, currentTime = 0, localResume = null, anilistResume = null }) {
+		if (typeof trackedProgress !== "number" || typeof activeEp !== "number" || activeEp <= 0 || activeEp !== trackedProgress + 1) return {
+			action: "none",
+			reason: "ineligible_episode"
+		};
+		if (currentTime > 5) return {
+			action: "yield",
+			reason: "already_playing"
+		};
+		const isValid = (r) => {
+			if (!r || typeof r !== "object") return false;
+			if (r.ep !== activeEp) return false;
+			if (typeof r.time !== "number" || r.time <= 10) return false;
+			return (typeof r.percent === "number" ? r.percent : r.duration > 0 ? r.time / r.duration * 100 : 0) < 90;
+		};
+		const localValid = isValid(localResume);
+		const anilistValid = isValid(anilistResume);
+		if (localValid && anilistValid) return {
+			action: "seek",
+			time: (localResume.time >= anilistResume.time ? localResume : anilistResume).time
+		};
+		if (localValid) return {
+			action: "seek",
+			time: localResume.time
+		};
+		if (anilistValid) return {
+			action: "seek",
+			time: anilistResume.time
+		};
+		return {
+			action: "none",
+			reason: "no_valid_resume"
+		};
+	}
 	var cache$1 = new Map();
 	var CACHE_TTL_MS = 18e4;
 	var avatarMap = new Map();
@@ -4413,6 +4447,7 @@
 	var pendingResumeTarget = null;
 	var pendingResumeEp = null;
 	var resumedEpKey = null;
+	var lastObservedCurrentTime = 0;
 	function getResumeKey(activeEp) {
 		const ep = activeEp || provider?.getActiveEpisode?.() || 1;
 		return `${currentMedia?.id || "media"}_ep${ep}`;
@@ -4435,27 +4470,34 @@
 			pendingResumeEp = null;
 			return;
 		}
-		if (!isEpisodeEligibleForResume(activeEp)) {
-			pendingResumeTarget = null;
-			pendingResumeEp = null;
-			return;
-		}
 		const sessionTime = sessionStorage.getItem("al_resume_time");
 		const sessionTargetEp = sessionStorage.getItem("al_target_ep");
 		let targetTime = null;
 		if (sessionTime) {
 			const parsedTime = parseInt(sessionTime, 10);
 			const parsedEp = sessionTargetEp ? parseInt(sessionTargetEp, 10) : null;
-			if (!parsedEp || parsedEp === activeEp) targetTime = parsedTime;
+			if ((!parsedEp || parsedEp === activeEp) && (trackedProgress < 0 || activeEp === trackedProgress + 1)) targetTime = parsedTime;
 		}
 		if (!targetTime && currentMedia) {
-			const resume = Resume.extract(currentMedia?.mediaListEntry?.notes) || Resume.getLocal(currentMedia?.id);
-			if (resume && resume.ep === activeEp && resume.time > 5 && resume.percent < 88) targetTime = resume.time;
+			const decision = resolveResumeAction({
+				trackedProgress,
+				activeEp,
+				currentTime: lastObservedCurrentTime,
+				localResume: Resume.getLocal(currentMedia.id),
+				anilistResume: Resume.extract(currentMedia?.mediaListEntry?.notes)
+			});
+			if (decision.action === "yield") {
+				resumedEpKey = currentKey;
+				pendingResumeTarget = null;
+				pendingResumeEp = null;
+				return;
+			}
+			if (decision.action === "seek") targetTime = decision.time;
 		}
 		if (targetTime && targetTime > 0) {
 			pendingResumeTarget = targetTime;
 			pendingResumeEp = activeEp;
-		} else if (force) {
+		} else if (force || currentMedia) {
 			pendingResumeTarget = null;
 			pendingResumeEp = null;
 		}
@@ -4494,6 +4536,7 @@
 		} catch (_) {}
 	}
 	function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
+		lastObservedCurrentTime = typeof currentTime === "number" ? currentTime : 0;
 		if (!currentMedia || isHome()) return;
 		const activeEp = provider?.getActiveEpisode?.() || 1;
 		const settings = Settings.get();
@@ -4535,6 +4578,7 @@
 		lastActiveEp = newActiveEp;
 		cancelAutoTrack();
 		resumedEpKey = null;
+		lastObservedCurrentTime = 0;
 		const info = provider?.getAnimeInfo() || {};
 		const malId = currentMedia?.idMal || info.malId;
 		if (malId) checkSkipIntro(malId, newActiveEp);

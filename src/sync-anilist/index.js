@@ -7,7 +7,7 @@ import { handleOAuthRedirect, handleUrlToken, getTodayDate, openTokenModal } fro
 import { cleanTitle, extractSeason } from "./providers/base.js";
 import { getProvider, getCurrentProvider } from "./providers/index.js";
 import { Settings } from "./settings.js";
-import { Resume } from "./resume.js";
+import { Resume, resolveResumeAction } from "./resume.js";
 import { renderNav } from "./components/nav.js";
 import { renderActions } from "./components/actions.js";
 import { renderWatchingShelf } from "./components/watching-shelf.js";
@@ -60,6 +60,7 @@ let hasTriggeredPlayTrack = false;
 let pendingResumeTarget = null;
 let pendingResumeEp = null;
 let resumedEpKey = null;
+let lastObservedCurrentTime = 0;
 
 function getResumeKey(activeEp) {
   const ep = activeEp || provider?.getActiveEpisode?.() || 1;
@@ -91,13 +92,6 @@ function prepareResumeTarget(force = false) {
     return;
   }
 
-  // Resume is strictly disallowed for past re-watched episodes
-  if (!isEpisodeEligibleForResume(activeEp)) {
-    pendingResumeTarget = null;
-    pendingResumeEp = null;
-    return;
-  }
-
   const sessionTime = sessionStorage.getItem("al_resume_time");
   const sessionTargetEp = sessionStorage.getItem("al_target_ep");
   let targetTime = null;
@@ -105,22 +99,34 @@ function prepareResumeTarget(force = false) {
   if (sessionTime) {
     const parsedTime = parseInt(sessionTime, 10);
     const parsedEp = sessionTargetEp ? parseInt(sessionTargetEp, 10) : null;
-    if (!parsedEp || parsedEp === activeEp) {
+    if ((!parsedEp || parsedEp === activeEp) && (trackedProgress < 0 || activeEp === trackedProgress + 1)) {
       targetTime = parsedTime;
     }
   }
 
   if (!targetTime && currentMedia) {
-    const resume = Resume.extract(currentMedia?.mediaListEntry?.notes) || Resume.getLocal(currentMedia?.id);
-    if (resume && resume.ep === activeEp && resume.time > 5 && resume.percent < 88) {
-      targetTime = resume.time;
+    const decision = resolveResumeAction({
+      trackedProgress,
+      activeEp,
+      currentTime: lastObservedCurrentTime,
+      localResume: Resume.getLocal(currentMedia.id),
+      anilistResume: Resume.extract(currentMedia?.mediaListEntry?.notes)
+    });
+    if (decision.action === "yield") {
+      resumedEpKey = currentKey;
+      pendingResumeTarget = null;
+      pendingResumeEp = null;
+      return;
+    }
+    if (decision.action === "seek") {
+      targetTime = decision.time;
     }
   }
 
   if (targetTime && targetTime > 0) {
     pendingResumeTarget = targetTime;
     pendingResumeEp = activeEp;
-  } else if (force) {
+  } else if (force || currentMedia) {
     pendingResumeTarget = null;
     pendingResumeEp = null;
   }
@@ -161,6 +167,7 @@ async function syncResumeToNotes(mediaId, ep, currentTime, duration) {
 }
 
 function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
+  lastObservedCurrentTime = typeof currentTime === "number" ? currentTime : 0;
   if (!currentMedia || isHome()) return;
   const activeEp = provider?.getActiveEpisode?.() || 1;
   const settings = Settings.get();
@@ -223,6 +230,7 @@ function handleActiveEpisodeChange(newActiveEp) {
   cancelAutoTrack();
   hasTriggeredPlayTrack = false;
   resumedEpKey = null;
+  lastObservedCurrentTime = 0;
 
   const info = provider?.getAnimeInfo() || {};
   const malId = currentMedia?.idMal || info.malId;
