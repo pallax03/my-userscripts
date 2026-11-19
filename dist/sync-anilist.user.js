@@ -3402,9 +3402,11 @@
 		if (!container) return;
 		if (!currentProvider?.isWatchPage?.()) {
 			container.innerHTML = "";
+			container.style.display = "none";
 			container.dataset.rendered = "0";
 			return;
 		}
+		container.style.display = "";
 		const settings = Settings.get();
 		const isActive = isEpisodeAutoSkipActive();
 		const inSkipWindow = Boolean(activeOp && !isActive && lastKnownCurrentTime >= Math.max(0, activeOp.start - 1.5) && lastKnownCurrentTime <= Math.max(activeOp.start, activeOp.end - 2));
@@ -3484,11 +3486,7 @@
 		container.querySelector("#al-skip-now-btn")?.addEventListener("click", (e) => {
 			e.preventDefault();
 			e.stopPropagation();
-			document.querySelectorAll("iframe").forEach((frame) => {
-				try {
-					frame.contentWindow?.postMessage({ type: "AU_TRIGGER_SKIP" }, "*");
-				} catch (_) {}
-			});
+			triggerSkip();
 		});
 		container.querySelector("#al-skip-toggle-btn")?.addEventListener("click", (e) => {
 			e.preventDefault();
@@ -3602,6 +3600,25 @@
 			onSuccess: handleSuccessfulContribution
 		});
 	}
+	function triggerSkip() {
+		document.querySelectorAll("iframe").forEach((frame) => {
+			try {
+				frame.contentWindow?.postMessage({ type: "AU_TRIGGER_SKIP" }, "*");
+			} catch (_) {}
+		});
+		const topVideo = document.querySelector("video");
+		if (topVideo) {
+			const fallbackDuration = Settings.get().skipFallbackDuration || 85;
+			const resolution = resolveManualSkipTarget({
+				currentPos: topVideo.currentTime || 0,
+				duration: topVideo.duration || 0,
+				segment: activeOp,
+				fallbackDuration
+			});
+			topVideo.currentTime = resolution.target;
+			showToast(resolution.source === "fallback" ? `⏩ Skipped +${fallbackDuration}s` : `⏩ Skipped intro (${resolution.source === "native" ? "Native" : "AniSkip"})`, false, 2e3);
+		}
+	}
 	function initSkipIntroTop() {
 		window.addEventListener("message", (e) => {
 			if (e.data?.type === "AU_FRAME_READY" || e.data?.type === "AL_PLAYER_READY") {
@@ -3636,11 +3653,7 @@
 			const tag = document.activeElement?.tagName?.toLowerCase();
 			if (tag === "input" || tag === "textarea" || tag === "select") return;
 			if (e.key === "s" || e.key === "S") {
-				document.querySelectorAll("iframe").forEach((frame) => {
-					try {
-						frame.contentWindow?.postMessage({ type: "AU_TRIGGER_SKIP" }, "*");
-					} catch (_) {}
-				});
+				triggerSkip();
 				return;
 			}
 			const keyLower = e.key?.toLowerCase();
@@ -4768,6 +4781,7 @@
 			if (switchSlot) switchSlot.style.display = "";
 			const skipSlot = document.getElementById("al-slot-skip");
 			if (skipSlot) skipSlot.style.display = isWatch ? "" : "none";
+			if (isWatch) renderAutoSkipButton(provider);
 			const navSlot = document.getElementById("al-slot-nav");
 			if (navSlot) navSlot.style.display = "none";
 			renderActions(currentMedia, hasToken, {

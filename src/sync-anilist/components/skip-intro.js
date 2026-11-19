@@ -3,7 +3,7 @@ import { Logger } from "../../shared/logger.js";
 import { showToast } from "../../shared/toast.js";
 import { slot } from "../slots.js";
 import { iconHtml, SkipForward, Plus, Pencil, ThumbsUp, ThumbsDown } from "../../shared/icons.js";
-import { resolveSkipSegment } from "../skip-logic.js";
+import { resolveSkipSegment, resolveManualSkipTarget } from "../skip-logic.js";
 import {
   voteSkipTime,
   getVoteStatus,
@@ -90,9 +90,11 @@ export function renderAutoSkipButton(provider) {
 
   if (!currentProvider?.isWatchPage?.()) {
     container.innerHTML = "";
+    container.style.display = "none";
     container.dataset.rendered = "0";
     return;
   }
+  container.style.display = "";
 
   const settings = Settings.get();
   const isActive = isEpisodeAutoSkipActive();
@@ -165,11 +167,7 @@ export function renderAutoSkipButton(provider) {
   container.querySelector("#al-skip-now-btn")?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    document.querySelectorAll("iframe").forEach((frame) => {
-      try {
-        frame.contentWindow?.postMessage({ type: "AU_TRIGGER_SKIP" }, "*");
-      } catch (_) {}
-    });
+    triggerSkip();
   });
 
   container.querySelector("#al-skip-toggle-btn")?.addEventListener("click", (e) => {
@@ -308,6 +306,31 @@ function handleHotkeyAction(action, timeOverride = null) {
   );
 }
 
+function triggerSkip() {
+  const frames = document.querySelectorAll("iframe");
+  frames.forEach((frame) => {
+    try {
+      frame.contentWindow?.postMessage({ type: "AU_TRIGGER_SKIP" }, "*");
+    } catch (_) {}
+  });
+
+  const topVideo = document.querySelector("video");
+  if (topVideo) {
+    const fallbackDuration = Settings.get().skipFallbackDuration || 85;
+    const resolution = resolveManualSkipTarget({
+      currentPos: topVideo.currentTime || 0,
+      duration: topVideo.duration || 0,
+      segment: activeOp,
+      fallbackDuration
+    });
+    topVideo.currentTime = resolution.target;
+    const label = resolution.source === "fallback"
+      ? `⏩ Skipped +${fallbackDuration}s`
+      : `⏩ Skipped intro (${resolution.source === "native" ? "Native" : "AniSkip"})`;
+    showToast(label, false, 2000);
+  }
+}
+
 export function initSkipIntroTop() {
   window.addEventListener("message", (e) => {
     if (e.data?.type === "AU_FRAME_READY" || e.data?.type === "AL_PLAYER_READY") {
@@ -365,11 +388,7 @@ export function initSkipIntroTop() {
       if (tag === "input" || tag === "textarea" || tag === "select") return;
 
       if (e.key === "s" || e.key === "S") {
-        document.querySelectorAll("iframe").forEach((frame) => {
-          try {
-            frame.contentWindow?.postMessage({ type: "AU_TRIGGER_SKIP" }, "*");
-          } catch (_) {}
-        });
+        triggerSkip();
         return;
       }
 

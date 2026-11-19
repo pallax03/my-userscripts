@@ -579,6 +579,7 @@ export const App = {
     if (switchSlot) switchSlot.style.display = "";
     const skipSlot = document.getElementById("al-slot-skip");
     if (skipSlot) skipSlot.style.display = isWatch ? "" : "none";
+    if (isWatch) renderAutoSkipButton(provider);
     const navSlot = document.getElementById("al-slot-nav");
     if (navSlot) navSlot.style.display = "none";
 
