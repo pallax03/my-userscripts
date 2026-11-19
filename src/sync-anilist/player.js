@@ -14,6 +14,7 @@ export function initPlayer() {
   let hasConfirmedResume = false;
   let activeGuardInterval = null;
   let hasReportedPlayerReady = false;
+  let lastNativeTimestampKey = "";
   let lastBroadcastTime = 0;
   let isProgrammaticSeek = false;
   let programmaticSeekTimeout = null;
@@ -114,11 +115,20 @@ export function initPlayer() {
     if (dur > 0 && target < dur - 5) {
       seekTo(target);
       Logger.info(`↺ Applying companion seekTo ${target}s`);
-      hasConfirmedResume = true;
-      try {
-        window.top.postMessage({ type: "AL_RESUME_CONFIRMED", time: target }, "*");
-      } catch (_) {}
       pendingResumeSeek = null;
+      setTimeout(() => {
+        const settledPos = getPos();
+        if (settledPos < 5 && activeResumeTarget === target) {
+          Logger.info(`↺ Retrying seekTo ${target}s after reset`);
+          seekTo(target);
+        }
+        if (getPos() >= Math.max(5, target - 15)) {
+          hasConfirmedResume = true;
+          try {
+            window.top.postMessage({ type: "AL_RESUME_CONFIRMED", time: target }, "*");
+          } catch (_) {}
+        }
+      }, 450);
     } else {
       pendingResumeSeek = target;
     }
@@ -165,9 +175,6 @@ export function initPlayer() {
       if (Math.round(dur) !== Math.round(lastReportedDur)) {
         lastReportedDur = dur;
         hasReportedPlayerReady = false;
-        try {
-          window.top.postMessage({ type: "AU_FRAME_READY", duration: dur }, "*");
-        } catch (_) {}
       }
       if (!hasReportedPlayerReady) {
         hasReportedPlayerReady = true;
@@ -303,6 +310,9 @@ export function initPlayer() {
 
     const intro = introTs ? { start: introTs.start_time, end: introTs.end_time } : null;
     const outro = outroTs ? { start: outroTs.start_time, end: outroTs.end_time } : null;
+    const tsKey = `${intro?.start || ""}-${intro?.end || ""}|${outro?.start || ""}-${outro?.end || ""}`;
+    if (tsKey === lastNativeTimestampKey) return;
+    lastNativeTimestampKey = tsKey;
 
     if (intro && !rawOp) {
       rawOp = {
@@ -328,17 +338,21 @@ export function initPlayer() {
 
   function seekTo(target) {
     if (typeof target !== "number" || isNaN(target) || target < 0) return;
-    markProgrammaticSeek(600);
+    markProgrammaticSeek(1500);
     const jw = getPlayer();
     if (jw && typeof jw.seek === "function") {
       try {
         jw.seek(target);
+        broadcastPlaybackState(true);
+        return;
       } catch (_) {}
     }
     const vds = getVidstack();
     if (vds && typeof vds.currentTime !== "undefined") {
       try {
         vds.currentTime = target;
+        broadcastPlaybackState(true);
+        return;
       } catch (_) {}
     }
     const v = document.querySelector("video");

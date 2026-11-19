@@ -61,14 +61,15 @@ describe("Resume notes & formatting", () => {
 });
 
 describe("resolveResumeAction", () => {
-  it("returns none when activeEp is not trackedProgress + 1", () => {
+  it("returns none for past or future episodes, while allowing current tracked or next episode", () => {
     const validResume = { ep: 5, time: 300, duration: 1400, percent: 21 };
 
-    // Already watched / rewatching current or older episode
+    // Current tracked episode with matching resume is eligible
     assert.deepEqual(
       resolveResumeAction({ trackedProgress: 5, activeEp: 5, localResume: validResume }),
-      { action: "none", reason: "ineligible_episode" }
+      { action: "seek", time: 300 }
     );
+    // Older rewatched episode is ineligible
     assert.deepEqual(
       resolveResumeAction({ trackedProgress: 5, activeEp: 3, localResume: { ...validResume, ep: 3 } }),
       { action: "none", reason: "ineligible_episode" }

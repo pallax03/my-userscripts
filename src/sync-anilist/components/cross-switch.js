@@ -284,14 +284,7 @@ export function renderCrossSwitch({ media, activeEp = 0, provider = null } = {})
   const targetIcon = isUnity ? Globe : Tv;
   const targetEp = activeEp > 0 ? activeEp : 1;
 
-  // Determine container
-  let container = null;
-  if (isUnity) {
-    container = document.getElementById("video-top");
-  } else {
-    container = document.querySelector(".watch-toolbar") || document.querySelector(".player-card") || document.querySelector(".ag-cta");
-  }
-
+  const container = document.getElementById("al-dock-switch-slot");
   const existing = document.getElementById("al-cross-switch-btn");
 
   if (!container || !media) {
@@ -304,18 +297,18 @@ export function renderCrossSwitch({ media, activeEp = 0, provider = null } = {})
     btn = document.createElement("button");
     btn.type = "button";
     btn.id = "al-cross-switch-btn";
-    btn.className = `al-cross-switch-btn ${isUnity ? "for-saturn" : "for-unity"}`;
+  }
+  btn.className = `al-cross-switch-btn ${isUnity ? "for-saturn" : "for-unity"}`;
+  if (btn.parentElement !== container) {
     container.appendChild(btn);
-  } else {
-    btn.className = `al-cross-switch-btn ${isUnity ? "for-saturn" : "for-unity"}`;
   }
 
   btn.title = `Switch to ${targetSiteName} · Open Ep. ${targetEp}`;
   btn.innerHTML = `
-    <span class="al-switch-icon">${iconHtml(targetIcon, { width: 13, height: 13 })}</span>
-    <span class="al-switch-label">${targetSiteName}</span>
-    <span class="al-switch-ep">Ep. ${targetEp}</span>
-    ${iconHtml(ExternalLink, { width: 11, height: 11, class: "al-switch-ext" })}
+    <span class="al-switch-icon">${iconHtml(targetIcon, { width: 12, height: 12 })}</span>
+    <span class="al-switch-label">${isUnity ? "Saturn" : "Unity"}</span>
+    <span class="al-switch-ep">Ep.${targetEp}</span>
+    ${iconHtml(ExternalLink, { width: 10, height: 10, class: "al-switch-ext" })}
   `;
 
   // Bind single click handler
