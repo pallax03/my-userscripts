@@ -431,7 +431,8 @@ try {
   const mSkip = await mPage.locator("#al-slot-skip").boundingBox();
   const mBar = await mPage.locator("#al-control-bar").boundingBox();
   assert.ok(mDock && mDock.x >= 0 && mDock.x + mDock.width <= 375, `iPhone SE dock within 375px (${JSON.stringify(mDock)})`);
-  assert.ok(mSwitch && mBar && mSwitch.x <= 20 && mSwitch.y < mBar.y, "AnimeSaturn button is above dock on bottom-left");
+  const vpH = mPage.viewportSize()?.height || 568;
+  assert.ok(mSwitch && mSwitch.x <= 20 && mSwitch.y + mSwitch.height >= vpH - 30, `AnimeSaturn button is tucked in bottom-left corner (${JSON.stringify(mSwitch)})`);
   assert.ok(mSkip && mBar && mSkip.y + mSkip.height <= mBar.y, "AniSkip separate dock is positioned above main dock");
   assert.ok(mBar && mBar.height <= 120, `iPhone SE dock stays compact (height: ${mBar?.height})`);
 
