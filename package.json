@@ -10,6 +10,7 @@
     "validate": "node -c dist/sync-anilist.user.js dist/import-friend-anilist.user.js",
     "lint": "eslint src/ scripts/ tests/",
     "test": "node --test tests/*.test.js",
+    "test:e2e": "node scripts/e2e-hermetic.mjs",
     "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
   },
   "repository": {
