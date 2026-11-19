@@ -1,4 +1,3 @@
-import { Storage } from "../../shared/storage.js";
 import { showToast } from "../../shared/toast.js";
 import { Logger } from "../../shared/logger.js";
 import { iconHtml, ANILIST_ICON_SVG, Play, Clock, Check, Zap, Sliders, Loader2, Link, Users } from "../../shared/icons.js";
@@ -423,7 +422,6 @@ function createCard(entry, buddySync = null, onSyncEntry = null) {
  * @param {Object} options
  * @param {Array} options.entries - List of watching media list entries
  * @param {Object|null} options.viewer - Current logged-in AniList viewer
- * @param {Function} [options.onRefresh] - Callback to refresh data
  * @param {Function} [options.onLogin] - Callback to trigger login
  * @param {Array} [options.syncNotifs] - Buddy sync notifications
  * @param {Function} [options.onSyncEntry] - Callback to sync buddy progress
@@ -432,7 +430,6 @@ function createCard(entry, buddySync = null, onSyncEntry = null) {
 export function renderWatchingShelf({
   entries = [],
   viewer = null,
-  onRefresh = null,
   onLogin = null,
   syncNotifs = [],
   onSyncEntry = null
@@ -572,8 +569,7 @@ export function renderWatchingShelf({
         else openTokenModal();
       };
       if (authBtn) {
-        authBtn.onclick = handleShelfLogin;
-        authBtn.addEventListener("click", handleShelfLogin, true);
+        authBtn.addEventListener("click", handleShelfLogin);
       }
       track.appendChild(empty);
       return;
