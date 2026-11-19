@@ -2782,7 +2782,7 @@ video-player,
 
 .al-aniskip-dock {
   position: fixed !important;
-  bottom: 24px !important;
+  bottom: calc(108px + env(safe-area-inset-bottom)) !important;
   left: 50% !important;
   transform: translateX(-50%) !important;
   z-index: 2147483645 !important;
@@ -2793,25 +2793,34 @@ video-player,
   pointer-events: auto !important;
   animation: al-dock-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   width: auto !important;
-  max-width: 96vw !important;
+  max-width: calc(100vw - 16px) !important;
 
   .al-dock-inner {
-    display: inline-flex;
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    flex-wrap: nowrap;
-    white-space: nowrap;
     gap: 8px;
-    height: 40px;
-    background: rgba(13, 21, 33, 0.95);
-    border: 1px solid rgba(56, 189, 248, 0.4);
-    border-radius: 12px;
-    padding: 0 10px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(56, 189, 248, 0.25);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    height: auto;
+    max-width: 100%;
+    background: rgba(13, 21, 33, 0.96);
+    border: 1px solid rgba(56, 189, 248, 0.45);
+    border-radius: 14px;
+    padding: 8px 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.72), 0 0 20px rgba(56, 189, 248, 0.25);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     color: #e2e8f0;
     font-size: 12px;
     font-weight: 600;
+  }
+
+  .al-dock-contrib-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
   }
 
   // Keyboard shortcut badge
@@ -3177,21 +3186,41 @@ video-player,
     order: -1;
     display: inline-flex;
     align-items: center;
-    height: 32px;
-    padding: 0 10px;
+    min-height: 38px;
+    padding: 4px 12px;
     border-radius: 9999px;
-    background: rgba(11, 20, 28, 0.92);
+    background: rgba(11, 20, 28, 0.94);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
-    border: 1px solid rgba(20, 184, 166, 0.3);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(20, 184, 166, 0.35);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.48);
     white-space: nowrap;
     .al-dock-skip-cluster {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       flex-wrap: nowrap;
       white-space: nowrap;
+
+      .al-dock-chip,
+      .al-dock-btn {
+        height: 28px;
+        padding: 0 11px;
+        font-size: 12px;
+        gap: 6px;
+      }
+
+      .al-dock-step-btn,
+      .al-skip-vote-btn {
+        width: 28px;
+        height: 28px;
+      }
+
+      .al-skip-pill-votes {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
     }
   }
 }

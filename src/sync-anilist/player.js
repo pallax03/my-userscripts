@@ -290,9 +290,9 @@ export function initPlayer() {
     let offset = 0;
 
     // Adjust for pre-roll bumper if AniSkip file is longer by <= 35s
-    if (dur > 0 && rawSeg.episodeLength > 0 && rawSeg.start > 0) {
+    if (dur > 0 && rawSeg.episodeLength > 0) {
       const diff = rawSeg.episodeLength - dur;
-      if (diff >= 0.5 && diff <= 35 && rawSeg.start >= diff) {
+      if (diff >= 0.5 && diff <= 35 && (rawSeg.start >= diff || (rawSeg.start <= 3 && diff <= 10))) {
         offset = diff;
       }
     }

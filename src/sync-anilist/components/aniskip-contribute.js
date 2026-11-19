@@ -520,65 +520,69 @@ function renderAniSkipDock() {
 
   dockContainer.innerHTML = `
     <div class="al-dock-inner">
-      <!-- Type Selector -->
-      <div class="al-dock-types">
-        <button type="button" class="al-dock-type ${skipType === "op" ? "is-active" : ""}" data-type="op" title="Opening sequence">
-          OP
-        </button>
-        <button type="button" class="al-dock-type ${skipType === "ed" ? "is-active" : ""}" data-type="ed" title="Ending sequence">
-          ED
-        </button>
-      </div>
+      <div class="al-dock-contrib-row">
+        <!-- Type Selector -->
+        <div class="al-dock-types">
+          <button type="button" class="al-dock-type ${skipType === "op" ? "is-active" : ""}" data-type="op" title="Opening sequence">
+            OP
+          </button>
+          <button type="button" class="al-dock-type ${skipType === "ed" ? "is-active" : ""}" data-type="ed" title="Ending sequence">
+            ED
+          </button>
+        </div>
 
-      <!-- Guided Provider Selector -->
-      <div class="al-dock-provider-wrap" title="Video source / release provider">
-        <span class="al-dock-provider-icon">${iconHtml(Tv, { width: 12, height: 12 })}</span>
-        <select class="al-dock-provider-select">
-          ${PRESET_PROVIDERS.map((p) => `<option value="${p}" ${providerName === p ? "selected" : ""}>${p}</option>`).join("")}
-          <option value="custom" ${!isPreset ? "selected" : ""}>Custom...</option>
-        </select>
-        <input type="text" class="al-dock-provider-custom ${!isPreset ? "" : "is-hidden"}" value="${!isPreset ? providerName : ""}" placeholder="Provider" spellcheck="false" />
-      </div>
+        <!-- Guided Provider Selector -->
+        <div class="al-dock-provider-wrap" title="Video source / release provider">
+          <span class="al-dock-provider-icon">${iconHtml(Tv, { width: 12, height: 12 })}</span>
+          <select class="al-dock-provider-select">
+            ${PRESET_PROVIDERS.map((p) => `<option value="${p}" ${providerName === p ? "selected" : ""}>${p}</option>`).join("")}
+            <option value="custom" ${!isPreset ? "selected" : ""}>Custom...</option>
+          </select>
+          <input type="text" class="al-dock-provider-custom ${!isPreset ? "" : "is-hidden"}" value="${!isPreset ? providerName : ""}" placeholder="Provider" spellcheck="false" />
+        </div>
 
-      <!-- In Point Split-Pill (Left: Set/Mark with [, Right: Preview Seek) -->
-      <div class="al-dock-split-pill ${isManualIn ? "is-manual" : "is-auto"} ${activeTarget === "in" ? "is-active-target" : ""}" title="Left: Set In (Key: [) | Right: Jump to In point">
-        <button type="button" class="al-dock-pill-btn al-dock-in-mark" title="Set In (Key: [). Click repeatedly to step 1s back">
-          <span class="al-dock-kbd">[</span>
-          <span class="al-dock-pill-tag">In</span>
+        <!-- Live Duration & Status Toggle Button (Auto vs Custom) -->
+        <button type="button" class="al-dock-dur-btn al-dock-dur-badge ${isValid ? "is-valid" : "is-invalid"} ${isAllManual ? "is-custom" : "is-auto"}" title="${isAllManual ? `Click to recalculate Auto duration from ${dockState.lastManualTarget === "out" ? "Out" : "In"}` : `Assisted auto duration (${recDuration}s). Click to restore custom`}">
+          ${interval}s ${isAllManual ? "Custom ✓" : "Auto"}
         </button>
-        <button type="button" class="al-dock-pill-btn al-dock-in-seek" title="Seek video to ${Resume.formatTime(startTime)}">
-          <b class="al-dock-pill-time">${Resume.formatTime(startTime)}</b>
-          <span class="al-dock-pill-arrow">⤏</span>
-        </button>
-      </div>
 
-      <!-- Out Point Split-Pill (Left: Set/Mark with ], Right: Preview Seek) -->
-      <div class="al-dock-split-pill ${isManualOut ? "is-manual" : "is-auto"} ${activeTarget === "out" ? "is-active-target" : ""}" title="Left: Set Out (Key: ]) | Right: Jump to Out point">
-        <button type="button" class="al-dock-pill-btn al-dock-out-mark" title="Set Out (Key: ]). Click repeatedly to step 1s back">
-          <span class="al-dock-kbd">]</span>
-          <span class="al-dock-pill-tag">Out</span>
+        <!-- Submit Action with Enter badge -->
+        <button type="button" class="al-dock-submit-btn ${isValid ? "" : "is-disabled"}" title="Submit to AniSkip (Key: Enter)">
+          <span class="al-dock-kbd">↵</span>
+          <span>Submit</span>
         </button>
-        <button type="button" class="al-dock-pill-btn al-dock-out-seek" title="Seek video to ${Resume.formatTime(endTime)}">
-          <b class="al-dock-pill-time">${Resume.formatTime(endTime)}</b>
-          <span class="al-dock-pill-arrow">⤏</span>
+
+        <!-- Close Action -->
+        <button type="button" class="al-dock-close-btn" title="Close dock (Key: Esc)">
+          ${iconHtml(X, { width: 13, height: 13 })}
         </button>
       </div>
 
-      <!-- Live Duration & Status Toggle Button (Auto vs Custom) -->
-      <button type="button" class="al-dock-dur-btn al-dock-dur-badge ${isValid ? "is-valid" : "is-invalid"} ${isAllManual ? "is-custom" : "is-auto"}" title="${isAllManual ? `Click to recalculate Auto duration from ${dockState.lastManualTarget === "out" ? "Out" : "In"}` : `Assisted auto duration (${recDuration}s). Click to restore custom`}">
-        ${interval}s ${isAllManual ? "Custom ✓" : "Auto"}
-      </button>
+      <div class="al-dock-contrib-row">
+        <!-- In Point Split-Pill (Left: Set/Mark with [, Right: Preview Seek) -->
+        <div class="al-dock-split-pill ${isManualIn ? "is-manual" : "is-auto"} ${activeTarget === "in" ? "is-active-target" : ""}" title="Left: Set In (Key: [) | Right: Jump to In point">
+          <button type="button" class="al-dock-pill-btn al-dock-in-mark" title="Set In (Key: [). Click repeatedly to step 1s back">
+            <span class="al-dock-kbd">[</span>
+            <span class="al-dock-pill-tag">In</span>
+          </button>
+          <button type="button" class="al-dock-pill-btn al-dock-in-seek" title="Seek video to ${Resume.formatTime(startTime)}">
+            <b class="al-dock-pill-time">${Resume.formatTime(startTime)}</b>
+            <span class="al-dock-pill-arrow">⤏</span>
+          </button>
+        </div>
 
-      <!-- Submit Action with Enter badge -->
-      <button type="button" class="al-dock-submit-btn ${isValid ? "" : "is-disabled"}" title="Submit to AniSkip (Key: Enter)">
-        <span class="al-dock-kbd">↵</span>
-        <span>Submit</span>
-      </button>
-
-      <!-- Close Action -->
-      <button type="button" class="al-dock-close-btn" title="Close dock (Key: Esc)">
-        ${iconHtml(X, { width: 13, height: 13 })}
-      </button>
+        <!-- Out Point Split-Pill (Left: Set/Mark with ], Right: Preview Seek) -->
+        <div class="al-dock-split-pill ${isManualOut ? "is-manual" : "is-auto"} ${activeTarget === "out" ? "is-active-target" : ""}" title="Left: Set Out (Key: ]) | Right: Jump to Out point">
+          <button type="button" class="al-dock-pill-btn al-dock-out-mark" title="Set Out (Key: ]). Click repeatedly to step 1s back">
+            <span class="al-dock-kbd">]</span>
+            <span class="al-dock-pill-tag">Out</span>
+          </button>
+          <button type="button" class="al-dock-pill-btn al-dock-out-seek" title="Seek video to ${Resume.formatTime(endTime)}">
+            <b class="al-dock-pill-time">${Resume.formatTime(endTime)}</b>
+            <span class="al-dock-pill-arrow">⤏</span>
+          </button>
+        </div>
+      </div>
     </div>
   `;
 

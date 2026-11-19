@@ -245,12 +245,15 @@ export async function checkSkipIntro(malId, epNum, duration = 0) {
   const cacheKey = `${malId}_${epNum}`;
   if (cache.has(cacheKey)) {
     const cached = cache.get(cacheKey);
-    aniskipOp = cached?.op || null;
-    aniskipEd = cached?.ed || null;
-    syncActiveOp();
-    broadcastOp();
-    renderAutoSkipButton(currentProvider);
-    return;
+    const shouldRefetchWithDur = roundedDur > 0 && !cached?.op && cached?.queriedLength === 0;
+    if (!shouldRefetchWithDur) {
+      aniskipOp = cached?.op || null;
+      aniskipEd = cached?.ed || null;
+      syncActiveOp();
+      broadcastOp();
+      renderAutoSkipButton(currentProvider);
+      return;
+    }
   }
 
   const token = ++fetchToken;
@@ -264,7 +267,7 @@ export async function checkSkipIntro(malId, epNum, duration = 0) {
     if (!res.ok) {
       aniskipOp = null;
       aniskipEd = null;
-      cache.set(cacheKey, { op: null, ed: null });
+      cache.set(cacheKey, { op: null, ed: null, queriedLength: activeDuration });
       syncActiveOp();
       broadcastOp();
       renderAutoSkipButton(currentProvider);
@@ -285,7 +288,7 @@ export async function checkSkipIntro(malId, epNum, duration = 0) {
     const ed = data.results?.find((r) => r.skipType === "ed" || r.skipType === "mixed-ed");
     aniskipOp = toSegment(op);
     aniskipEd = toSegment(ed);
-    cache.set(cacheKey, { op: aniskipOp, ed: aniskipEd });
+    cache.set(cacheKey, { op: aniskipOp, ed: aniskipEd, queriedLength: activeDuration });
     syncActiveOp();
 
     Logger.info(`📡 AniSkip result for Ep ${epNum}:`, activeOp || "No opening found");
@@ -347,7 +350,7 @@ export function initSkipIntroTop() {
   window.addEventListener("message", (e) => {
     if (e.data?.type === "AU_FRAME_READY" || e.data?.type === "AL_PLAYER_READY") {
       const frameDur = e.data.duration ? Math.round(e.data.duration) : 0;
-      if (frameDur > 0 && !activeOp && activeMalId && activeEp) {
+      if (frameDur > 0 && !aniskipOp && activeMalId && activeEp) {
         checkSkipIntro(activeMalId, activeEp, frameDur);
       } else {
         broadcastOp();
