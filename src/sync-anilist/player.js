@@ -369,6 +369,9 @@ export function initPlayer() {
     const target = Math.max(0, currentOp.end - 1);
     Logger.info(`⏩ ${isAuto ? "Auto-skipped" : "User skipped"} intro to ${target.toFixed(2)}s`);
     seekTo(target);
+    try {
+      window.top.postMessage({ type: "AU_SKIP_EXECUTED", mode: isAuto ? "auto" : "manual", source: rawOp?.source || "aniskip", target }, "*");
+    } catch (_) {}
   }
 
   function handleSkipAction() {
@@ -392,6 +395,15 @@ export function initPlayer() {
       Logger.info(`⏩ Fallback skip (+${skipFallbackDuration}s) to ${resolution.target.toFixed(2)}s`);
     }
     seekTo(resolution.target);
+    try {
+      window.top.postMessage({
+        type: "AU_SKIP_EXECUTED",
+        mode: resolution.mode,
+        source: resolution.source,
+        fallbackDuration: skipFallbackDuration,
+        target: resolution.target
+      }, "*");
+    } catch (_) {}
   }
 
   function checkTime() {
