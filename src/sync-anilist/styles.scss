@@ -1,5 +1,13 @@
 @use "../shared/modal.scss" as *;
 
+// --- Unified Design System Tokens ---
+$al-surface-grad: linear-gradient(180deg, rgba(18, 28, 42, 0.94), rgba(10, 17, 27, 0.97));
+$al-surface-soft: linear-gradient(180deg, rgba(18, 28, 42, 0.72), rgba(10, 17, 27, 0.84));
+$al-border-glass: rgba(255, 255, 255, 0.09);
+$al-border-accent: rgba(61, 180, 242, 0.32);
+$al-shadow-elevated: 0 12px 32px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+$al-ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+
 // --- Hide AnimeUnity Native Account Clutter ---
 .cover-wrap .actions,
 .list-btn-mobile,
@@ -1226,13 +1234,13 @@ a[href*="/login"].btn-danger {
 
 .al-home-shelf {
   width: 100%;
-  background: rgba(14, 22, 34, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
+  background: $al-surface-soft;
+  border: 1px solid $al-border-glass;
+  border-radius: 16px;
   padding: 16px 20px;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: $al-shadow-elevated;
 
   @media (max-width: 576px) {
     padding: 14px 12px;
@@ -2933,13 +2941,13 @@ video-player,
     gap: 8px;
     height: 44px;
     max-width: 100%;
-    background: linear-gradient(180deg, rgba(16, 28, 42, 0.95), rgba(9, 17, 26, 0.97));
-    border: 1px solid rgba(56, 189, 248, 0.42);
+    background: $al-surface-grad;
+    border: 1px solid $al-border-accent;
     border-radius: 9999px;
     padding: 0 12px;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.72), 0 0 20px rgba(56, 189, 248, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
+    box-shadow: $al-shadow-elevated, 0 0 20px rgba(56, 189, 248, 0.16);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     color: #e2e8f0;
     font-size: 12px;
     font-weight: 600;
@@ -3335,12 +3343,13 @@ video-player,
     min-height: 40px;
     padding: 4px 12px;
     border-radius: 9999px;
-    background: linear-gradient(180deg, rgba(16, 28, 42, 0.94), rgba(9, 17, 26, 0.97));
+    background: $al-surface-grad;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(45, 212, 191, 0.32);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), 0 0 18px rgba(20, 184, 166, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    border: 1px solid $al-border-accent;
+    box-shadow: $al-shadow-elevated, 0 0 18px rgba(61, 180, 242, 0.12);
     white-space: nowrap;
+    transition: transform 0.22s $al-ease-spring, box-shadow 0.22s ease;
     .al-dock-skip-cluster {
       display: inline-flex;
       align-items: center;
@@ -3406,11 +3415,11 @@ video-player,
   gap: 6px;
   padding: 5px 12px;
   border-radius: 9999px;
-  background: rgba(11, 20, 28, 0.95);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(56, 189, 248, 0.45);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+  background: $al-surface-grad;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid $al-border-accent;
+  box-shadow: $al-shadow-elevated;
   color: #e0f2fe;
   font-size: 11px;
   font-weight: 600;
@@ -3434,17 +3443,18 @@ video-player,
   height: 44px;
   gap: 10px;
   padding: 0 14px;
-  background: rgba(11, 20, 28, 0.94);
+  background: $al-surface-grad;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(20, 184, 166, 0.35);
+  border: 1px solid $al-border-accent;
   border-radius: 9999px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55), 0 0 16px rgba(20, 184, 166, 0.2);
+  box-shadow: $al-shadow-elevated, 0 0 18px rgba(61, 180, 242, 0.14);
   color: #f1f5f9;
   font-family: inherit;
   font-size: 12px;
   user-select: none;
   pointer-events: auto;
+  transition: transform 0.22s $al-ease-spring, box-shadow 0.22s ease, border-color 0.22s ease;
 
   .al-pill-label {
     font-size: 12px;
@@ -3967,12 +3977,12 @@ video-player,
   bottom: calc(100% + 10px);
   right: 0;
   width: 210px;
-  background: rgba(11, 20, 28, 0.95);
+  background: $al-surface-grad;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(20, 184, 166, 0.3);
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 14px rgba(20, 184, 166, 0.15);
+  border: 1px solid $al-border-accent;
+  border-radius: 14px;
+  box-shadow: $al-shadow-elevated, 0 0 16px rgba(61, 180, 242, 0.14);
   display: none;
   flex-direction: column;
   padding: 6px;
@@ -3981,7 +3991,7 @@ video-player,
 
   &.show {
     display: flex;
-    animation: al-dock-in 0.18s ease-out;
+    animation: al-dock-in 0.2s $al-ease-spring;
   }
 }
 
