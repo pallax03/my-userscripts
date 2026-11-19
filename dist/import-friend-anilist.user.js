@@ -365,20 +365,64 @@
 	var handleUrlToken = () => {
 		const params = new URLSearchParams(window.location.search);
 		if (params.has("al_token")) {
-			Storage.set("anilist_token", params.get("al_token").trim());
+			const token = params.get("al_token").trim();
+			Storage.set("anilist_token", token);
 			params.delete("al_token");
 			const query = params.toString() ? `?${params}` : "";
 			window.history.replaceState({}, document.title, window.location.pathname + query + window.location.hash);
+			return token;
 		}
+		return null;
 	};
 	var openTokenModal = (onTokenSaved) => {
+		const oauthUrl = typeof AniListAPI.getOAuthUrl === "function" ? AniListAPI.getOAuthUrl(window.location.href) : AniListAPI.oauthUrl;
+		let authFinished = false;
+		const finishAuth = (token) => {
+			if (authFinished) return;
+			authFinished = true;
+			if (token) {
+				Storage.set("anilist_token", token);
+				showToast("✓ AniList Connected!");
+				if (typeof onTokenSaved === "function") onTokenSaved();
+			}
+		};
+		const onMessage = (e) => {
+			if (e.data?.type === "AL_AUTH_SUCCESS" && e.data.token) {
+				window.removeEventListener("message", onMessage);
+				finishAuth(e.data.token);
+			}
+		};
+		window.addEventListener("message", onMessage);
+		let authWin = null;
+		try {
+			authWin = window.open(oauthUrl, "anilist_auth", "width=600,height=750,menubar=no,toolbar=no");
+		} catch (_) {}
+		if (authWin) {
+			showToast("Waiting for AniList authorization...", false, 3500);
+			const timer = setInterval(() => {
+				const token = Storage.get("anilist_token");
+				if (token) {
+					clearInterval(timer);
+					finishAuth(token);
+				} else if (authWin.closed) {
+					clearInterval(timer);
+					setTimeout(() => {
+						if (!authFinished && !Storage.get("anilist_token")) showFallbackModal(oauthUrl, finishAuth);
+					}, 500);
+				}
+			}, 600);
+			return;
+		}
+		showFallbackModal(oauthUrl, finishAuth);
+	};
+	function showFallbackModal(oauthUrl, onTokenSaved) {
 		const { modal, close } = createModal({
 			id: "al-token-modal",
 			icon: KeyRound,
 			title: "Connect AniList",
 			subtitle: "Authorize access to sync episodes and lists",
 			body: `
-      <a href="${AniListAPI.oauthUrl}" target="_blank" rel="noopener noreferrer" class="al-auth-link">
+      <a href="${oauthUrl}" target="_blank" rel="noopener noreferrer" class="al-auth-link">
         <span class="d-flex align-items-center" style="gap:8px;">
           ${iconHtml(ExternalLink, {
 				width: 14,
@@ -407,9 +451,9 @@
 					const val = modal.querySelector("#al-tok-in")?.value.trim();
 					if (val) {
 						Storage.set("anilist_token", val);
-						showToast("Token saved");
+						showToast("✓ Token saved");
 						close();
-						if (typeof onTokenSaved === "function") await onTokenSaved();
+						if (typeof onTokenSaved === "function") await onTokenSaved(val);
 					}
 				}
 			}]
@@ -419,7 +463,7 @@
 		input?.addEventListener("keydown", (e) => {
 			if (e.key === "Enter") modal.querySelector("#al-m-ok")?.click();
 		});
-	};
+	}
 	var STATUS_CONFIG = {
 		CURRENT: {
 			key: "CURRENT",

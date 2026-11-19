@@ -5,8 +5,6 @@ export function initPlayer() {
   let currentOp = null;
   let autoSkip = false;
   let skipFallbackDuration = 85;
-  let btn = null;
-  let isBtnVisible = false;
   let lastReportedDur = 0;
   let hasAutoSkipped = false;
   let lastSkipTime = 0;
@@ -101,37 +99,24 @@ export function initPlayer() {
 
   function applyResumeSeek(target) {
     if (typeof target !== "number" || target <= 0) return;
+    const cur = getPos();
+    // Companion mode: if video is already playing past 5s (e.g. site native resume), do not fight or overwrite
+    if (cur > 5 && Math.abs(cur - target) < 15) {
+      hasConfirmedResume = true;
+      return;
+    }
+
     hasConfirmedResume = false;
     activeResumeTarget = target;
     const dur = getDuration();
 
     if (dur > 0 && target < dur - 5) {
       seekTo(target);
-      Logger.info(`↺ Applying seekTo ${target}s`);
-
-      // Anti-reset guard: HLS players often reset time to 0 upon first user play
-      if (activeGuardInterval) clearInterval(activeGuardInterval);
-      let checks = 0;
-      activeGuardInterval = setInterval(() => {
-        checks++;
-        const currentPos = getPos();
-        if (currentPos < 3 && checks <= 6) {
-          seekTo(target);
-        } else if (currentPos >= target - 5 || checks > 8) {
-          clearInterval(activeGuardInterval);
-          activeGuardInterval = null;
-          if (!hasConfirmedResume) {
-            hasConfirmedResume = true;
-            try {
-              window.top.postMessage({ type: "AL_RESUME_CONFIRMED", time: target }, "*");
-            } catch (_) {}
-          }
-          setTimeout(() => {
-            activeResumeTarget = null;
-          }, 1500);
-        }
-      }, 400);
-
+      Logger.info(`↺ Applying companion seekTo ${target}s`);
+      hasConfirmedResume = true;
+      try {
+        window.top.postMessage({ type: "AL_RESUME_CONFIRMED", time: target }, "*");
+      } catch (_) {}
       pendingResumeSeek = null;
     } else {
       pendingResumeSeek = target;
@@ -306,6 +291,37 @@ export function initPlayer() {
     };
   }
 
+  function checkNativeTimestamps() {
+    const uWin = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
+    const timestamps = uWin.video?.timestamps || window.video?.timestamps;
+    if (Array.isArray(timestamps) && timestamps.length > 0) {
+      const intro = timestamps.find((t) => t.kind === "intro" && t.end_time > t.start_time);
+      if (intro) {
+        if (!rawOp) {
+          rawOp = {
+            start: intro.start_time,
+            end: intro.end_time,
+            episodeLength: getDuration(),
+            source: "native"
+          };
+          computeAdjustedOp();
+        }
+        try {
+          window.top.postMessage(
+            {
+              type: "AU_NATIVE_TIMESTAMPS",
+              intro: {
+                start: intro.start_time,
+                end: intro.end_time
+              }
+            },
+            "*"
+          );
+        } catch (_) {}
+      }
+    }
+  }
+
   function seekTo(target) {
     if (typeof target !== "number" || isNaN(target) || target < 0) return;
     markProgrammaticSeek(600);
@@ -335,10 +351,6 @@ export function initPlayer() {
     const target = Math.max(0, currentOp.end - 1);
     Logger.info(`⏩ ${isAuto ? "Auto-skipped" : "User skipped"} intro to ${target.toFixed(2)}s`);
     seekTo(target);
-    if (btn) {
-      btn.style.display = "none";
-      isBtnVisible = false;
-    }
   }
 
   function fallbackSkip() {
@@ -347,10 +359,6 @@ export function initPlayer() {
     const target = dur > 0 ? Math.min(dur - 1, pos + skipFallbackDuration) : pos + skipFallbackDuration;
     Logger.info(`⏩ Fallback skip (+${skipFallbackDuration}s) to ${target.toFixed(2)}s`);
     seekTo(target);
-    if (btn) {
-      btn.style.display = "none";
-      isBtnVisible = false;
-    }
   }
 
   function handleSkipAction() {
@@ -369,40 +377,9 @@ export function initPlayer() {
     }
   }
 
-  function ensureButton() {
-    if (btn && btn.parentElement) return;
-
-    btn = document.createElement("button");
-    btn.id = "au-skip-intro-btn";
-    btn.innerHTML = `
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><polygon points="19 5 19 19"></polygon></svg>
-      <span>Skip Intro (S)</span>
-    `;
-
-    ["mousedown", "mouseup", "pointerdown", "touchstart", "click"].forEach((evt) => {
-      btn.addEventListener(
-        evt,
-        (e) => {
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          if (evt === "click") {
-            e.preventDefault();
-            skipIntro(false);
-          }
-        },
-        true
-      );
-    });
-
-    const target = document.querySelector(".jw-wrapper, .jwplayer, #player, .player, .video-container, video")?.parentElement || document.body;
-    if (window.getComputedStyle(target).position === "static") {
-      target.style.position = "relative";
-    }
-    target.appendChild(btn);
-  }
-
   function checkTime() {
     bindMediaEvents();
+    checkNativeTimestamps();
 
     if (activeResumeTarget !== null && getPos() >= activeResumeTarget - 3) {
       activeResumeTarget = null;
@@ -412,13 +389,7 @@ export function initPlayer() {
       notifyReady();
     }
 
-    if (!rawOp) {
-      if (btn && isBtnVisible) {
-        btn.style.display = "none";
-        isBtnVisible = false;
-      }
-      return;
-    }
+    if (!rawOp) return;
 
     computeAdjustedOp();
     if (!currentOp) return;
@@ -427,10 +398,6 @@ export function initPlayer() {
 
     // Auto-skip logic
     if (autoSkip) {
-      if (btn && isBtnVisible) {
-        btn.style.display = "none";
-        isBtnVisible = false;
-      }
       if (pos >= currentOp.start && pos < currentOp.end - 1) {
         if (!hasAutoSkipped) {
           hasAutoSkipped = true;
@@ -438,24 +405,6 @@ export function initPlayer() {
         }
       } else if (pos < currentOp.start - 5) {
         hasAutoSkipped = false;
-      }
-      return;
-    }
-
-    // Manual skip button logic
-    const showStart = Math.max(0, currentOp.start - 1.5);
-    const showEnd = Math.max(showStart, currentOp.end - 2);
-
-    if (pos >= showStart && pos <= showEnd) {
-      if (!isBtnVisible) {
-        ensureButton();
-        btn.style.display = "inline-flex";
-        isBtnVisible = true;
-      }
-    } else {
-      if (isBtnVisible && btn) {
-        btn.style.display = "none";
-        isBtnVisible = false;
       }
     }
   }

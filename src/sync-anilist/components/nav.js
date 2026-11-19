@@ -3,229 +3,112 @@ import {
   User,
   KeyRound,
   LogOut,
-  ExternalLink,
   Sliders
 } from "../../shared/icons.js";
 import { openPreferencesModal } from "./preferences-modal.js";
+import { slot } from "../slots.js";
 
-const dropdownTpl = (user) => `
-  <div class="al-dropdown-header">
-    <div class="al-user-info">
-      <img src="${user.avatar?.medium || "https://anilist.co/img/icons/icon.svg"}" class="al-dropdown-avatar" />
-      <div class="al-user-text">
-        <span class="al-username">${user.name}</span>
-        <span class="al-user-status">
-          <span class="al-status-dot"></span>
-          <span>AniList Connected</span>
-        </span>
+/**
+ * Renders the compact bottom-right floating account pill on Home page.
+ * Completely eliminates brittle navbar DOM scraping and off-screen dropdown clipping.
+ */
+export function renderNav(currentUser, callbacks, provider = null) {
+  // Purge any legacy navbar site injections if still present in DOM
+  document.getElementById("al-nav-desktop")?.remove();
+  document.getElementById("al-nav-mobile")?.remove();
+
+  // On Anime Detail and Watch pages, account menu is already integrated into the main dock
+  if (!provider?.isHome?.()) {
+    document.getElementById("al-home-user-pill")?.remove();
+    return;
+  }
+
+  const navSlot = slot("nav");
+  let pill = document.getElementById("al-home-user-pill");
+  if (!pill) {
+    pill = document.createElement("div");
+    pill.id = "al-home-user-pill";
+    pill.className = "al-compact-pill";
+  }
+
+  if (pill.parentElement !== navSlot) {
+    navSlot.appendChild(pill);
+  }
+
+  const avatar = currentUser?.avatar?.medium || "https://anilist.co/img/icons/icon.svg";
+
+  if (!currentUser) {
+    pill.innerHTML = `
+      <div class="al-dock-dot is-offline" title="Non connesso ad AniList"></div>
+      <button type="button" class="al-pill-btn primary" id="al-home-login-btn">
+        ${iconHtml(KeyRound, { width: 13, height: 13 })}
+        <span>Accedi ad AniList</span>
+      </button>
+    `;
+    pill.querySelector("#al-home-login-btn")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      callbacks.onLogin?.();
+    });
+    return;
+  }
+
+  pill.innerHTML = `
+    <div class="al-dock-dot is-synced" title="Connesso ad AniList"></div>
+    <div class="al-dock-user-wrap">
+      <button type="button" class="al-dock-avatar-btn" id="al-home-avatar-btn" title="${currentUser.name}">
+        <img src="${avatar}" class="al-dock-avatar" alt="${currentUser.name}" />
+      </button>
+      <div class="al-dock-menu" id="al-home-menu">
+        <div class="al-dock-menu-header">
+          <img src="${avatar}" class="al-dock-menu-avatar" alt="${currentUser.name}" />
+          <div class="al-dock-menu-user">
+            <span class="al-dock-menu-name">${currentUser.name}</span>
+            <span class="al-dock-menu-sub">AniList • Connesso</span>
+          </div>
+        </div>
+        <div class="al-dock-menu-body">
+          <a class="al-dock-menu-item" href="https://anilist.co/user/${currentUser.name}" target="_blank" rel="noopener noreferrer">
+            ${iconHtml(User, { width: 13, height: 13 })}
+            <span>Profilo AniList</span>
+          </a>
+          <button type="button" class="al-dock-menu-item" id="al-home-menu-prefs">
+            ${iconHtml(Sliders, { width: 13, height: 13 })}
+            <span>Impostazioni</span>
+          </button>
+          <button type="button" class="al-dock-menu-item" id="al-home-menu-token">
+            ${iconHtml(KeyRound, { width: 13, height: 13 })}
+            <span>Cambia Token</span>
+          </button>
+          <button type="button" class="al-dock-menu-item danger" id="al-home-menu-logout">
+            ${iconHtml(LogOut, { width: 13, height: 13 })}
+            <span>Disconnetti Account</span>
+          </button>
+        </div>
       </div>
     </div>
-  </div>
+  `;
 
-  <div class="al-dropdown-body">
-    <a class="al-dropdown-item" href="https://anilist.co/user/${user.name}" target="_blank" rel="noopener noreferrer">
-      <span class="al-item-left">
-        ${iconHtml(User, { width: 14, height: 14 })}
-        <span>View Profile</span>
-      </span>
-      ${iconHtml(ExternalLink, { width: 12, height: 12, class: "al-item-ext" })}
-    </a>
-    <button class="al-dropdown-item al-btn-prefs" type="button">
-      <span class="al-item-left">
-        ${iconHtml(Sliders, { width: 14, height: 14 })}
-        <span>Preferences</span>
-      </span>
-    </button>
-    <button class="al-dropdown-item al-btn-token" type="button">
-      <span class="al-item-left">
-        ${iconHtml(KeyRound, { width: 14, height: 14 })}
-        <span>Change Token</span>
-      </span>
-    </button>
-  </div>
-
-  <div class="al-dropdown-footer">
-    <button class="al-dropdown-item danger al-btn-logout" type="button">
-      <span class="al-item-left">
-        ${iconHtml(LogOut, { width: 14, height: 14, style: "color:#ef4444;" })}
-        <span>Disconnect Account</span>
-      </span>
-    </button>
-  </div>
-`;
-
-function bindDropdown(menu, { onChangeToken, onLogout }, currentUser) {
-  menu.querySelector(".al-btn-prefs")?.addEventListener("click", (e) => {
+  const avatarBtn = pill.querySelector("#al-home-avatar-btn");
+  const menu = pill.querySelector("#al-home-menu");
+  avatarBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
-    menu.classList.remove("show");
+    menu?.classList.toggle("show");
+  });
+  document.addEventListener("click", (e) => {
+    if (!pill.contains(e.target)) menu?.classList.remove("show");
+  });
+
+  pill.querySelector("#al-home-menu-prefs")?.addEventListener("click", () => {
+    menu?.classList.remove("show");
     openPreferencesModal({ viewer: currentUser });
   });
-
-  menu.querySelector(".al-btn-token")?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    menu.classList.remove("show");
-    onChangeToken?.();
+  pill.querySelector("#al-home-menu-token")?.addEventListener("click", () => {
+    menu?.classList.remove("show");
+    callbacks.onChangeToken?.();
   });
-
-  menu.querySelector(".al-btn-logout")?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    menu.classList.remove("show");
-    onLogout?.();
+  pill.querySelector("#al-home-menu-logout")?.addEventListener("click", () => {
+    menu?.classList.remove("show");
+    callbacks.onLogout?.();
   });
-}
-
-export function renderNav(currentUser, callbacks, provider = null) {
-  const avatar = currentUser?.avatar?.medium || "https://anilist.co/img/icons/icon.svg";
-  const navAnchor = provider?.getNavAnchor?.();
-
-  // 1. AnimeUnity or standard list-item nav
-  const leftNav = navAnchor?.desktop || document.querySelector("#left-nav");
-  if (leftNav) {
-    let container = document.getElementById("al-nav-desktop");
-    const isSaturn = leftNav.classList?.contains("flex") || provider?.name === "AnimeSaturn";
-
-    if (!container) {
-      container = document.createElement(isSaturn ? "div" : "li");
-      container.id = "al-nav-desktop";
-      container.className = isSaturn ? "al-nav-saturn position-relative" : "nav-item position-relative";
-
-      if (isSaturn) {
-        leftNav.prepend(container);
-      } else {
-        const nativeLogin = leftNav.querySelector('a[href*="/login"]')?.closest(".nav-item");
-        nativeLogin ? nativeLogin.replaceWith(container) : leftNav.appendChild(container);
-      }
-    }
-
-    if (!currentUser) {
-      if (isSaturn) {
-        container.innerHTML = `
-          <button type="button" class="btn-icon cursor-pointer" id="al-nav-login-btn" title="Connect AniList" style="display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:9999px;background:rgba(2,169,255,0.15);color:#02a9ff;font-size:12px;font-weight:600;border:none;">
-            ${iconHtml(KeyRound, { width: 14, height: 14 })}
-            <span>AniList</span>
-          </button>`;
-      } else {
-        container.innerHTML = `
-          <a class="nav-link text-center pt-3" href="javascript:void(0)" role="button" id="al-nav-login-btn">
-            ${iconHtml(KeyRound, { width: 18, height: 18, style: "color:var(--al-blue);" })}<br>
-            <span style="color:var(--al-blue);font-weight:600;font-size:11px;">AniList</span>
-          </a>`;
-      }
-      const btn = container.querySelector("#al-nav-login-btn") || container.querySelector("a, button");
-      const handleLogin = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        callbacks.onLogin?.();
-      };
-      if (btn) {
-        btn.onclick = handleLogin;
-        btn.addEventListener("click", handleLogin, true);
-      }
-    } else {
-      if (isSaturn) {
-        container.innerHTML = `
-          <button type="button" class="btn-icon cursor-pointer al-saturn-nav-avatar" title="AniList: ${currentUser.name}" style="background:none;border:none;padding:0;cursor:pointer;">
-            <img src="${avatar}" class="al-avatar" style="width:28px;height:28px;border-radius:50%;display:block;border:1.5px solid #02a9ff;" />
-          </button>
-          <div class="dropdown-menu dropdown-menu-right al-dropdown-menu" id="al-nav-dropdown" style="right:0;left:auto;">
-            ${dropdownTpl(currentUser)}
-          </div>`;
-      } else {
-        container.innerHTML = `
-          <a class="nav-link d-flex align-items-center p-2" href="#" role="button" style="gap:8px;">
-            <img src="${avatar}" class="al-avatar" />
-            <div class="d-none d-lg-flex flex-column text-left">
-              <span class="text-white font-weight-bold small text-truncate" style="max-width:85px;">${currentUser.name}</span>
-              <span class="text-muted" style="font-size:10px;">AniList</span>
-            </div>
-            <i class="fas fa-chevron-down text-muted ml-1" style="font-size:9px;"></i>
-          </a>
-          <div class="dropdown-menu dropdown-menu-right al-dropdown-menu" id="al-nav-dropdown">
-            ${dropdownTpl(currentUser)}
-          </div>`;
-      }
-
-      const menu = container.querySelector("#al-nav-dropdown");
-      let closeTimer = null;
-
-      const openDropdown = () => {
-        if (closeTimer) clearTimeout(closeTimer);
-        closeTimer = null;
-        menu?.classList.add("show");
-      };
-
-      const closeDropdownWithDelay = () => {
-        if (closeTimer) clearTimeout(closeTimer);
-        closeTimer = setTimeout(() => {
-          menu?.classList.remove("show");
-        }, 220);
-      };
-
-      container.addEventListener("mouseenter", openDropdown);
-      container.addEventListener("mouseleave", closeDropdownWithDelay);
-      menu?.addEventListener("mouseenter", openDropdown);
-      menu?.addEventListener("mouseleave", closeDropdownWithDelay);
-
-      const triggerBtn = container.querySelector("a, button");
-      if (triggerBtn) {
-        triggerBtn.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          menu?.classList.toggle("show");
-        };
-      }
-
-      document.addEventListener("click", (e) => {
-        if (!container.contains(e.target)) menu?.classList.remove("show");
-      });
-
-      if (menu) bindDropdown(menu, callbacks, currentUser);
-    }
-  }
-
-  // 2. Mobile Nav
-  const mobileNav = navAnchor?.mobile || document.querySelector(".nav-top-mobile");
-  if (mobileNav && mobileNav !== leftNav) {
-    let mWidget = document.getElementById("al-nav-mobile");
-    if (!mWidget) {
-      mWidget = document.createElement("div");
-      mWidget.id = "al-nav-mobile";
-      mWidget.className = "d-inline-block ml-2 position-relative";
-      mobileNav.appendChild(mWidget);
-    }
-
-    if (!currentUser) {
-      mWidget.innerHTML = `
-        <button type="button" class="btn btn-sm al-bg-blue py-1 px-2 rounded-pill small d-inline-flex align-items-center" id="al-nav-m-login-btn" style="gap:4px;">
-          ${iconHtml(KeyRound, { width: 12, height: 12 })}
-          <span>AniList</span>
-        </button>`;
-      const mBtn = mWidget.querySelector("#al-nav-m-login-btn") || mWidget.querySelector("button");
-      const handleMLogin = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        callbacks.onLogin?.();
-      };
-      if (mBtn) {
-        mBtn.onclick = handleMLogin;
-        mBtn.addEventListener("click", handleMLogin, true);
-      }
-    } else {
-      mWidget.innerHTML = `
-        <img src="${avatar}" class="al-avatar-mobile" />
-        <div class="dropdown-menu dropdown-menu-right al-dropdown-menu position-fixed" id="al-nav-m-dropdown" style="top:54px;right:12px;z-index:99999;">
-          ${dropdownTpl(currentUser)}
-        </div>`;
-
-      const mMenu = mWidget.querySelector("#al-nav-m-dropdown");
-      const mAvatar = mWidget.querySelector("img");
-      if (mAvatar) {
-        mAvatar.onclick = (e) => {
-          e.stopPropagation();
-          mMenu?.classList.toggle("show");
-        };
-      }
-      if (mMenu) bindDropdown(mMenu, callbacks, currentUser);
-    }
-  }
 }

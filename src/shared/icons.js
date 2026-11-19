@@ -38,7 +38,8 @@ import {
   Languages,
   Globe,
   Tv,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Bookmark
 } from "lucide";
 
 export function iconHtml(iconNode, attrs = { width: 12, height: 12 }) {
@@ -86,7 +87,8 @@ export {
   Languages,
   Globe,
   Tv,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Bookmark
 };
 
 

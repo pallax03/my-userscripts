@@ -54,81 +54,41 @@ function handleSuccessfulContribution(newData) {
 
 export function renderAutoSkipButton(provider) {
   if (provider) currentProvider = provider;
-  const container = currentProvider?.getVideoBottomAnchor?.();
+  document.getElementById("al-aniskip-wrapper")?.remove();
+
+  const container = document.getElementById("al-dock-skip-slot") || currentProvider?.getVideoBottomAnchor?.();
   if (!container) return;
 
   const settings = Settings.get();
-  let wrapper = document.getElementById("al-aniskip-wrapper");
-
-  if (!wrapper) {
-    wrapper = document.createElement("div");
-    wrapper.id = "al-aniskip-wrapper";
-    wrapper.className = "al-aniskip-wrapper";
-    container.appendChild(wrapper);
-  } else if (wrapper.parentElement !== container) {
-    container.appendChild(wrapper);
-  }
+  const isActive = isEpisodeAutoSkipActive();
 
   // 1. If Opening is present on AniSkip
   if (activeOp) {
-    const isActive = isEpisodeAutoSkipActive();
     const currentVote = (settings.communityAniSkip && activeOp.skipId)
       ? getVoteStatus(activeOp.skipId)
       : null;
 
-    wrapper.innerHTML = `
-      <div class="al-aniskip-pill-bar">
-        <!-- Skip Intro Toggle -->
-        <button type="button" class="al-skip-pill-btn al-skip-toggle ${isActive ? "is-active" : "is-disabled"}" title="${isActive ? "Auto-skip active (Click to disable)" : "Auto-skip disabled (Click to enable)"}">
-          <span class="al-skip-icon">${iconHtml(SkipForward, { width: 13, height: 13 })}</span>
-          <span class="al-skip-label">Skip Intro</span>
-          <span class="al-skip-status-dot"></span>
+    container.innerHTML = `
+      <div class="al-dock-skip-cluster">
+        <button type="button" class="al-dock-chip ${isActive ? "is-tracked" : "is-pending"}" id="al-skip-toggle-btn" title="${isActive ? "Auto-Skip attivo (Clicca per disattivare)" : "Auto-Skip disattivato (Clicca per attivare)"}">
+          ${iconHtml(SkipForward, { width: 11, height: 11 })}
+          <span>${isActive ? "Auto-Skip: ON" : "Auto-Skip: OFF"}</span>
         </button>
-
-        ${settings.communityAniSkip && activeOp.skipId ? `
-          <span class="al-skip-pill-divider"></span>
-          <!-- Skip Intro Community Votes -->
-          <div class="al-skip-pill-votes" title="Vote on this skip timing">
-            <button type="button" class="al-skip-vote-btn is-upvote ${currentVote === "upvote" ? "is-voted" : ""}" title="${currentVote === "upvote" ? "Upvoted (+1)" : "Accurate skip (+1)"}">
-              ${iconHtml(ThumbsUp, { width: 12, height: 12 })}
-            </button>
-            <button type="button" class="al-skip-vote-btn is-downvote ${currentVote === "downvote" ? "is-voted" : ""}" title="${currentVote === "downvote" ? "Downvoted (-1)" : "Inaccurate skip (-1)"}">
-              ${iconHtml(ThumbsDown, { width: 12, height: 12 })}
-            </button>
-          </div>
-        ` : ""}
-
         ${settings.communityAniSkip ? `
-          <span class="al-skip-pill-divider"></span>
-          <!-- Edit / Calibrate Timestamps -->
-          <button type="button" class="al-skip-pill-btn al-skip-edit-btn" title="Edit or calibrate skip timestamps (Key: [ or ])">
-            <span class="al-skip-icon">${iconHtml(Pencil, { width: 11, height: 11 })}</span>
+          <button type="button" class="al-dock-step-btn" id="al-skip-edit-btn" title="Calibra timestamp intro (Key: [ o ])">
+            ${iconHtml(Pencil, { width: 10, height: 10 })}
           </button>
         ` : ""}
       </div>
     `;
 
-    wrapper.querySelector(".al-skip-toggle")?.addEventListener("click", (e) => {
+    container.querySelector("#al-skip-toggle-btn")?.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       toggleEpisodeAutoSkip();
     });
 
-    wrapper.querySelector(".is-upvote")?.addEventListener("click", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const ok = await voteSkipTime({ skipId: activeOp.skipId, voteType: "upvote" });
-      if (ok) renderAutoSkipButton(currentProvider);
-    });
-
-    wrapper.querySelector(".is-downvote")?.addEventListener("click", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const ok = await voteSkipTime({ skipId: activeOp.skipId, voteType: "downvote" });
-      if (ok) renderAutoSkipButton(currentProvider);
-    });
-
-    wrapper.querySelector(".al-skip-edit-btn")?.addEventListener("click", (e) => {
+    container.querySelector("#al-skip-edit-btn")?.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       const { malId, epNum } = getEffectiveIds();
@@ -150,16 +110,16 @@ export function renderAutoSkipButton(provider) {
 
   // 2. If NO Opening is present on AniSkip
   if (settings.communityAniSkip) {
-    wrapper.innerHTML = `
-      <div class="al-aniskip-pill-bar">
-        <button type="button" class="al-skip-pill-btn al-skip-suggest-btn" title="No intro found on AniSkip. Add timestamps (Key: [ or ])">
-          <span class="al-skip-icon">${iconHtml(Plus, { width: 12, height: 12 })}</span>
-          <span class="al-skip-label">Contribute Skip</span>
+    container.innerHTML = `
+      <div class="al-dock-skip-cluster">
+        <button type="button" class="al-dock-chip is-pending" id="al-skip-add-btn" title="Nessuna intro trovata su AniSkip. Aggiungi timestamp (Key: [ o ])">
+          ${iconHtml(Plus, { width: 10, height: 10 })}
+          <span>+ Intro</span>
         </button>
       </div>
     `;
 
-    wrapper.querySelector(".al-skip-suggest-btn")?.addEventListener("click", (e) => {
+    container.querySelector("#al-skip-add-btn")?.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       const { malId, epNum } = getEffectiveIds();
@@ -177,7 +137,7 @@ export function renderAutoSkipButton(provider) {
       });
     });
   } else {
-    wrapper.innerHTML = "";
+    container.innerHTML = "";
   }
 }
 
@@ -231,8 +191,10 @@ export async function checkSkipIntro(malId, epNum, duration = 0) {
     if (token !== fetchToken) return;
 
     if (!res.ok) {
-      activeOp = null;
-      cache.set(cacheKey, null);
+      if (!activeOp || activeOp.source !== "native") {
+        activeOp = null;
+        cache.set(cacheKey, null);
+      }
       broadcastOp();
       renderAutoSkipButton(currentProvider);
       return;
@@ -240,17 +202,20 @@ export async function checkSkipIntro(malId, epNum, duration = 0) {
 
     const data = await res.json();
     const op = data.results?.find((r) => r.skipType === "op" || r.skipType === "mixed-op");
-    activeOp = op
-      ? {
-          start: op.interval.startTime,
-          end: op.interval.endTime,
-          episodeLength: op.episodeLength || 0,
-          skipType: op.skipType,
-          skipId: op.skipId
-        }
-      : null;
+    if (op) {
+      activeOp = {
+        start: op.interval.startTime,
+        end: op.interval.endTime,
+        episodeLength: op.episodeLength || 0,
+        skipType: op.skipType,
+        skipId: op.skipId
+      };
+      cache.set(cacheKey, activeOp);
+    } else if (!activeOp || activeOp.source !== "native") {
+      activeOp = null;
+      cache.set(cacheKey, null);
+    }
 
-    cache.set(cacheKey, activeOp);
     Logger.info(`📡 AniSkip result for Ep ${epNum}:`, activeOp || "No opening found");
     broadcastOp();
     renderAutoSkipButton(currentProvider);
@@ -287,12 +252,27 @@ export function initSkipIntroTop() {
       } else {
         broadcastOp();
       }
+    } else if (e.data?.type === "AU_NATIVE_TIMESTAMPS" && e.data.intro) {
+      if (!activeOp) {
+        activeOp = {
+          start: e.data.intro.start,
+          end: e.data.intro.end,
+          episodeLength: activeDuration || lastKnownDuration,
+          skipType: "op",
+          source: "native"
+        };
+        broadcastOp();
+        renderAutoSkipButton(currentProvider);
+      }
     } else if (e.data?.type === "AL_PLAYBACK_STATE") {
       if (typeof e.data.currentTime === "number") {
         lastKnownCurrentTime = e.data.currentTime;
       }
       if (typeof e.data.duration === "number" && e.data.duration > 0) {
         lastKnownDuration = e.data.duration;
+      }
+      if (e.data.isPaused) {
+        document.getElementById("al-aniskip-wrapper")?.classList.remove("al-aniskip-idle");
       }
     } else if (e.data?.type === "AU_ANISKIP_HOTKEY") {
       const action = e.data.action || (e.data.key === "]" || e.data.key === "o" ? "end" : "start");

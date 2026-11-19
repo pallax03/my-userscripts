@@ -3,14 +3,13 @@ import { Storage } from "../shared/storage.js";
 import { showToast } from "../shared/toast.js";
 import { Logger } from "../shared/logger.js";
 import { AniListAPI } from "../shared/anilist/api.js";
-import { handleUrlToken, getTodayDate, openTokenModal } from "../shared/anilist/auth.js";
+import { handleOAuthRedirect, handleUrlToken, getTodayDate, openTokenModal } from "../shared/anilist/auth.js";
 import { cleanTitle, extractSeason } from "./providers/base.js";
 import { getProvider, getCurrentProvider } from "./providers/index.js";
 import { Settings } from "./settings.js";
 import { Resume } from "./resume.js";
 import { renderNav } from "./components/nav.js";
 import { renderActions } from "./components/actions.js";
-import { autoSelectTargetEpisode } from "./components/episodes.js";
 import { renderWatchingShelf } from "./components/watching-shelf.js";
 import { Buddy } from "./buddy.js";
 import { iconHtml, Play } from "../shared/icons.js";
@@ -168,6 +167,12 @@ function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
   const percent = duration > 0 ? (currentTime / duration) * 100 : 0;
   const isEligible = isEpisodeEligibleForResume(activeEp);
 
+  // Companion mode: if video is already playing past 5s, site native resume is active
+  if (currentTime > 5) {
+    resumedEpKey = getResumeKey(activeEp);
+    pendingResumeTarget = null;
+  }
+
   // 1. Fast local cache update (strictly ONLY for eligible episodes, never past episodes)
   if (isEligible && currentTime > 5 && percent < 92) {
     Resume.setLocal(currentMedia.id, {
@@ -191,7 +196,7 @@ function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
   if (
     settings.autoTrack &&
     (percent >= threshold || isEnded) &&
-    activeEp > trackedProgress &&
+    (activeEp > trackedProgress || currentMedia?.mediaListEntry?.status === "REPEATING") &&
     !cancelledEps.has(activeEp)
   ) {
     cancelledEps.add(activeEp);
@@ -548,6 +553,7 @@ export const App = {
   render() {
     const hasToken = !!Storage.get("anilist_token");
     const activeEp = provider?.getActiveEpisode?.() || 0;
+    const isWatch = !!provider?.isWatchPage?.();
 
     renderNav(currentUser, {
       onLogin: openAuth,
@@ -556,9 +562,18 @@ export const App = {
     }, provider);
 
     if (isHome()) {
+      const actionsSlot = document.getElementById("al-slot-actions");
+      if (actionsSlot) actionsSlot.style.display = "none";
+      const navSlot = document.getElementById("al-slot-nav");
+      if (navSlot) navSlot.style.display = "";
       renderHome();
       return;
     }
+
+    const actionsSlot = document.getElementById("al-slot-actions");
+    if (actionsSlot) actionsSlot.style.display = "";
+    const navSlot = document.getElementById("al-slot-nav");
+    if (navSlot) navSlot.style.display = "none";
 
     renderActions(currentMedia, hasToken, {
       onConnect: openAuth,
@@ -621,6 +636,11 @@ export const App = {
         cancelAutoTrack();
         if (currentActiveEp) cancelledEps.add(currentActiveEp);
         App.setProgress(rewindTarget);
+      },
+      onNextEp: () => {
+        cancelAutoTrack();
+        const nextEp = (trackedProgress > 0 ? trackedProgress : activeEp) + 1;
+        App.setProgress(nextEp);
       }
     }, {
       isLoading: isMediaLoading,
@@ -630,12 +650,15 @@ export const App = {
       provider,
       activeEp,
       trackedProgress,
-      autoTrackState
+      autoTrackState,
+      isWatch
     });
 
     provider?.highlightEpisodes(trackedProgress);
     renderCrossSwitch({ media: currentMedia, activeEp, provider });
-    renderAutoSkipButton(provider);
+    if (isWatch && activeEp > 0) {
+      renderAutoSkipButton(provider);
+    }
   },
 
   async sync() {
@@ -727,15 +750,12 @@ export const App = {
       }
 
       if (!isHome()) {
-        if (provider?.name === "AnimeUnity") {
-          autoSelectTargetEpisode(currentMedia, trackedProgress);
-        }
-        const ep = provider?.getActiveEpisode?.() || 1;
+        const ep = provider?.getActiveEpisode?.() || 0;
         const malId = currentMedia?.idMal || info.malId;
-        if (malId) {
+        if (malId && ep > 0) {
           checkSkipIntro(malId, ep);
         }
-        if (resumedEpKey !== getResumeKey(ep)) {
+        if (ep > 0 && resumedEpKey !== getResumeKey(ep)) {
           prepareResumeTarget();
           if (pendingResumeTarget) {
             dispatchResumeSeek();
@@ -756,16 +776,34 @@ export const App = {
     prepareResumeTarget();
 
     window.addEventListener("message", (e) => {
-      if (e.data?.type === "AL_PLAYBACK_STATE") {
+      if (e.data?.type === "AL_AUTH_SUCCESS" && e.data.token) {
+        Storage.set("anilist_token", e.data.token);
+        showToast("✓ AniList Connected!");
+        App.loadUser();
+      } else if (e.data?.type === "AL_PLAYBACK_STATE") {
         handlePlaybackState(e.data);
+      } else if (e.data?.type === "PLAYER_EVENT" && e.data?.data?.event === "playerstate") {
+        const d = e.data.data;
+        handlePlaybackState({
+          currentTime: typeof d.position === "number" ? d.position : 0,
+          duration: typeof d.duration === "number" ? d.duration : 0,
+          isPaused: !!d.paused,
+          isEnded: d.reason === "complete"
+        });
       } else if (e.data?.type === "AL_PLAYER_READY" || e.data?.type === "AU_FRAME_READY") {
         const ep = provider?.getActiveEpisode?.() || 1;
         if (resumedEpKey !== getResumeKey(ep)) {
           if (!pendingResumeTarget) {
             prepareResumeTarget();
           }
+          // Give native site resume 1s grace period before applying cross-device AniList fallback
           if (pendingResumeTarget) {
-            dispatchResumeSeek(e.source);
+            const targetWin = e.source;
+            setTimeout(() => {
+              if (resumedEpKey !== getResumeKey(ep) && pendingResumeTarget) {
+                dispatchResumeSeek(targetWin);
+              }
+            }, 1000);
           }
         }
       } else if (e.data?.type === "AL_RESUME_CONFIRMED") {
@@ -858,7 +896,9 @@ export const App = {
         }
 
         provider?.highlightEpisodes(trackedProgress);
-        renderAutoSkipButton(provider);
+        if (provider?.isWatchPage?.() && ep > 0) {
+          renderAutoSkipButton(provider);
+        }
       }
 
       function monitorTopLevelVideo() {
@@ -883,10 +923,12 @@ export const App = {
       }
       monitorTopLevelVideo();
 
-      const hasNav = document.getElementById("al-nav-desktop");
-      const hasBar = document.getElementById("al-control-bar");
-      if (!hasNav || (!isHome() && !hasBar)) {
-        App.render();
+      if (isHome()) {
+        const hasPill = document.getElementById("al-home-user-pill");
+        if (!hasPill) App.render();
+      } else {
+        const hasBar = document.getElementById("al-control-bar");
+        if (!hasBar) App.render();
       }
     }, 700);
   }
@@ -894,7 +936,9 @@ export const App = {
 
 const isPlayerFrame = window.self !== window.top || window.location.hostname.includes("vixcloud") || window.location.hostname.includes("saturncdn");
 
-if (isPlayerFrame) {
+if (handleOAuthRedirect()) {
+  // Handled AniList OAuth callback
+} else if (isPlayerFrame) {
   initPlayer();
 } else {
   provider = getProvider();
