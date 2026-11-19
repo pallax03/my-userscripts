@@ -1,4 +1,5 @@
 import { Logger } from "../shared/logger.js";
+import { resolveManualSkipTarget } from "./skip-logic.js";
 
 export function initPlayer() {
   let rawOp = null;
@@ -294,32 +295,35 @@ export function initPlayer() {
   function checkNativeTimestamps() {
     const uWin = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
     const timestamps = uWin.video?.timestamps || window.video?.timestamps;
-    if (Array.isArray(timestamps) && timestamps.length > 0) {
-      const intro = timestamps.find((t) => t.kind === "intro" && t.end_time > t.start_time);
-      if (intro) {
-        if (!rawOp) {
-          rawOp = {
-            start: intro.start_time,
-            end: intro.end_time,
-            episodeLength: getDuration(),
-            source: "native"
-          };
-          computeAdjustedOp();
-        }
-        try {
-          window.top.postMessage(
-            {
-              type: "AU_NATIVE_TIMESTAMPS",
-              intro: {
-                start: intro.start_time,
-                end: intro.end_time
-              }
-            },
-            "*"
-          );
-        } catch (_) {}
-      }
+    if (!Array.isArray(timestamps) || timestamps.length === 0) return;
+
+    const introTs = timestamps.find((t) => t.kind === "intro" && t.end_time > t.start_time);
+    const outroTs = timestamps.find((t) => t.kind === "outro" && t.end_time > t.start_time);
+    if (!introTs && !outroTs) return;
+
+    const intro = introTs ? { start: introTs.start_time, end: introTs.end_time } : null;
+    const outro = outroTs ? { start: outroTs.start_time, end: outroTs.end_time } : null;
+
+    if (intro && !rawOp) {
+      rawOp = {
+        start: intro.start,
+        end: intro.end,
+        episodeLength: getDuration(),
+        source: "native"
+      };
+      computeAdjustedOp();
     }
+
+    try {
+      window.top.postMessage(
+        {
+          type: "AU_NATIVE_TIMESTAMPS",
+          intro,
+          outro
+        },
+        "*"
+      );
+    } catch (_) {}
   }
 
   function seekTo(target) {
@@ -353,14 +357,6 @@ export function initPlayer() {
     seekTo(target);
   }
 
-  function fallbackSkip() {
-    const pos = getPos();
-    const dur = getDuration();
-    const target = dur > 0 ? Math.min(dur - 1, pos + skipFallbackDuration) : pos + skipFallbackDuration;
-    Logger.info(`⏩ Fallback skip (+${skipFallbackDuration}s) to ${target.toFixed(2)}s`);
-    seekTo(target);
-  }
-
   function handleSkipAction() {
     cancelActiveResume();
     const now = Date.now();
@@ -368,13 +364,20 @@ export function initPlayer() {
     lastSkipTime = now;
 
     const pos = getPos();
-    const showStart = currentOp ? Math.max(0, currentOp.start - 1.5) : 0;
-    const showEnd = currentOp ? Math.max(showStart, currentOp.end - 2) : 0;
-    if (currentOp && pos >= showStart && pos <= showEnd) {
-      skipIntro(false);
+    const dur = getDuration();
+    const resolution = resolveManualSkipTarget({
+      currentPos: pos,
+      duration: dur,
+      segment: currentOp,
+      fallbackDuration: skipFallbackDuration
+    });
+
+    if (resolution.mode === "segment") {
+      Logger.info(`⏩ User skipped intro (${resolution.source}) to ${resolution.target.toFixed(2)}s`);
     } else {
-      fallbackSkip();
+      Logger.info(`⏩ Fallback skip (+${skipFallbackDuration}s) to ${resolution.target.toFixed(2)}s`);
     }
+    seekTo(resolution.target);
   }
 
   function checkTime() {

@@ -1,6 +1,7 @@
 import { Settings } from "../settings.js";
 import { Logger } from "../../shared/logger.js";
 import { iconHtml, SkipForward, ThumbsUp, ThumbsDown, Plus, Pencil } from "../../shared/icons.js";
+import { resolveSkipSegment } from "../skip-logic.js";
 import {
   voteSkipTime,
   getVoteStatus,
@@ -12,6 +13,8 @@ import {
 const cache = new Map();
 let activeMalId = null;
 let activeEp = null;
+let aniskipOp = null;
+let nativeIntro = null;
 let activeOp = null;
 let activeDuration = 0;
 let fetchToken = 0;
@@ -20,6 +23,10 @@ let currentProvider = null;
 
 let lastKnownCurrentTime = 0;
 let lastKnownDuration = 0;
+
+function syncActiveOp() {
+  activeOp = resolveSkipSegment({ aniskipOp, nativeIntro });
+}
 
 export function isEpisodeAutoSkipActive() {
   if (episodeAutoSkipOverride !== null) {
@@ -42,11 +49,12 @@ function getEffectiveIds() {
 }
 
 function handleSuccessfulContribution(newData) {
-  activeOp = newData;
+  aniskipOp = newData;
+  syncActiveOp();
   const { malId, epNum } = getEffectiveIds();
   if (malId && epNum) {
     const cacheKey = `${malId}_${epNum}`;
-    cache.set(cacheKey, activeOp);
+    cache.set(cacheKey, aniskipOp);
   }
   broadcastOp();
   renderAutoSkipButton(currentProvider);
@@ -166,7 +174,9 @@ export async function checkSkipIntro(malId, epNum, duration = 0) {
     activeMalId = malId;
     activeEp = epNum;
     activeDuration = roundedDur;
-    activeOp = null;
+    aniskipOp = null;
+    nativeIntro = null;
+    syncActiveOp();
     episodeAutoSkipOverride = null;
     broadcastOp();
     renderAutoSkipButton(currentProvider);
@@ -176,7 +186,8 @@ export async function checkSkipIntro(malId, epNum, duration = 0) {
 
   const cacheKey = `${malId}_${epNum}`;
   if (cache.has(cacheKey)) {
-    activeOp = cache.get(cacheKey);
+    aniskipOp = cache.get(cacheKey);
+    syncActiveOp();
     broadcastOp();
     renderAutoSkipButton(currentProvider);
     return;
@@ -191,10 +202,9 @@ export async function checkSkipIntro(malId, epNum, duration = 0) {
     if (token !== fetchToken) return;
 
     if (!res.ok) {
-      if (!activeOp || activeOp.source !== "native") {
-        activeOp = null;
-        cache.set(cacheKey, null);
-      }
+      aniskipOp = null;
+      cache.set(cacheKey, null);
+      syncActiveOp();
       broadcastOp();
       renderAutoSkipButton(currentProvider);
       return;
@@ -203,18 +213,20 @@ export async function checkSkipIntro(malId, epNum, duration = 0) {
     const data = await res.json();
     const op = data.results?.find((r) => r.skipType === "op" || r.skipType === "mixed-op");
     if (op) {
-      activeOp = {
+      aniskipOp = {
         start: op.interval.startTime,
         end: op.interval.endTime,
         episodeLength: op.episodeLength || 0,
         skipType: op.skipType,
-        skipId: op.skipId
+        skipId: op.skipId,
+        source: "aniskip"
       };
-      cache.set(cacheKey, activeOp);
-    } else if (!activeOp || activeOp.source !== "native") {
-      activeOp = null;
+      cache.set(cacheKey, aniskipOp);
+    } else {
+      aniskipOp = null;
       cache.set(cacheKey, null);
     }
+    syncActiveOp();
 
     Logger.info(`📡 AniSkip result for Ep ${epNum}:`, activeOp || "No opening found");
     broadcastOp();
@@ -253,14 +265,16 @@ export function initSkipIntroTop() {
         broadcastOp();
       }
     } else if (e.data?.type === "AU_NATIVE_TIMESTAMPS" && e.data.intro) {
-      if (!activeOp) {
-        activeOp = {
-          start: e.data.intro.start,
-          end: e.data.intro.end,
-          episodeLength: activeDuration || lastKnownDuration,
-          skipType: "op",
-          source: "native"
-        };
+      nativeIntro = {
+        start: e.data.intro.start,
+        end: e.data.intro.end,
+        episodeLength: activeDuration || lastKnownDuration,
+        skipType: "op",
+        source: "native"
+      };
+      const prevOp = activeOp;
+      syncActiveOp();
+      if (activeOp && activeOp !== prevOp) {
         broadcastOp();
         renderAutoSkipButton(currentProvider);
       }
