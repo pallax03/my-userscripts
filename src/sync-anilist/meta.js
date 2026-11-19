@@ -21,6 +21,8 @@ export default (manifest = {}) => ({
       "*://animeunity.cc/*",
       "*://*.animeunity.fun/*",
       "*://animeunity.fun/*",
+      "*://*.animeunity.cx/*",
+      "*://animeunity.cx/*",
       "*://*.animesaturn.net/*",
       "*://animesaturn.net/*",
       "*://*.animesaturn.cx/*",
@@ -54,7 +56,9 @@ export default (manifest = {}) => ({
       "*://*.vixcloud2.to/*",
       "*://vixcloud2.to/*",
       "*://*.vixcloud2.net/*",
-      "*://vixcloud2.net/*"
+      "*://vixcloud2.net/*",
+      "*://anilist.co/api/v2/oauth/*",
+      "*://*.anilist.co/api/v2/oauth/*"
     ],
     include: [
       "*://*.animeunity.*/*",
@@ -70,7 +74,8 @@ export default (manifest = {}) => ({
       "/^https?:\\/\\/(?:[a-z0-9-]+\\.)?animeunity\\.[a-z]{2,}\\/.*$/",
       "/^https?:\\/\\/(?:[a-z0-9-]+\\.)?animesaturn\\.[a-z]{2,}\\/.*$/",
       "/^https?:\\/\\/(?:[a-z0-9-]+\\.)?saturncdn\\.[a-z]{2,}\\/.*$/",
-      "/^https?:\\/\\/(?:[a-z0-9-]+\\.)?vixcloud[0-9]?\\.[a-z]{2,}\\/.*$/"
+      "/^https?:\\/\\/(?:[a-z0-9-]+\\.)?vixcloud[0-9]?\\.[a-z]{2,}\\/.*$/",
+      "/^https?:\\/\\/[^/]+\\/embed\\/\\d+\\?.*token=/"
     ],
     updateURL: "https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/sync-anilist.user.js",
     downloadURL: "https://raw.githubusercontent.com/pallax03/my-userscripts/master/dist/sync-anilist.user.js",
@@ -93,6 +98,7 @@ export default (manifest = {}) => ({
       "animeunity.co",
       "animeunity.cc",
       "animeunity.fun",
+      "animeunity.cx",
       "animeunity.*",
       "animesaturn.*"
     ],

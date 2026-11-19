@@ -22,6 +22,7 @@
 // @include      /^https?:\/\/(?:[a-z0-9-]+\.)?animesaturn\.[a-z]{2,}\/.*$/
 // @include      /^https?:\/\/(?:[a-z0-9-]+\.)?saturncdn\.[a-z]{2,}\/.*$/
 // @include      /^https?:\/\/(?:[a-z0-9-]+\.)?vixcloud[0-9]?\.[a-z]{2,}\/.*$/
+// @include      /^https?:\/\/[^/]+\/embed\/\d+\?.*token=/
 // @match        *://*.animeunity.to/*
 // @match        *://animeunity.to/*
 // @match        *://*.animeunity.so/*
@@ -34,6 +35,8 @@
 // @match        *://animeunity.cc/*
 // @match        *://*.animeunity.fun/*
 // @match        *://animeunity.fun/*
+// @match        *://*.animeunity.cx/*
+// @match        *://animeunity.cx/*
 // @match        *://*.animesaturn.net/*
 // @match        *://animesaturn.net/*
 // @match        *://*.animesaturn.cx/*
@@ -68,6 +71,8 @@
 // @match        *://vixcloud2.to/*
 // @match        *://*.vixcloud2.net/*
 // @match        *://vixcloud2.net/*
+// @match        *://anilist.co/api/v2/oauth/*
+// @match        *://*.anilist.co/api/v2/oauth/*
 // @connect      graphql.anilist.co
 // @connect      anilist.co
 // @connect      api.aniskip.com
@@ -79,6 +84,7 @@
 // @connect      animeunity.co
 // @connect      animeunity.cc
 // @connect      animeunity.fun
+// @connect      animeunity.cx
 // @connect      animeunity.*
 // @connect      animesaturn.*
 // @grant        GM_addStyle
