@@ -299,13 +299,13 @@ try {
   // Detail
   await page.goto("https://animeunity.cx/anime/12-one-piece", { waitUntil: "domcontentloaded" });
   await page.waitForSelector("#al-control-bar #al-bar-status", { timeout: 10000 });
+  await page.waitForSelector("#al-slot-switch #al-cross-switch-btn", { timeout: 10000 });
   const detailText = await page.locator("#al-control-bar").innerText();
   assert.ok(detailText.includes("Progress: Ep. 5 / 1122"), "Detail dock displays tracked/max progress");
-  await page.click("#al-dock-anime-btn");
-  await page.waitForSelector("#al-dock-anime-menu.show #al-cross-switch-btn", { timeout: 5000 });
-  const animeMenuText = await page.locator("#al-dock-anime-menu").innerText();
-  assert.ok(animeMenuText.includes("Watch on AnimeSaturn"), "Anime (⋯) menu contains secondary Watch on AnimeSaturn fallback");
-  assert.ok(animeMenuText.includes("Remove"), "Anime (⋯) menu contains Remove from AniList");
+  assert.ok(detailText.includes("One Piece"), "Detail dock displays blue AniList title link");
+  const titleHref = await page.locator("#al-control-bar .al-dock-title").getAttribute("href");
+  assert.equal(titleHref, "https://anilist.co/anime/21", "Title links directly to AniList");
+  assert.equal(await page.locator("#al-dock-anime-btn").count(), 0, "No second ⋯ dropdown next to PFP");
 
   // User PFP menu must stay strictly user-only (no anime title/actions)
   await page.click("#al-dock-avatar-btn");
@@ -314,15 +314,16 @@ try {
   assert.ok(userMenuText.includes("Profile"), "User PFP menu has Profile");
   assert.ok(!userMenuText.includes("One Piece"), "User PFP menu never mixes anime info");
 
-  // Watch Ep 6 (next unwatched when progress=5) -> verify resume seek dispatch + 86% playback sync
+  // Watch Ep 6 (next unwatched when progress=5) -> verify in-dock resume loading chip + AL_RESUME_SEEK + 86% sync
   await page.evaluate(() => {
     window.localStorage.setItem("al_resume_21", JSON.stringify({ ep: 6, time: 420, duration: 1500, percent: 28, updatedAt: Date.now() }));
   });
   await page.goto("https://animeunity.cx/anime/12-one-piece/50574", { waitUntil: "domcontentloaded" });
   await page.waitForSelector("#al-control-bar #al-ep-save", { timeout: 10000 });
-  await page.waitForSelector("#al-control-bar #al-bar-status", { timeout: 10000 });
+  await page.waitForSelector("#al-control-bar #al-dock-resume-loading", { timeout: 10000 });
   const watchText = await page.locator("#al-control-bar").innerText();
   assert.ok(watchText.includes("Ep. 6 / 1122"), "Watch dock displays current/max episode");
+  assert.ok(watchText.includes("7:00"), "Watch dock displays in-dock resume loading chip");
   await page.waitForTimeout(200);
 
   // Verify AL_RESUME_SEEK dispatch when iframe posts AL_PLAYER_READY
@@ -408,25 +409,25 @@ try {
   assert.deepEqual(errors, [], "Zero uncaught pageerrors on desktop");
   await ctx.close();
 
-  // 2. Mobile viewport bounds & dropdown test (iPhone 14, 390px)
-  const mobileCtx = await browser.newContext(devices["iPhone 14"]);
+  // 2. Mobile viewport bounds & dropdown test (iPhone SE, 375x667)
+  const mobileCtx = await browser.newContext(devices["iPhone SE"]);
   await setupRoutes(mobileCtx, state);
   await mobileCtx.addInitScript(`${shim}; document.addEventListener("DOMContentLoaded", () => setTimeout(() => { ${code}\n}, 50));`);
   const mPage = await mobileCtx.newPage();
   await mPage.goto("https://animeunity.cx/anime/12-one-piece/50574", { waitUntil: "domcontentloaded" });
   await mPage.waitForSelector("#al-dock-avatar-btn", { timeout: 10000 });
-  await mPage.waitForSelector("#al-dock-anime-btn", { timeout: 10000 });
+  await mPage.waitForSelector("#al-slot-switch #al-cross-switch-btn", { timeout: 10000 });
 
   const mDock = await mPage.locator("#al-dock").boundingBox();
-  assert.ok(mDock && mDock.x >= 0 && mDock.x + mDock.width <= 390, `Mobile dock within 390px (${JSON.stringify(mDock)})`);
+  assert.ok(mDock && mDock.x >= 0 && mDock.x + mDock.width <= 375, `iPhone SE dock within 375px (${JSON.stringify(mDock)})`);
 
   await mPage.click("#al-dock-avatar-btn");
   await mPage.waitForSelector("#al-dock-menu.show", { timeout: 5000 });
   const mMenu = await mPage.locator("#al-dock-menu").boundingBox();
-  assert.ok(mMenu && mMenu.x >= 0 && mMenu.x + mMenu.width <= 390, `Mobile menu within 390px (${JSON.stringify(mMenu)})`);
+  assert.ok(mMenu && mMenu.x >= 0 && mMenu.x + mMenu.width <= 375, `iPhone SE menu within 375px (${JSON.stringify(mMenu)})`);
 
   await mobileCtx.close();
-  console.log("✅ Hermetic E2E suite passed (Home, Detail, 85% Sync, Old-Ep Guard, Mobile Bounds)");
+  console.log("✅ Hermetic E2E suite passed (Home, Detail, Resume Chip, 85% Sync, Old-Ep Guard, iPhone SE 375px Bounds)");
 } finally {
   await browser.close();
 }

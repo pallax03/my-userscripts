@@ -1,7 +1,8 @@
 import { Storage } from "../../shared/storage.js";
 import { showToast } from "../../shared/toast.js";
 import { Logger } from "../../shared/logger.js";
-import { iconHtml, Globe, Tv, ExternalLink, Loader2 } from "../../shared/icons.js";
+import { iconHtml, Globe, Tv, Loader2 } from "../../shared/icons.js";
+import { slot } from "../slots.js";
 import { cleanTitle, generateSearchCandidates, extractSeason, scoreSearchResult } from "../providers/base.js";
 
 /**
@@ -278,13 +279,18 @@ export async function resolveUnityUrl(media, targetEp = 1) {
  * @param {number} options.activeEp
  * @param {Object} options.provider
  */
+const FAVICONS = {
+  AnimeSaturn: "https://www.animesaturn.cx/assets/img/favicon/favicon-96x96.png",
+  AnimeUnity: "https://www.animeunity.cx/favicon.ico"
+};
+
 export function renderCrossSwitch({ media, activeEp = 0, provider = null } = {}) {
   const isUnity = provider?.name === "AnimeUnity";
   const targetSiteName = isUnity ? "AnimeSaturn" : "AnimeUnity";
   const targetIcon = isUnity ? Globe : Tv;
   const targetEp = activeEp > 0 ? activeEp : 1;
 
-  const container = document.getElementById("al-dock-switch-slot");
+  const container = slot("switch");
   const existing = document.getElementById("al-cross-switch-btn");
 
   if (!container || !media) {
@@ -298,17 +304,20 @@ export function renderCrossSwitch({ media, activeEp = 0, provider = null } = {})
     btn.type = "button";
     btn.id = "al-cross-switch-btn";
   }
-  btn.className = `al-dock-menu-item al-cross-switch-btn ${isUnity ? "for-saturn" : "for-unity"}`;
+  btn.className = `al-switch-pill-btn ${isUnity ? "for-saturn" : "for-unity"}`;
   if (btn.parentElement !== container) {
     container.appendChild(btn);
   }
 
-  btn.title = `Switch to ${targetSiteName} (Ep. ${targetEp})`;
-  btn.innerHTML = `
-    ${iconHtml(targetIcon, { width: 13, height: 13 })}
-    <span>Watch on ${targetSiteName}</span>
-    ${iconHtml(ExternalLink, { width: 11, height: 11, style: "margin-left:auto;opacity:0.7;" })}
-  `;
+  const faviconUrl = FAVICONS[targetSiteName];
+  btn.title = `Watch on ${targetSiteName} (Ep. ${targetEp})`;
+  btn.innerHTML = `<img src="${faviconUrl}" alt="${targetSiteName}" />`;
+  const img = btn.querySelector("img");
+  if (img) {
+    img.onerror = () => {
+      btn.innerHTML = iconHtml(targetIcon, { width: 16, height: 16 });
+    };
+  }
 
   // Bind single click handler
   btn.onclick = async (e) => {
@@ -316,7 +325,7 @@ export function renderCrossSwitch({ media, activeEp = 0, provider = null } = {})
     e.stopPropagation();
 
     btn.classList.add("is-loading");
-    btn.innerHTML = `${iconHtml(Loader2, { width: 12, height: 12, class: "al-spin" })} <span>Opening ${targetSiteName}...</span>`;
+    btn.innerHTML = iconHtml(Loader2, { width: 16, height: 16, class: "al-spin" });
 
     showToast(`⚡ Switching to ${targetSiteName} (Ep. ${targetEp})...`, false, 2500);
 

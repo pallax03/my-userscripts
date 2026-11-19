@@ -3142,17 +3142,18 @@ video-player,
 
 #al-dock {
   position: fixed;
-  right: 16px;
+  left: 50%;
+  right: auto;
   bottom: calc(14px + env(safe-area-inset-bottom));
-  left: auto;
-  transform: none;
+  transform: translateX(-50%);
   z-index: 2147483600;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
+  gap: 8px;
   pointer-events: none;
   width: auto;
-  max-width: calc(100vw - 32px);
+  max-width: calc(100vw - 24px);
   transition: opacity 0.25s ease, transform 0.25s ease;
 
   > .al-slot {
@@ -3736,31 +3737,81 @@ video-player,
   }
 }
 
+.al-dock-title {
+  color: #3db4f2;
+  font-weight: 700;
+  font-size: 12px;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: none;
+  &:hover {
+    color: #60c5f7;
+    text-decoration: underline;
+  }
+}
+
+.al-switch-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 9999px;
+  background: rgba(11, 20, 28, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  img {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  &:hover {
+    transform: scale(1.08);
+    border-color: rgba(59, 130, 246, 0.8);
+  }
+}
+
 @media (max-width: 640px) {
   #al-dock {
-    right: 8px;
-    left: auto;
-    bottom: calc(10px + env(safe-area-inset-bottom));
-    max-width: calc(100vw - 16px);
+    left: 6px;
+    right: 6px;
+    transform: none;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    max-width: calc(100vw - 12px);
+    gap: 6px;
   }
   .al-compact-pill {
-    height: 38px;
-    padding: 0 8px;
+    height: auto;
+    min-height: 40px;
+    padding: 5px 8px;
     gap: 5px;
     font-size: 11px;
-    max-width: calc(100vw - 16px);
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    &::-webkit-scrollbar { display: none; }
+    max-width: calc(100vw - 56px);
+    border-radius: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
   }
   .al-dock-title {
-    max-width: 80px;
+    max-width: 96px;
+    font-size: 11px;
+  }
+  .al-switch-pill-btn {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
   }
   .al-dock-btn {
     padding: 0 8px;
-    font-size: 10px;
-    height: 24px;
+    font-size: 10.5px;
+    height: 26px;
   }
   .al-dock-step-btn {
     padding: 1px 4px;
