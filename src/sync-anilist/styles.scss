@@ -1487,6 +1487,11 @@ a[href*="/login"].btn-danger {
     pointer-events: none;
   }
 
+  &:has(.al-card-body.is-actions-open) {
+    overflow: visible;
+    z-index: 30;
+  }
+
   &:hover {
     transform: translateY(-3px);
     box-shadow: 0 14px 28px rgba(0, 0, 0, 0.52), 0 0 18px rgba(45, 212, 191, 0.14);
@@ -1603,10 +1608,13 @@ a[href*="/login"].btn-danger {
   gap: 8px;
   background: transparent;
 
-  &.is-actions-open .al-card-action-overlay {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0);
+  &.is-actions-open {
+    overflow: visible;
+    .al-card-action-overlay {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
   }
 }
 
@@ -1696,6 +1704,31 @@ a[href*="/login"].btn-danger {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
+}
+
+.al-card-buddy-mount {
+  width: 100%;
+
+  .al-buddy-picker {
+    width: 100%;
+  }
+
+  .al-buddy-btn {
+    width: 100%;
+    height: 28px;
+    justify-content: space-between;
+    border-radius: 9999px;
+    padding: 0 10px;
+  }
+
+  .al-buddy-popover {
+    top: calc(100% + 6px);
+    bottom: auto;
+    right: 0;
+    left: auto;
+    min-width: 215px;
+    z-index: 2147483647;
+  }
 }
 
 .al-card-status-select {

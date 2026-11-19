@@ -500,6 +500,19 @@ function renderHome() {
         showToast(`Status: ${AniListAPI.statuses[status] || status}`);
         await loadHomeWatching();
       }
+    },
+    onBuddyChange: async (entry, newBuddy) => {
+      if (!entry?.media?.id) return;
+      const updatedNotes = Buddy.apply(entry.notes || "", newBuddy);
+      const res = await AniListAPI.saveEntry({
+        mediaId: entry.media.id,
+        notes: updatedNotes
+      });
+      if (res?.SaveMediaListEntry) {
+        if (newBuddy) Settings.set("defaultBuddy", newBuddy);
+        showToast(newBuddy ? `Sync Together set: ${newBuddy}` : "Sync Together removed");
+        await loadHomeWatching();
+      }
     }
   });
   injectHomeShelf(shelf);

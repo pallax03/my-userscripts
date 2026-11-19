@@ -5,6 +5,7 @@ import { openTokenModal } from "../../shared/anilist/auth.js";
 import { simulateAgenticSearch } from "./agent-search.js";
 import { Settings } from "../settings.js";
 import { Buddy } from "../buddy.js";
+import { initBuddyPicker } from "./buddy-picker.js";
 import { getCurrentProvider } from "../providers/index.js";
 import { cleanTitle } from "../providers/base.js";
 import { Resume } from "../resume.js";
@@ -145,7 +146,9 @@ function createCard(
   onClearResume = null,
   onAdjustProgress = null,
   onRemoveEntry = null,
-  onStatusChange = null
+  onStatusChange = null,
+  onBuddyChange = null,
+  viewer = null
 ) {
   const media = entry.media || {};
   const state = calculateEntryState(entry);
@@ -444,13 +447,28 @@ function createCard(
     overlayBody.appendChild(statusSelect);
   }
 
+  if (typeof onBuddyChange === "function") {
+    const buddyMount = document.createElement("div");
+    buddyMount.className = "al-card-buddy-mount";
+    overlayBody.appendChild(buddyMount);
+    initBuddyPicker(buddyMount, {
+      selectedBuddy: Buddy.extract(entry.notes) || "",
+      defaultBuddy: Settings.get().defaultBuddy,
+      viewer,
+      emptyLabel: "Buddy",
+      placeholder: "Search friend...",
+      onSelect: (name) => onBuddyChange(entry, name),
+      onClear: () => onBuddyChange(entry, "")
+    });
+  }
+
   overlayPanel.appendChild(overlayBody);
   cardBody.appendChild(overlayPanel);
   card.appendChild(cardBody);
 
   // Unified Card Navigation
   async function handleCardNavigate(e) {
-    if (e.target.closest(".al-card-more-btn, .al-card-action-overlay, .al-btn-buddy-sync, .al-btn-clear-resume, .al-card-mini-btn")) return;
+    if (e.target.closest(".al-card-more-btn, .al-card-action-overlay, .al-btn-buddy-sync, .al-btn-clear-resume, .al-card-mini-btn, .al-buddy-picker, .al-buddy-popover")) return;
     e.preventDefault();
 
     const provider = getCurrentProvider();
@@ -527,7 +545,8 @@ export function renderWatchingShelf({
   onClearResume = null,
   onAdjustProgress = null,
   onRemoveEntry = null,
-  onStatusChange = null
+  onStatusChange = null,
+  onBuddyChange = null
 } = {}) {
   let unwatchedOnly = Settings.get().shelfFilterUnwatched;
   let syncOnly = Settings.get().shelfFilterSync;
@@ -690,7 +709,7 @@ export function renderWatchingShelf({
 
     visibleEntries.forEach((entry) => {
       const buddySync = syncMap.get(entry.mediaId) || null;
-      const card = createCard(entry, buddySync, onSyncEntry, onClearResume, onAdjustProgress, onRemoveEntry, onStatusChange);
+      const card = createCard(entry, buddySync, onSyncEntry, onClearResume, onAdjustProgress, onRemoveEntry, onStatusChange, onBuddyChange, viewer);
       track.appendChild(card);
     });
   }
