@@ -144,7 +144,8 @@ function createCard(
   onSyncEntry = null,
   onClearResume = null,
   onAdjustProgress = null,
-  onRemoveEntry = null
+  onRemoveEntry = null,
+  onStatusChange = null
 ) {
   const media = entry.media || {};
   const state = calculateEntryState(entry);
@@ -378,9 +379,9 @@ function createCard(
     const decBtn = document.createElement("button");
     decBtn.type = "button";
     decBtn.className = "al-card-overlay-btn";
-    decBtn.title = `Previous episode (Ep. ${Math.max(0, state.progress - 1)})`;
+    decBtn.title = `Decrement to Ep. ${Math.max(0, state.progress - 1)}`;
     decBtn.disabled = state.progress <= 0;
-    decBtn.innerHTML = `${iconHtml(Minus, { width: 12, height: 12 })}<span>-1</span>`;
+    decBtn.innerHTML = iconHtml(Minus, { width: 13, height: 13 });
     decBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -394,7 +395,7 @@ function createCard(
     incBtn.className = "al-card-overlay-btn";
     incBtn.title = `Mark Ep. ${state.progress + 1} watched`;
     incBtn.disabled = Boolean(state.totalEp && state.progress >= state.totalEp);
-    incBtn.innerHTML = `${iconHtml(Plus, { width: 12, height: 12 })}<span>+1</span>`;
+    incBtn.innerHTML = iconHtml(Plus, { width: 13, height: 13 });
     incBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -409,7 +410,7 @@ function createCard(
     delBtn.type = "button";
     delBtn.className = "al-card-overlay-btn is-danger";
     delBtn.title = "Remove from AniList";
-    delBtn.innerHTML = `${iconHtml(Trash2, { width: 12, height: 12 })}<span>Remove</span>`;
+    delBtn.innerHTML = iconHtml(Trash2, { width: 13, height: 13 });
     delBtn.addEventListener("click", async (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -419,6 +420,35 @@ function createCard(
   }
 
   overlayBody.appendChild(editRow);
+
+  if (typeof onStatusChange === "function") {
+    const statusSelect = document.createElement("select");
+    statusSelect.className = "al-card-status-select";
+    statusSelect.title = "Change AniList status";
+    const statuses = [
+      ["CURRENT", "Watching"],
+      ["REPEATING", "Rewatching"],
+      ["PAUSED", "Paused"],
+      ["PLANNING", "Planning"],
+      ["COMPLETED", "Completed"],
+      ["DROPPED", "Dropped"]
+    ];
+    statuses.forEach(([val, label]) => {
+      const opt = document.createElement("option");
+      opt.value = val;
+      opt.textContent = label;
+      if (entry.status === val) opt.selected = true;
+      statusSelect.appendChild(opt);
+    });
+    statusSelect.addEventListener("click", (e) => e.stopPropagation());
+    statusSelect.addEventListener("change", async (e) => {
+      e.stopPropagation();
+      statusSelect.disabled = true;
+      await onStatusChange(entry, e.target.value);
+    });
+    overlayBody.appendChild(statusSelect);
+  }
+
   overlayPanel.appendChild(overlayBody);
   cardBody.appendChild(overlayPanel);
   card.appendChild(cardBody);
@@ -501,7 +531,8 @@ export function renderWatchingShelf({
   onSyncEntry = null,
   onClearResume = null,
   onAdjustProgress = null,
-  onRemoveEntry = null
+  onRemoveEntry = null,
+  onStatusChange = null
 } = {}) {
   let unwatchedOnly = Settings.get().shelfFilterUnwatched;
   let syncOnly = Settings.get().shelfFilterSync;
@@ -664,7 +695,7 @@ export function renderWatchingShelf({
 
     visibleEntries.forEach((entry) => {
       const buddySync = syncMap.get(entry.mediaId) || null;
-      const card = createCard(entry, buddySync, onSyncEntry, onClearResume, onAdjustProgress, onRemoveEntry);
+      const card = createCard(entry, buddySync, onSyncEntry, onClearResume, onAdjustProgress, onRemoveEntry, onStatusChange);
       track.appendChild(card);
     });
   }

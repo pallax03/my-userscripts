@@ -485,6 +485,21 @@ function renderHome() {
         showToast("Anime removed");
         await loadHomeWatching();
       }
+    },
+    onStatusChange: async (entry, status) => {
+      if (!entry?.media?.id || !status) return;
+      const params = { mediaId: entry.media.id, status };
+      if (status === "COMPLETED") {
+        if (!entry.completedAt?.year) params.completedAt = getTodayDate();
+        if (!entry.startedAt?.year) params.startedAt = getTodayDate();
+        if (entry.status === "REPEATING") params.repeat = (entry.repeat || 0) + 1;
+      } else if ((status === "CURRENT" || status === "REPEATING") && !entry.startedAt?.year) {
+        params.startedAt = getTodayDate();
+      }
+      if (await AniListAPI.saveEntry(params)) {
+        showToast(`Status: ${AniListAPI.statuses[status] || status}`);
+        await loadHomeWatching();
+      }
     }
   });
   injectHomeShelf(shelf);
