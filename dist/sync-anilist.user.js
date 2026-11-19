@@ -3089,6 +3089,40 @@
 		shelfContainer.appendChild(carouselWrap);
 		return shelfContainer;
 	}
+	function isValidSegment(segment) {
+		return Boolean(segment && typeof segment.start === "number" && typeof segment.end === "number" && Number.isFinite(segment.start) && Number.isFinite(segment.end) && segment.end > segment.start);
+	}
+	function resolveSkipSegment({ aniskipOp = null, nativeIntro = null } = {}) {
+		if (isValidSegment(aniskipOp)) return {
+			...aniskipOp,
+			source: aniskipOp.source || "aniskip"
+		};
+		if (isValidSegment(nativeIntro)) return {
+			...nativeIntro,
+			source: nativeIntro.source || "native"
+		};
+		return null;
+	}
+	function resolveManualSkipTarget({ currentPos = 0, duration = 0, segment = null, fallbackDuration = 85 } = {}) {
+		const pos = typeof currentPos === "number" && Number.isFinite(currentPos) && currentPos >= 0 ? currentPos : 0;
+		const dur = typeof duration === "number" && Number.isFinite(duration) && duration > 0 ? duration : 0;
+		const fallback = typeof fallbackDuration === "number" && Number.isFinite(fallbackDuration) && fallbackDuration > 0 ? fallbackDuration : 85;
+		if (isValidSegment(segment)) {
+			const showStart = Math.max(0, segment.start - 1.5);
+			const showEnd = Math.max(showStart, segment.end - 2);
+			if (pos >= showStart && pos <= showEnd) return {
+				target: Math.max(0, segment.end - 1),
+				mode: "segment",
+				source: segment.source || "aniskip"
+			};
+		}
+		const rawTarget = pos + fallback;
+		return {
+			target: dur > 0 ? Math.max(0, Math.min(dur - 1, rawTarget)) : rawTarget,
+			mode: "fallback",
+			source: "fallback"
+		};
+	}
 	var ANISKIP_API_URL = "https://api.aniskip.com/v2";
 	var PRESET_PROVIDERS = [
 		"Crunchyroll",
@@ -3546,6 +3580,8 @@
 	var cache = new Map();
 	var activeMalId = null;
 	var activeEp = null;
+	var aniskipOp = null;
+	var nativeIntro = null;
 	var activeOp = null;
 	var activeDuration = 0;
 	var fetchToken = 0;
@@ -3553,6 +3589,12 @@
 	var currentProvider = null;
 	var lastKnownCurrentTime = 0;
 	var lastKnownDuration = 0;
+	function syncActiveOp() {
+		activeOp = resolveSkipSegment({
+			aniskipOp,
+			nativeIntro
+		});
+	}
 	function isEpisodeAutoSkipActive() {
 		if (episodeAutoSkipOverride !== null) return episodeAutoSkipOverride;
 		return Settings.get().autoSkip;
@@ -3570,11 +3612,12 @@
 		};
 	}
 	function handleSuccessfulContribution(newData) {
-		activeOp = newData;
+		aniskipOp = newData;
+		syncActiveOp();
 		const { malId, epNum } = getEffectiveIds();
 		if (malId && epNum) {
 			const cacheKey = `${malId}_${epNum}`;
-			cache.set(cacheKey, activeOp);
+			cache.set(cacheKey, aniskipOp);
 		}
 		broadcastOp();
 		renderAutoSkipButton(currentProvider);
@@ -3682,14 +3725,17 @@
 			activeMalId = malId;
 			activeEp = epNum;
 			activeDuration = roundedDur;
-			activeOp = null;
+			aniskipOp = null;
+			nativeIntro = null;
+			syncActiveOp();
 			episodeAutoSkipOverride = null;
 			broadcastOp();
 			renderAutoSkipButton(currentProvider);
 		} else if (roundedDur > 0) activeDuration = roundedDur;
 		const cacheKey = `${malId}_${epNum}`;
 		if (cache.has(cacheKey)) {
-			activeOp = cache.get(cacheKey);
+			aniskipOp = cache.get(cacheKey);
+			syncActiveOp();
 			broadcastOp();
 			renderAutoSkipButton(currentProvider);
 			return;
@@ -3699,28 +3745,29 @@
 			const res = await fetch(`https://api.aniskip.com/v2/skip-times/${malId}/${epNum}?types=op&episodeLength=${activeDuration}`);
 			if (token !== fetchToken) return;
 			if (!res.ok) {
-				if (!activeOp || activeOp.source !== "native") {
-					activeOp = null;
-					cache.set(cacheKey, null);
-				}
+				aniskipOp = null;
+				cache.set(cacheKey, null);
+				syncActiveOp();
 				broadcastOp();
 				renderAutoSkipButton(currentProvider);
 				return;
 			}
 			const op = (await res.json()).results?.find((r) => r.skipType === "op" || r.skipType === "mixed-op");
 			if (op) {
-				activeOp = {
+				aniskipOp = {
 					start: op.interval.startTime,
 					end: op.interval.endTime,
 					episodeLength: op.episodeLength || 0,
 					skipType: op.skipType,
-					skipId: op.skipId
+					skipId: op.skipId,
+					source: "aniskip"
 				};
-				cache.set(cacheKey, activeOp);
-			} else if (!activeOp || activeOp.source !== "native") {
-				activeOp = null;
+				cache.set(cacheKey, aniskipOp);
+			} else {
+				aniskipOp = null;
 				cache.set(cacheKey, null);
 			}
+			syncActiveOp();
 			Logger.info(`📡 AniSkip result for Ep ${epNum}:`, activeOp || "No opening found");
 			broadcastOp();
 			renderAutoSkipButton(currentProvider);
@@ -3746,14 +3793,16 @@
 				if (frameDur > 0 && !activeOp && activeMalId && activeEp) checkSkipIntro(activeMalId, activeEp, frameDur);
 				else broadcastOp();
 			} else if (e.data?.type === "AU_NATIVE_TIMESTAMPS" && e.data.intro) {
-				if (!activeOp) {
-					activeOp = {
-						start: e.data.intro.start,
-						end: e.data.intro.end,
-						episodeLength: activeDuration || lastKnownDuration,
-						skipType: "op",
-						source: "native"
-					};
+				nativeIntro = {
+					start: e.data.intro.start,
+					end: e.data.intro.end,
+					episodeLength: activeDuration || lastKnownDuration,
+					skipType: "op",
+					source: "native"
+				};
+				const prevOp = activeOp;
+				syncActiveOp();
+				if (activeOp && activeOp !== prevOp) {
 					broadcastOp();
 					renderAutoSkipButton(currentProvider);
 				}
@@ -4039,29 +4088,34 @@
 		}
 		function checkNativeTimestamps() {
 			const timestamps = (typeof unsafeWindow !== "undefined" ? unsafeWindow : window).video?.timestamps || window.video?.timestamps;
-			if (Array.isArray(timestamps) && timestamps.length > 0) {
-				const intro = timestamps.find((t) => t.kind === "intro" && t.end_time > t.start_time);
-				if (intro) {
-					if (!rawOp) {
-						rawOp = {
-							start: intro.start_time,
-							end: intro.end_time,
-							episodeLength: getDuration(),
-							source: "native"
-						};
-						computeAdjustedOp();
-					}
-					try {
-						window.top.postMessage({
-							type: "AU_NATIVE_TIMESTAMPS",
-							intro: {
-								start: intro.start_time,
-								end: intro.end_time
-							}
-						}, "*");
-					} catch (_) {}
-				}
+			if (!Array.isArray(timestamps) || timestamps.length === 0) return;
+			const introTs = timestamps.find((t) => t.kind === "intro" && t.end_time > t.start_time);
+			const outroTs = timestamps.find((t) => t.kind === "outro" && t.end_time > t.start_time);
+			if (!introTs && !outroTs) return;
+			const intro = introTs ? {
+				start: introTs.start_time,
+				end: introTs.end_time
+			} : null;
+			const outro = outroTs ? {
+				start: outroTs.start_time,
+				end: outroTs.end_time
+			} : null;
+			if (intro && !rawOp) {
+				rawOp = {
+					start: intro.start,
+					end: intro.end,
+					episodeLength: getDuration(),
+					source: "native"
+				};
+				computeAdjustedOp();
 			}
+			try {
+				window.top.postMessage({
+					type: "AU_NATIVE_TIMESTAMPS",
+					intro,
+					outro
+				}, "*");
+			} catch (_) {}
 		}
 		function seekTo(target) {
 			if (typeof target !== "number" || isNaN(target) || target < 0) return;
@@ -4086,23 +4140,20 @@
 			Logger.info(`⏩ ${isAuto ? "Auto-skipped" : "User skipped"} intro to ${target.toFixed(2)}s`);
 			seekTo(target);
 		}
-		function fallbackSkip() {
-			const pos = getPos();
-			const dur = getDuration();
-			const target = dur > 0 ? Math.min(dur - 1, pos + skipFallbackDuration) : pos + skipFallbackDuration;
-			Logger.info(`⏩ Fallback skip (+${skipFallbackDuration}s) to ${target.toFixed(2)}s`);
-			seekTo(target);
-		}
 		function handleSkipAction() {
 			cancelActiveResume();
 			const now = Date.now();
 			if (now - lastSkipTime < 500) return;
 			lastSkipTime = now;
-			const pos = getPos();
-			const showStart = currentOp ? Math.max(0, currentOp.start - 1.5) : 0;
-			const showEnd = currentOp ? Math.max(showStart, currentOp.end - 2) : 0;
-			if (currentOp && pos >= showStart && pos <= showEnd) skipIntro(false);
-			else fallbackSkip();
+			const resolution = resolveManualSkipTarget({
+				currentPos: getPos(),
+				duration: getDuration(),
+				segment: currentOp,
+				fallbackDuration: skipFallbackDuration
+			});
+			if (resolution.mode === "segment") Logger.info(`⏩ User skipped intro (${resolution.source}) to ${resolution.target.toFixed(2)}s`);
+			else Logger.info(`⏩ Fallback skip (+${skipFallbackDuration}s) to ${resolution.target.toFixed(2)}s`);
+			seekTo(resolution.target);
 		}
 		function checkTime() {
 			bindMediaEvents();
