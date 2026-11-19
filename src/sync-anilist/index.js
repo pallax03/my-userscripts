@@ -563,6 +563,8 @@ export const App = {
     if (isHome()) {
       const actionsSlot = document.getElementById("al-slot-actions");
       if (actionsSlot) actionsSlot.style.display = "none";
+      const switchSlot = document.getElementById("al-slot-switch");
+      if (switchSlot) switchSlot.style.display = "none";
       const navSlot = document.getElementById("al-slot-nav");
       if (navSlot) navSlot.style.display = "";
       renderHome();
@@ -571,6 +573,8 @@ export const App = {
 
     const actionsSlot = document.getElementById("al-slot-actions");
     if (actionsSlot) actionsSlot.style.display = "";
+    const switchSlot = document.getElementById("al-slot-switch");
+    if (switchSlot) switchSlot.style.display = "";
     const navSlot = document.getElementById("al-slot-nav");
     if (navSlot) navSlot.style.display = "none";
 
