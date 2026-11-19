@@ -96,3 +96,63 @@ export const Resume = {
     Storage.del(`al_resume_${mediaId}`);
   }
 };
+
+/**
+ * Resolves the resume action for the current episode while coexisting with native site resume.
+ * @param {Object} params
+ * @param {number} params.trackedProgress - Current AniList progress (0, N, or -1 if untracked)
+ * @param {number} params.activeEp - Active episode number being watched
+ * @param {number} [params.currentTime=0] - Current observed playback time in seconds
+ * @param {Object|null} [params.localResume] - Local cached resume { ep, time, duration?, percent?, updatedAt? }
+ * @param {Object|null} [params.anilistResume] - AniList notes resume { ep, time, duration?, percent? }
+ * @returns {{ action: "seek", time: number } | { action: "yield", reason: string } | { action: "none", reason: string }}
+ */
+export function resolveResumeAction({
+  trackedProgress,
+  activeEp,
+  currentTime = 0,
+  localResume = null,
+  anilistResume = null
+}) {
+  if (
+    typeof trackedProgress !== "number" ||
+    typeof activeEp !== "number" ||
+    activeEp <= 0 ||
+    activeEp !== trackedProgress + 1
+  ) {
+    return { action: "none", reason: "ineligible_episode" };
+  }
+
+  if (currentTime > 5) {
+    return { action: "yield", reason: "already_playing" };
+  }
+
+  const isValid = (r) => {
+    if (!r || typeof r !== "object") return false;
+    if (r.ep !== activeEp) return false;
+    if (typeof r.time !== "number" || r.time <= 10) return false;
+    const percent =
+      typeof r.percent === "number"
+        ? r.percent
+        : r.duration > 0
+          ? (r.time / r.duration) * 100
+          : 0;
+    return percent < 90;
+  };
+
+  const localValid = isValid(localResume);
+  const anilistValid = isValid(anilistResume);
+
+  if (localValid && anilistValid) {
+    const chosen = localResume.time >= anilistResume.time ? localResume : anilistResume;
+    return { action: "seek", time: chosen.time };
+  }
+  if (localValid) {
+    return { action: "seek", time: localResume.time };
+  }
+  if (anilistValid) {
+    return { action: "seek", time: anilistResume.time };
+  }
+
+  return { action: "none", reason: "no_valid_resume" };
+}
