@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.7.0...sync-anilist-v1.7.1) (2026-11-24)
+
+
+### Bug Fixes
+
+* general fix ([c36955e](https://github.com/pallax03/my-userscripts/commit/c36955ecfd78807ef3dc2c8223831db0d3a945ec))
+
 ## [1.7.0](https://github.com/pallax03/my-userscripts/compare/sync-anilist-v1.6.0...sync-anilist-v1.7.0) (2026-11-19)
 
 
