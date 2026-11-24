@@ -301,7 +301,7 @@ try {
   await page.waitForSelector("#al-control-bar #al-bar-status", { timeout: 10000 });
   await page.waitForSelector("#al-slot-switch #al-cross-switch-btn", { timeout: 10000 });
   const detailText = await page.locator("#al-control-bar").innerText();
-  assert.ok(detailText.includes("Progress: Ep. 5 / 1122"), "Detail dock displays tracked/max progress");
+  assert.ok(detailText.includes("AL 5/1122"), "Detail dock displays tracked/max progress");
   assert.ok(detailText.includes("One Piece"), "Detail dock displays blue AniList title link");
   const titleHref = await page.locator("#al-control-bar .al-dock-title").getAttribute("href");
   assert.equal(titleHref, "https://anilist.co/anime/21", "Title links directly to AniList");
@@ -322,7 +322,7 @@ try {
   await page.waitForSelector("#al-control-bar #al-ep-save", { timeout: 10000 });
   await page.waitForSelector("#al-control-bar #al-dock-resume-loading", { timeout: 10000 });
   const watchText = await page.locator("#al-control-bar").innerText();
-  assert.ok(watchText.includes("Ep. 6 / 1122"), "Watch dock displays current/max episode");
+  assert.ok(watchText.includes("AL 5/1122") && watchText.includes("Ep. 6"), "Watch dock displays tracked/max progress and current episode");
   assert.ok(watchText.includes("7:00"), "Watch dock displays in-dock resume loading chip");
   await page.waitForSelector("#al-skip-toggle-btn", { timeout: 10000 });
   await page.waitForSelector(".al-skip-pill-votes .is-upvote", { timeout: 5000 });
