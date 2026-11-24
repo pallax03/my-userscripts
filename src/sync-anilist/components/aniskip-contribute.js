@@ -273,6 +273,8 @@ export function openAniSkipDock({
   initialStart = null,
   initialEnd = null,
   skipType = "op",
+  existingOp = null,
+  existingEd = null,
   provider,
   onSuccess
 }) {
@@ -307,6 +309,8 @@ export function openAniSkipDock({
     lastManualTarget: isEditing ? "in" : null,
     lastCustomStart: isEditing ? initialStart : null,
     lastCustomEnd: isEditing ? initialEnd : null,
+    existingOp,
+    existingEd,
     provider,
     onSuccess
   };
@@ -467,7 +471,7 @@ export function toggleAutoCustomDuration() {
  * Handles hotkeys for start (In) and end (Out) points with script formula auto-fill
  */
 export function handleAniSkipHotkey(action, currentTime = 0, duration = 0, context = {}) {
-  const { malId, epNum, provider, onSuccess } = context;
+  const { malId, epNum, provider, onSuccess, existingOp = null, existingEd = null, skipType = null } = context;
   if (!malId || !epNum) return;
 
   if (typeof currentTime === "number" && currentTime > 0) {
@@ -478,11 +482,15 @@ export function handleAniSkipHotkey(action, currentTime = 0, duration = 0, conte
   }
 
   if (!dockState) {
+    const inferredType = skipType || (duration > 0 && currentTime > duration * 0.5 ? "ed" : "op");
     openAniSkipDock({
       malId,
       epNum,
       currentTime,
       duration,
+      skipType: inferredType,
+      existingOp,
+      existingEd,
       provider,
       onSuccess
     });
@@ -591,8 +599,27 @@ function renderAniSkipDock() {
   typeButtons.forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      dockState.skipType = btn.dataset.type || "op";
-      typeButtons.forEach((b) => b.classList.toggle("is-active", b === btn));
+      const nextType = btn.dataset.type || "op";
+      if (dockState.skipType === nextType) return;
+      dockState.skipType = nextType;
+      const existing = nextType === "ed" ? dockState.existingEd : dockState.existingOp;
+      if (existing && typeof existing.start === "number" && typeof existing.end === "number") {
+        dockState.startTime = existing.start;
+        dockState.endTime = existing.end;
+        dockState.isManualIn = true;
+        dockState.isManualOut = true;
+        dockState.lastCustomStart = existing.start;
+        dockState.lastCustomEnd = existing.end;
+      } else {
+        const cur = Math.max(0, Math.round(getCurrentPlaybackTime() * 10) / 10);
+        const rec = getRecommendedDuration();
+        const totalDur = dockState.episodeLength || 0;
+        dockState.startTime = cur;
+        dockState.endTime = Math.round((totalDur > 0 ? Math.min(totalDur, cur + rec) : cur + rec) * 10) / 10;
+        dockState.isManualIn = false;
+        dockState.isManualOut = false;
+      }
+      renderAniSkipDock();
     });
   });
 

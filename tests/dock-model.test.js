@@ -39,7 +39,7 @@ describe("dock-model deriveDockState", () => {
     assert.equal(state.episodeMode, "tracked");
   });
 
-  it("enables buddy sync button only when buddy is ahead or completed", () => {
+  it("enables buddy sync button only when buddy is ahead, completed, or has ahead resume", () => {
     const ahead = deriveDockState({
       media: { ...baseMedia, mediaListEntry: { status: "CURRENT", progress: 5 } },
       buddyData: { name: "brother", progress: 7, isCompleted: false }
@@ -48,7 +48,33 @@ describe("dock-model deriveDockState", () => {
       media: { ...baseMedia, mediaListEntry: { status: "CURRENT", progress: 7 } },
       buddyData: { name: "brother", progress: 5, isCompleted: false }
     });
+    const sameEpResume = deriveDockState({
+      media: { ...baseMedia, mediaListEntry: { status: "CURRENT", progress: 5 } },
+      myResume: { ep: 6, time: 60, duration: 1440, percent: 4 },
+      buddyData: {
+        name: "brother",
+        progress: 5,
+        isCompleted: false,
+        resume: { ep: 6, time: 360, duration: 1440, percent: 25 }
+      }
+    });
     assert.equal(ahead.canSyncBuddy, true);
+    assert.equal(ahead.buddySyncKind, "episode");
     assert.equal(behind.canSyncBuddy, false);
+    assert.equal(sameEpResume.canSyncBuddy, true);
+    assert.equal(sameEpResume.buddySyncKind, "resume");
+  });
+
+  it("computes canDecrement and canIncrement bounds for AniList stepper", () => {
+    const atZero = deriveDockState({
+      media: { id: 1, episodes: 12, mediaListEntry: { status: "CURRENT", progress: 0 } }
+    });
+    const atTotal = deriveDockState({
+      media: { id: 1, episodes: 12, mediaListEntry: { status: "CURRENT", progress: 12 } }
+    });
+    assert.equal(atZero.canDecrement, false);
+    assert.equal(atZero.canIncrement, true);
+    assert.equal(atTotal.canDecrement, true);
+    assert.equal(atTotal.canIncrement, false);
   });
 });

@@ -29,6 +29,7 @@ export function renderActions(
     viewer = null,
     defaultBuddy = "",
     buddyData = null,
+    myResume = null,
     provider = null,
     activeEp = 0,
     trackedProgress = -1,
@@ -68,6 +69,10 @@ export function renderActions(
     currentBuddy,
     buddyData?.progress,
     buddyData?.isCompleted,
+    buddyData?.resume?.ep,
+    buddyData?.resume?.time,
+    myResume?.ep,
+    myResume?.time,
     autoTrackState?.isActive ? autoTrackState.countdown : -1,
     resumeTarget || 0,
     viewer?.name
@@ -122,8 +127,12 @@ export function renderActions(
     isAhead,
     isPast,
     isBuddyCompleted,
-    canSyncBuddy
-  } = deriveDockState({ media, activeEp, isWatch, autoTrackState, buddyData });
+    canSyncBuddy,
+    buddySyncKind,
+    buddyResumeToApply,
+    canDecrement,
+    canIncrement
+  } = deriveDockState({ media, activeEp, isWatch, autoTrackState, buddyData, myResume });
   const buddyAvatar = Buddy.getAvatar(currentBuddy) || buddyData?.avatar || "https://anilist.co/img/icons/icon.svg";
 
   const statusMap = {
@@ -148,7 +157,7 @@ export function renderActions(
     actionBtnHtml = `
       <button type="button" class="al-dock-btn is-counting" id="al-ep-save" title="Auto-saving in ${autoTrackState.countdown}s">
         ${iconHtml(Zap, { width: 12, height: 12, class: "al-pulse" })}
-        <span>Save (${autoTrackState.countdown}s)</span>
+        <span>Save Ep. ${activeEp} (${autoTrackState.countdown}s)</span>
       </button>
       <button type="button" class="al-dock-step-btn danger" id="al-ep-cancel-track" title="Cancel auto-save">✕</button>
     `;
@@ -163,14 +172,14 @@ export function renderActions(
     actionBtnHtml = `
       <button type="button" class="al-dock-btn is-tracked" id="al-ep-save" title="Synced on AniList (Ep. ${progress})">
         ${iconHtml(Check, { width: 12, height: 12 })}
-        <span>Synced</span>
+        <span>Ep. ${activeEp}</span>
       </button>
     `;
   } else if (isPast) {
     actionBtnHtml = `
-      <button type="button" class="al-dock-btn is-tracked" id="al-ep-save" title="Watched (AniList: Ep. ${progress})">
+      <button type="button" class="al-dock-btn is-tracked" id="al-ep-save" title="Already watched (AniList at Ep. ${progress})">
         ${iconHtml(Check, { width: 12, height: 12 })}
-        <span>Watched (AL: ${progress})</span>
+        <span>Ep. ${activeEp}</span>
       </button>
     `;
   }
@@ -193,36 +202,29 @@ export function renderActions(
       ` : ""}
     </div>
 
-    <!-- Center: Episode Progress + -/+ + Resume Loading + Sync Action -->
+    <!-- Center: AniList Progress Stepper + Watch Action -->
     <div class="al-dock-group al-dock-ep-group">
-      ${isWatchEp ? `
-        <div class="al-dock-ep-badge" title="Episode ${activeEp} of ${total || "?"}">
-          Ep. ${activeEp} / ${total || "?"}
+      ${entry ? `
+        <div class="al-dock-al-stepper" title="AniList tracked progress: Ep. ${progress} / ${total || "?"}">
+          <button type="button" class="al-dock-step-btn" id="al-ep-dec" title="AniList -1 (Ep. ${Math.max(0, progress - 1)})" ${canDecrement ? "" : "disabled"}>${iconHtml(Minus, { width: 11, height: 11 })}</button>
+          <span class="al-dock-al-value">${isRewatching ? "Rewatch" : "AL"} ${progress}/${total || "?"}</span>
+          <button type="button" class="al-dock-step-btn" id="al-ep-inc" title="AniList +1 (Ep. ${progress + 1})" ${canIncrement ? "" : "disabled"}>${iconHtml(Plus, { width: 11, height: 11 })}</button>
         </div>
-        ${entry ? `
-          <button type="button" class="al-dock-step-btn" id="al-ep-rewind" title="Previous episode">${iconHtml(Minus, { width: 11, height: 11 })}</button>
-          <button type="button" class="al-dock-step-btn" id="al-ep-next" title="Next episode">${iconHtml(Plus, { width: 11, height: 11 })}</button>
+        ${isWatchEp ? `
+          ${resumeTarget > 0 ? `
+            <div class="al-dock-resume-chip" id="al-dock-resume-loading" title="Restoring position">
+              ${iconHtml(Loader2, { width: 11, height: 11, class: "al-spin" })}
+              <span>${Resume.formatTime(resumeTarget)}</span>
+            </div>
+          ` : ""}
+          ${actionBtnHtml}
         ` : ""}
-        ${resumeTarget > 0 ? `
-          <div class="al-dock-resume-chip" id="al-dock-resume-loading" title="Restoring position">
-            ${iconHtml(Loader2, { width: 11, height: 11, class: "al-spin" })}
-            <span>${Resume.formatTime(resumeTarget)}</span>
-          </div>
-        ` : ""}
-        ${actionBtnHtml}
       ` : `
-        ${entry ? `
-          <div class="al-dock-ep-badge" title="${title}">
-            ${isRewatching ? "Rewatch" : "Progress"}: Ep. ${progress} / ${total || "?"}
-          </div>
-          <button type="button" class="al-dock-step-btn" id="al-ep-rewind" title="Previous episode">${iconHtml(Minus, { width: 11, height: 11 })}</button>
-          <button type="button" class="al-dock-step-btn" id="al-ep-next" title="Next episode">${iconHtml(Plus, { width: 11, height: 11 })}</button>
-        ` : `
-          <button type="button" class="al-dock-btn is-add" id="al-ep-save" title="Add to AniList">
-            ${iconHtml(Plus, { width: 12, height: 12 })}
-            <span>Add</span>
-          </button>
-        `}
+        ${isWatchEp ? `<div class="al-dock-ep-badge" title="Episode ${activeEp} of ${total || "?"}">Ep. ${activeEp}/${total || "?"}</div>` : ""}
+        <button type="button" class="al-dock-btn is-add" id="al-ep-save" title="Add to AniList">
+          ${iconHtml(Plus, { width: 12, height: 12 })}
+          <span>Add</span>
+        </button>
       `}
     </div>
 
@@ -231,9 +233,9 @@ export function renderActions(
       ${entry ? `
         <div class="al-dock-buddy-cluster" id="al-dock-buddy-box">
           ${currentBuddy && buddyData && canSyncBuddy ? `
-            <button type="button" class="al-dock-buddy-btn is-ahead" id="al-bar-buddy-sync" title="Sync to ${buddyData.name}">
+            <button type="button" class="al-dock-buddy-btn is-ahead" id="al-bar-buddy-sync" title="${buddySyncKind === "completed" ? `Sync Completed with ${buddyData.name}` : buddySyncKind === "resume" && buddyResumeToApply ? `Sync resume with ${buddyData.name}: Ep. ${buddyResumeToApply.ep} at ${Resume.formatTime(buddyResumeToApply.time)}` : `Sync to ${buddyData.name}: Ep. ${buddyData.progress}${buddyResumeToApply ? ` (${Resume.formatTime(buddyResumeToApply.time)})` : ""}`}">
               <img src="${buddyAvatar}" class="al-dock-buddy-avatar" alt="${currentBuddy}" />
-              <span>${isBuddyCompleted ? "Done" : `Ep. ${buddyData.progress}`}</span>
+              <span>${buddySyncKind === "completed" ? "Done" : buddySyncKind === "resume" && buddyResumeToApply ? Resume.formatTime(buddyResumeToApply.time) : `Ep. ${buddyData.progress}`}</span>
             </button>
           ` : `
             <div class="al-dock-buddy-picker-trigger" id="al-bar-buddy-picker-mount"></div>
@@ -278,19 +280,23 @@ export function renderActions(
       actions.onSave?.(activeEp || 1);
     }
   });
-  bar.querySelector("#al-ep-rewind")?.addEventListener("click", () => {
-    const rewindTarget = Math.max(0, (progress > 0 ? progress : activeEp || 1) - 1);
-    actions.onRewind?.(rewindTarget, activeEp);
+  bar.querySelector("#al-ep-dec")?.addEventListener("click", () => {
+    actions.onStepProgress?.(Math.max(0, progress - 1));
   });
-  bar.querySelector("#al-ep-next")?.addEventListener("click", () => {
-    actions.onNextEp?.();
+  bar.querySelector("#al-ep-inc")?.addEventListener("click", () => {
+    actions.onStepProgress?.(progress + 1);
   });
   bar.querySelector("#al-ep-cancel-track")?.addEventListener("click", () => {
     actions.onCancelCountdown?.();
   });
   bar.querySelector("#al-bar-buddy-sync")?.addEventListener("click", () => {
     if (typeof actions.onBuddySync === "function" && buddyData) {
-      actions.onBuddySync(buddyData.progress, isBuddyCompleted);
+      actions.onBuddySync({
+        ep: buddyData.progress,
+        isCompleted: isBuddyCompleted,
+        buddyResume: buddyResumeToApply,
+        syncKind: buddySyncKind
+      });
     }
   });
 

@@ -1,6 +1,12 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { resolveSkipSegment, resolveManualSkipTarget, buildTimelineHighlightGradient } from "../src/sync-anilist/skip-logic.js";
+import {
+  resolveSkipSegment,
+  resolveManualSkipTarget,
+  resolveEdSkipTarget,
+  hasPostCredits,
+  buildTimelineHighlightGradient
+} from "../src/sync-anilist/skip-logic.js";
 
 describe("resolveSkipSegment (AniSkip -> Native intro priority)", () => {
   it("prioritizes AniSkip segment over native intro when both are present", () => {
@@ -119,5 +125,40 @@ describe("buildTimelineHighlightGradient", () => {
   it("returns null when duration is invalid or no valid segments exist", () => {
     assert.equal(buildTimelineHighlightGradient([{ start: 10, end: 90 }], 0), null);
     assert.equal(buildTimelineHighlightGradient([], 1000), null);
+  });
+});
+
+describe("ED skip & post-credits detection", () => {
+  it("detects post-credits when >= 5s remain after ed.end", () => {
+    assert.equal(hasPostCredits({ start: 1200, end: 1290 }, 1320), true);
+    assert.equal(hasPostCredits({ start: 1200, end: 1290 }, 1294), false);
+    assert.equal(hasPostCredits({ start: 1200, end: 1290 }, 0), false);
+  });
+
+  it("resolves ED skip target with and without post-credits", () => {
+    assert.deepEqual(
+      resolveEdSkipTarget({ edSegment: { start: 1200, end: 1290, source: "aniskip" }, duration: 1320 }),
+      { target: 1289, hasPostCredits: true, source: "aniskip" }
+    );
+    assert.deepEqual(
+      resolveEdSkipTarget({ edSegment: { start: 1200, end: 1290, source: "native" }, duration: 1292 }),
+      { target: 1290, hasPostCredits: false, source: "native" }
+    );
+  });
+
+  it("resolves manual S-key skip inside ED window and falls back outside", () => {
+    const edSegment = { start: 1200, end: 1290, source: "aniskip" };
+    assert.deepEqual(
+      resolveManualSkipTarget({ currentPos: 1210, duration: 1320, edSegment }),
+      { target: 1289, mode: "segment", kind: "ed", hasPostCredits: true, source: "aniskip" }
+    );
+    assert.deepEqual(
+      resolveManualSkipTarget({ currentPos: 1210, duration: 1292, edSegment }),
+      { target: 1290, mode: "segment", kind: "ed", hasPostCredits: false, source: "aniskip" }
+    );
+    assert.deepEqual(
+      resolveManualSkipTarget({ currentPos: 500, duration: 1320, edSegment }),
+      { target: 585, mode: "fallback", source: "fallback" }
+    );
   });
 });

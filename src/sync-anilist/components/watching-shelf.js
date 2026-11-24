@@ -10,6 +10,8 @@ import { getCurrentProvider } from "../providers/index.js";
 import { cleanTitle } from "../providers/base.js";
 import { Resume } from "../resume.js";
 
+let openActionsMediaId = null;
+
 /**
  * Formats seconds into human-readable countdown
  * @param {number} seconds
@@ -85,7 +87,7 @@ export function getEntrySortTier(entry) {
     resume &&
     resume.percent > 0 &&
     resume.percent < 88 &&
-    (resume.ep === state.nextToWatch || resume.ep === state.progress)
+    resume.ep === state.nextToWatch
   );
 
   // 1. First priority: Intra-episode resume pending
@@ -157,7 +159,7 @@ function createCard(
     resume &&
     resume.percent > 0 &&
     resume.percent < 88 &&
-    (resume.ep === state.nextToWatch || resume.ep === state.progress)
+    resume.ep === state.nextToWatch
   );
   const epTarget = state.hasUnwatchedAired ? state.nextToWatch : (state.progress || 1);
   const title = media.title?.english || media.title?.romaji || media.title?.userPreferred || "Untitled";
@@ -181,7 +183,10 @@ function createCard(
   if (buddySync) {
     const buddyPill = document.createElement("div");
     buddyPill.className = "al-card-buddy-overlay";
-    buddyPill.title = `Watching with ${buddySync.buddy}`;
+    const buddyResumeSuffix = buddySync.buddyResume?.ep === (buddySync.buddyEp || 0) + 1
+      ? ` • ${Resume.formatTime(buddySync.buddyResume.time)}`
+      : "";
+    buddyPill.title = `Watching with ${buddySync.buddy}${buddyResumeSuffix}`;
 
     const epDisplay = `Ep. ${buddySync.buddyEp || 0}`;
 
@@ -196,11 +201,12 @@ function createCard(
   card.appendChild(coverWrap);
 
   const isBuddyCompleted = !!buddySync?.isBuddyCompleted;
-  const canBuddySync = Boolean(buddySync && (buddySync.isAhead || (isBuddyCompleted && entry.status !== "COMPLETED")));
+  const syncKind = buddySync?.syncKind || (buddySync?.isAhead ? "episode" : isBuddyCompleted ? "completed" : "none");
+  const canBuddySync = Boolean(buddySync && (buddySync.canSync || buddySync.isAhead || (isBuddyCompleted && entry.status !== "COMPLETED")));
 
   // Card Body (Right panel)
   const cardBody = document.createElement("div");
-  cardBody.className = "al-card-body";
+  cardBody.className = `al-card-body${openActionsMediaId === media.id ? " is-actions-open" : ""}`;
 
   const headerRow = document.createElement("div");
   headerRow.className = "al-card-header-row";
@@ -220,7 +226,8 @@ function createCard(
   moreBtn.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    cardBody.classList.toggle("is-actions-open");
+    const isOpen = cardBody.classList.toggle("is-actions-open");
+    openActionsMediaId = isOpen ? media.id : null;
   });
   headerRow.appendChild(moreBtn);
   cardBody.appendChild(headerRow);
@@ -302,7 +309,41 @@ function createCard(
   const actionsRow = document.createElement("div");
   actionsRow.className = "al-card-actions-bar";
 
-  if (isResumeActive && typeof onClearResume === "function") {
+  const createBuddySyncBtn = (compactResumeOnly = false) => {
+    const syncBtn = document.createElement("button");
+    syncBtn.type = "button";
+    syncBtn.className = `al-card-btn al-btn-buddy-sync${compactResumeOnly ? " al-btn-buddy-resume-sync" : ""}`;
+    if (compactResumeOnly && buddySync.resumeToApply) {
+      const formatted = Resume.formatTime(buddySync.resumeToApply.time);
+      syncBtn.title = `Sync resume with ${buddySync.buddy} (Ep. ${buddySync.resumeToApply.ep} at ${formatted})`;
+      syncBtn.innerHTML = `${iconHtml(Link, { width: 12, height: 12 })} <span>${formatted}</span>`;
+    } else {
+      const resumeNote = buddySync.resumeToApply ? ` + ${Resume.formatTime(buddySync.resumeToApply.time)}` : "";
+      syncBtn.title = `Sync AniList to ${isBuddyCompleted ? "Completed" : `Ep. ${buddySync.buddyEp}${resumeNote}`} (${buddySync.buddy})`;
+      syncBtn.innerHTML = `${iconHtml(Link, { width: 12, height: 12 })} <span>${isBuddyCompleted ? "Sync Completed" : `Sync Ep. ${buddySync.buddyEp}`}</span>`;
+    }
+    syncBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      syncBtn.style.pointerEvents = "none";
+      syncBtn.style.opacity = "0.7";
+      syncBtn.innerHTML = `${iconHtml(Loader2, { width: 12, height: 12, class: "al-spin" })} <span>Syncing...</span>`;
+      if (typeof onSyncEntry === "function") {
+        onSyncEntry(
+          buddySync.mediaId,
+          buddySync.buddyEp,
+          isBuddyCompleted,
+          buddySync.resumeToApply || null,
+          syncKind
+        );
+      }
+    });
+    return syncBtn;
+  };
+
+  if (canBuddySync && (syncKind === "episode" || syncKind === "completed")) {
+    actionsRow.appendChild(createBuddySyncBtn(false));
+  } else if (isResumeActive && typeof onClearResume === "function") {
     const splitWrap = document.createElement("div");
     splitWrap.className = "al-card-resume-split";
 
@@ -320,25 +361,17 @@ function createCard(
     });
 
     splitWrap.appendChild(btn);
+    if (canBuddySync && syncKind === "resume") {
+      splitWrap.appendChild(createBuddySyncBtn(true));
+    }
     splitWrap.appendChild(clearBtn);
     actionsRow.appendChild(splitWrap);
-  } else if (canBuddySync) {
-    const syncBtn = document.createElement("button");
-    syncBtn.type = "button";
-    syncBtn.className = "al-card-btn al-btn-buddy-sync";
-    syncBtn.title = `Sync AniList to ${isBuddyCompleted ? "Completed" : `Ep. ${buddySync.buddyEp}`} (${buddySync.buddy})`;
-    syncBtn.innerHTML = `${iconHtml(Link, { width: 12, height: 12 })} <span>${isBuddyCompleted ? "Sync Completed" : `Sync Ep. ${buddySync.buddyEp}`}</span>`;
-    syncBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      syncBtn.style.pointerEvents = "none";
-      syncBtn.style.opacity = "0.7";
-      syncBtn.innerHTML = `${iconHtml(Loader2, { width: 12, height: 12, class: "al-spin" })} <span>Syncing...</span>`;
-      if (typeof onSyncEntry === "function") {
-        onSyncEntry(buddySync.mediaId, buddySync.buddyEp, isBuddyCompleted);
-      }
-    });
-    actionsRow.appendChild(syncBtn);
+  } else if (canBuddySync && syncKind === "resume") {
+    const splitWrap = document.createElement("div");
+    splitWrap.className = "al-card-resume-split";
+    splitWrap.appendChild(btn);
+    splitWrap.appendChild(createBuddySyncBtn(true));
+    actionsRow.appendChild(splitWrap);
   } else {
     actionsRow.appendChild(btn);
   }
@@ -363,6 +396,7 @@ function createCard(
     e.preventDefault();
     e.stopPropagation();
     cardBody.classList.remove("is-actions-open");
+    if (openActionsMediaId === media.id) openActionsMediaId = null;
   });
   overlayHead.appendChild(closeOverlayBtn);
   overlayPanel.appendChild(overlayHead);
@@ -374,33 +408,84 @@ function createCard(
   editRow.className = "al-card-overlay-edit-row";
 
   if (typeof onAdjustProgress === "function") {
+    const stepper = document.createElement("div");
+    stepper.className = "al-card-ep-stepper";
+
     const decBtn = document.createElement("button");
     decBtn.type = "button";
-    decBtn.className = "al-card-overlay-btn";
+    decBtn.className = "al-card-ep-step-btn";
     decBtn.title = `Decrement to Ep. ${Math.max(0, state.progress - 1)}`;
     decBtn.disabled = state.progress <= 0;
-    decBtn.innerHTML = iconHtml(Minus, { width: 13, height: 13 });
-    decBtn.addEventListener("click", async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      decBtn.disabled = true;
-      await onAdjustProgress(media.id, Math.max(0, state.progress - 1));
-    });
-    editRow.appendChild(decBtn);
+    decBtn.innerHTML = iconHtml(Minus, { width: 12, height: 12 });
+
+    const epInput = document.createElement("input");
+    epInput.type = "number";
+    epInput.className = "al-card-ep-input";
+    epInput.min = "0";
+    if (state.totalEp) epInput.max = String(state.totalEp);
+    epInput.value = String(state.progress);
+    epInput.setAttribute("aria-label", "Watched episodes");
 
     const incBtn = document.createElement("button");
     incBtn.type = "button";
-    incBtn.className = "al-card-overlay-btn";
+    incBtn.className = "al-card-ep-step-btn";
     incBtn.title = `Mark Ep. ${state.progress + 1} watched`;
     incBtn.disabled = Boolean(state.totalEp && state.progress >= state.totalEp);
-    incBtn.innerHTML = iconHtml(Plus, { width: 13, height: 13 });
-    incBtn.addEventListener("click", async (e) => {
+    incBtn.innerHTML = iconHtml(Plus, { width: 12, height: 12 });
+
+    let isCommitting = false;
+    const commitEp = async (rawVal) => {
+      if (isCommitting) return;
+      const parsed = parseInt(String(rawVal), 10);
+      if (Number.isNaN(parsed)) {
+        epInput.value = String(state.progress);
+        return;
+      }
+      const clamped = Math.max(0, state.totalEp ? Math.min(state.totalEp, parsed) : parsed);
+      epInput.value = String(clamped);
+      if (clamped === state.progress) return;
+      isCommitting = true;
+      decBtn.disabled = true;
+      incBtn.disabled = true;
+      epInput.disabled = true;
+      await onAdjustProgress(media.id, clamped);
+    };
+
+    decBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      incBtn.disabled = true;
-      await onAdjustProgress(media.id, state.progress + 1);
+      commitEp(state.progress - 1);
     });
-    editRow.appendChild(incBtn);
+    incBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      commitEp(state.progress + 1);
+    });
+    epInput.addEventListener("click", (e) => e.stopPropagation());
+    epInput.addEventListener("keydown", (e) => {
+      e.stopPropagation();
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commitEp(epInput.value);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        commitEp((parseInt(epInput.value, 10) || 0) + 1);
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        commitEp((parseInt(epInput.value, 10) || 0) - 1);
+      } else if (e.key === "Escape") {
+        epInput.value = String(state.progress);
+        epInput.blur();
+      }
+    });
+    epInput.addEventListener("blur", () => {
+      commitEp(epInput.value);
+    });
+
+    stepper.appendChild(decBtn);
+    stepper.appendChild(epInput);
+    stepper.appendChild(incBtn);
+    editRow.appendChild(stepper);
   }
 
   if (typeof onRemoveEntry === "function") {
@@ -457,6 +542,7 @@ function createCard(
       viewer,
       emptyLabel: "Buddy",
       placeholder: "Search friend...",
+      portal: true,
       onSelect: (name) => onBuddyChange(entry, name),
       onClear: () => onBuddyChange(entry, "")
     });
@@ -468,7 +554,7 @@ function createCard(
 
   // Unified Card Navigation
   async function handleCardNavigate(e) {
-    if (e.target.closest(".al-card-more-btn, .al-card-action-overlay, .al-btn-buddy-sync, .al-btn-clear-resume, .al-card-mini-btn, .al-buddy-picker, .al-buddy-popover")) return;
+    if (e.target.closest(".al-card-more-btn, .al-card-action-overlay, .al-btn-buddy-sync, .al-btn-clear-resume, .al-card-mini-btn, .al-buddy-picker, .al-buddy-popover, .al-card-ep-stepper, .al-card-ep-input, .al-card-status-select")) return;
     e.preventDefault();
 
     const provider = getCurrentProvider();

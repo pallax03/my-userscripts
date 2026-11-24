@@ -3,7 +3,7 @@ import { Logger } from "../../shared/logger.js";
 import { showToast } from "../../shared/toast.js";
 import { slot } from "../slots.js";
 import { iconHtml, SkipForward, Plus, Pencil, ThumbsUp, ThumbsDown } from "../../shared/icons.js";
-import { resolveSkipSegment, resolveManualSkipTarget } from "../skip-logic.js";
+import { resolveSkipSegment, resolveManualSkipTarget, hasPostCredits } from "../skip-logic.js";
 import {
   voteSkipTime,
   getVoteStatus,
@@ -34,6 +34,10 @@ function syncActiveOp() {
   activeEd = resolveSkipSegment({ aniskipOp: aniskipEd, nativeIntro: nativeOutro });
 }
 
+export function getActiveSkipSegments() {
+  return { op: activeOp, ed: activeEd };
+}
+
 export function isEpisodeAutoSkipActive() {
   if (episodeAutoSkipOverride !== null) {
     return episodeAutoSkipOverride;
@@ -55,12 +59,17 @@ function getEffectiveIds() {
 }
 
 function handleSuccessfulContribution(newData) {
-  aniskipOp = newData;
+  const isEd = newData?.skipType === "ed" || newData?.skipType === "mixed-ed";
+  if (isEd) {
+    aniskipEd = { ...newData, source: "aniskip" };
+  } else {
+    aniskipOp = { ...newData, source: "aniskip" };
+  }
   syncActiveOp();
   const { malId, epNum } = getEffectiveIds();
   if (malId && epNum) {
     const cacheKey = `${malId}_${epNum}`;
-    cache.set(cacheKey, { op: aniskipOp, ed: aniskipEd });
+    cache.set(cacheKey, { op: aniskipOp, ed: aniskipEd, queriedLength: activeDuration });
   }
   broadcastOp();
   renderAutoSkipButton(currentProvider);
@@ -72,14 +81,20 @@ export function openSkipContribute() {
     Logger.warn("Cannot open AniSkip dock: MAL ID missing");
     return false;
   }
+  const dur = activeDuration || lastKnownDuration;
+  const preferEd = dur > 0 && lastKnownCurrentTime > dur * 0.5;
+  const initialType = preferEd ? "ed" : "op";
+  const seg = preferEd ? activeEd : activeOp;
   openAniSkipDock({
     malId,
     epNum,
     currentTime: lastKnownCurrentTime,
-    duration: activeDuration || lastKnownDuration,
-    initialStart: activeOp?.start,
-    initialEnd: activeOp?.end,
-    skipType: activeOp?.skipType || "op",
+    duration: dur,
+    initialStart: seg?.start ?? null,
+    initialEnd: seg?.end ?? null,
+    skipType: seg?.skipType || initialType,
+    existingOp: activeOp,
+    existingEd: activeEd,
     provider: currentProvider,
     onSuccess: handleSuccessfulContribution
   });
@@ -102,30 +117,45 @@ export function renderAutoSkipButton(provider) {
 
   const settings = Settings.get();
   const isActive = isEpisodeAutoSkipActive();
-  const inSkipWindow = Boolean(
+  const hasAnySegment = Boolean(activeOp || activeEd);
+  const dur = activeDuration || lastKnownDuration;
+  const inOpWindow = Boolean(
     activeOp &&
     !isActive &&
     lastKnownCurrentTime >= Math.max(0, activeOp.start - 1.5) &&
     lastKnownCurrentTime <= Math.max(activeOp.start, activeOp.end - 2)
   );
-  const currentVote = (settings.communityAniSkip && activeOp?.skipId)
-    ? getVoteStatus(activeOp.skipId)
+  const inEdWindow = Boolean(
+    !inOpWindow &&
+    activeEd &&
+    !isActive &&
+    lastKnownCurrentTime >= Math.max(0, activeEd.start - 1.5) &&
+    lastKnownCurrentTime <= Math.max(activeEd.start, activeEd.end - 2)
+  );
+  const inSkipWindow = inOpWindow || inEdWindow;
+  const voteSeg = (inEdWindow || (activeEd && dur > 0 && lastKnownCurrentTime > dur * 0.5) || !activeOp)
+    ? activeEd
+    : activeOp;
+  const currentVote = (settings.communityAniSkip && voteSeg?.skipId)
+    ? getVoteStatus(voteSeg.skipId)
     : null;
-  const renderKey = `${activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}-${activeOp.skipId || ""}` : "none"}|${isActive}|${settings.communityAniSkip}|${inSkipWindow}|${currentVote || ""}`;
+  const opKey = activeOp ? `${activeOp.start}-${activeOp.end}-${activeOp.source || "aniskip"}-${activeOp.skipId || ""}` : "none";
+  const edKey = activeEd ? `${activeEd.start}-${activeEd.end}-${activeEd.source || "aniskip"}-${activeEd.skipId || ""}` : "none";
+  const renderKey = `${opKey}|${edKey}|${isActive}|${settings.communityAniSkip}|${inOpWindow}|${inEdWindow}|${voteSeg?.skipId || ""}|${currentVote || ""}`;
   if (container.__lastSkipKey === renderKey && container.dataset.rendered === "1") return;
   container.__lastSkipKey = renderKey;
   container.dataset.rendered = "1";
 
-  if (!activeOp) {
+  if (!hasAnySegment) {
     if (!settings.communityAniSkip) {
       container.innerHTML = "";
       return;
     }
     container.innerHTML = `
       <div class="al-dock-skip-cluster">
-        <button type="button" class="al-dock-chip is-pending" id="al-skip-add-btn" title="Add intro timestamps (Key: [ / ])">
+        <button type="button" class="al-dock-chip is-pending" id="al-skip-add-btn" title="Add intro / ending timestamps (Key: [ / ])">
           ${iconHtml(Plus, { width: 11, height: 11 })}
-          <span>Intro</span>
+          <span>Intro/ED</span>
         </button>
       </div>
     `;
@@ -137,31 +167,38 @@ export function renderAutoSkipButton(provider) {
     return;
   }
 
-  const srcLabel = activeOp.source === "native" ? "Native" : "AniSkip";
+  const primarySeg = activeOp || activeEd;
+  const srcLabel = primarySeg.source === "native" ? "Native" : "AniSkip";
+  const nowLabel = inEdWindow
+    ? (hasPostCredits(activeEd, dur) ? "Post-Credits" : "Skip ED")
+    : "Skip";
+  const nowTitle = inEdWindow ? "Skip Ending (Key: S)" : "Skip Intro (Key: S)";
+  const voteKindLabel = voteSeg === activeEd ? "ED" : "OP";
+
   container.innerHTML = `
     <div class="al-dock-skip-cluster">
       ${inSkipWindow ? `
-        <button type="button" class="al-dock-btn is-pending" id="al-skip-now-btn" title="Skip Intro (Key: S)">
+        <button type="button" class="al-dock-btn is-pending" id="al-skip-now-btn" title="${nowTitle}">
           ${iconHtml(SkipForward, { width: 11, height: 11 })}
-          <span>Skip</span>
+          <span>${nowLabel}</span>
         </button>
       ` : ""}
-      <button type="button" class="al-dock-chip al-is-toggle ${isActive ? "is-tracked" : "is-pending"}" id="al-skip-toggle-btn" title="${srcLabel}: ${isActive ? "Auto-skip ON" : "Auto-skip OFF"}">
+      <button type="button" class="al-dock-chip al-is-toggle ${isActive ? "is-tracked" : "is-pending"}" id="al-skip-toggle-btn" title="${srcLabel}: ${isActive ? "Auto-skip ON (OP & ED)" : "Auto-skip OFF"}">
         ${iconHtml(SkipForward, { width: 11, height: 11 })}
         <span>Skip</span>
       </button>
-      ${settings.communityAniSkip && activeOp.skipId ? `
-        <div class="al-skip-pill-votes" title="Vote skip timing">
-          <button type="button" class="al-skip-vote-btn is-upvote ${currentVote === "upvote" ? "is-voted" : ""}" title="Accurate (+1)">
+      ${settings.communityAniSkip && voteSeg?.skipId ? `
+        <div class="al-skip-pill-votes" title="Vote ${voteKindLabel} skip timing">
+          <button type="button" class="al-skip-vote-btn is-upvote ${currentVote === "upvote" ? "is-voted" : ""}" title="Accurate ${voteKindLabel} (+1)">
             ${iconHtml(ThumbsUp, { width: 11, height: 11 })}
           </button>
-          <button type="button" class="al-skip-vote-btn is-downvote ${currentVote === "downvote" ? "is-voted" : ""}" title="Inaccurate (-1)">
+          <button type="button" class="al-skip-vote-btn is-downvote ${currentVote === "downvote" ? "is-voted" : ""}" title="Inaccurate ${voteKindLabel} (-1)">
             ${iconHtml(ThumbsDown, { width: 11, height: 11 })}
           </button>
         </div>
       ` : ""}
       ${settings.communityAniSkip ? `
-        <button type="button" class="al-dock-step-btn" id="al-skip-edit-btn" title="Calibrate intro (Key: [ / ])">
+        <button type="button" class="al-dock-step-btn" id="al-skip-edit-btn" title="Calibrate OP / ED (Key: [ / ])">
           ${iconHtml(Pencil, { width: 10, height: 10 })}
         </button>
       ` : ""}
@@ -183,14 +220,14 @@ export function renderAutoSkipButton(provider) {
   container.querySelector(".is-upvote")?.addEventListener("click", async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const ok = await voteSkipTime({ skipId: activeOp.skipId, voteType: "upvote" });
+    const ok = await voteSkipTime({ skipId: voteSeg.skipId, voteType: "upvote" });
     if (ok) renderAutoSkipButton(currentProvider);
   });
 
   container.querySelector(".is-downvote")?.addEventListener("click", async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const ok = await voteSkipTime({ skipId: activeOp.skipId, voteType: "downvote" });
+    const ok = await voteSkipTime({ skipId: voteSeg.skipId, voteType: "downvote" });
     if (ok) renderAutoSkipButton(currentProvider);
   });
 
@@ -315,6 +352,8 @@ function handleHotkeyAction(action, timeOverride = null) {
     {
       malId,
       epNum,
+      existingOp: activeOp,
+      existingEd: activeEd,
       provider: currentProvider,
       onSuccess: handleSuccessfulContribution
     }
@@ -336,12 +375,15 @@ function triggerSkip() {
       currentPos: topVideo.currentTime || 0,
       duration: topVideo.duration || 0,
       segment: activeOp,
+      edSegment: activeEd,
       fallbackDuration
     });
     topVideo.currentTime = resolution.target;
     const label = resolution.source === "fallback"
       ? `⏩ Skipped +${fallbackDuration}s`
-      : `⏩ Skipped intro (${resolution.source === "native" ? "Native" : "AniSkip"})`;
+      : resolution.kind === "ed"
+        ? (resolution.hasPostCredits ? "⏩ Skipped ending -> Post-credits" : "⏩ Ending skipped (no post-credits)")
+        : `⏩ Skipped intro (${resolution.source === "native" ? "Native" : "AniSkip"})`;
     showToast(label, false, 2000);
   }
 }
@@ -391,13 +433,20 @@ export function initSkipIntroTop() {
       if (typeof e.data.duration === "number" && e.data.duration > 0) {
         lastKnownDuration = e.data.duration;
       }
-      if (activeOp && !isEpisodeAutoSkipActive()) {
+      if ((activeOp || activeEd) && !isEpisodeAutoSkipActive()) {
         renderAutoSkipButton(currentProvider);
       }
     } else if (e.data?.type === "AU_SKIP_EXECUTED") {
-      const label = e.data.source === "fallback"
-        ? `⏩ Skipped +${e.data.fallbackDuration || 85}s`
-        : `⏩ ${e.data.mode === "auto" ? "Auto-skipped" : "Skipped"} intro (${e.data.source === "native" ? "Native" : "AniSkip"})`;
+      let label;
+      if (e.data.source === "fallback") {
+        label = `⏩ Skipped +${e.data.fallbackDuration || 85}s`;
+      } else if (e.data.kind === "ed") {
+        label = e.data.hasPostCredits
+          ? `⏩ ${e.data.mode === "auto" ? "Auto-skipped" : "Skipped"} ending -> Post-credits`
+          : "⏩ Ending skipped (no post-credits)";
+      } else {
+        label = `⏩ ${e.data.mode === "auto" ? "Auto-skipped" : "Skipped"} intro (${e.data.source === "native" ? "Native" : "AniSkip"})`;
+      }
       showToast(label, false, 2000);
     } else if (e.data?.type === "AU_ANISKIP_HOTKEY") {
       const action = e.data.action || (e.data.key === "]" || e.data.key === "o" ? "end" : "start");

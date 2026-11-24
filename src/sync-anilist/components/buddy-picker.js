@@ -23,12 +23,18 @@ export function initBuddyPicker(container, {
   viewer = null,
   emptyLabel = "Sync",
   placeholder = "Search followed friend...",
+  portal = false,
   onSelect,
   onClear,
   onOpen,
   onClose
 } = {}) {
   if (!container) return;
+
+  if (container._buddyPortalCleanup) {
+    container._buddyPortalCleanup();
+    container._buddyPortalCleanup = null;
+  }
 
   let activeBuddy = (selectedBuddy || "").trim();
 
@@ -71,13 +77,70 @@ export function initBuddyPicker(container, {
   }
 
   let searchDebounce = null;
+  let portalListenersActive = false;
+
+  const positionPortalPopover = () => {
+    if (!portal) return;
+    const rect = trigger.getBoundingClientRect();
+    const popWidth = Math.max(220, rect.width);
+    const popHeight = Math.min(260, popover.offsetHeight || 220);
+    const spaceBelow = window.innerHeight - rect.bottom - 8;
+    const spaceAbove = rect.top - 8;
+    const top = spaceBelow < popHeight && spaceAbove >= popHeight
+      ? rect.top - 6 - popHeight
+      : rect.bottom + 6;
+    const left = Math.min(
+      Math.max(8, rect.right - popWidth),
+      Math.max(8, window.innerWidth - popWidth - 8)
+    );
+    popover.style.position = "fixed";
+    popover.style.top = `${Math.max(8, top)}px`;
+    popover.style.left = `${left}px`;
+    popover.style.right = "auto";
+    popover.style.bottom = "auto";
+    popover.style.width = `${popWidth}px`;
+    popover.style.zIndex = "2147483647";
+  };
+
+  const onPortalScrollOrResize = (evt) => {
+    if (evt?.type === "scroll" && popover.contains(evt.target)) return;
+    if (!document.body.contains(trigger)) {
+      closePopover();
+      return;
+    }
+    positionPortalPopover();
+  };
+
+  const detachPortalListeners = () => {
+    if (!portalListenersActive) return;
+    portalListenersActive = false;
+    window.removeEventListener("resize", onPortalScrollOrResize);
+    window.removeEventListener("scroll", onPortalScrollOrResize, true);
+  };
 
   const closePopover = () => {
     if (popover.style.display === "none") return;
     popover.style.display = "none";
     trigger.classList.remove("has-open-popover");
+    detachPortalListeners();
+    if (portal) {
+      popover.classList.remove("al-buddy-popover-portal");
+      if (container.isConnected) {
+        const wrap = container.querySelector(".al-buddy-picker-wrap");
+        if (wrap && popover.parentElement !== wrap) wrap.appendChild(popover);
+      } else {
+        popover.remove();
+      }
+    }
     if (typeof onClose === "function") onClose();
   };
+
+  if (portal) {
+    container._buddyPortalCleanup = () => {
+      detachPortalListeners();
+      popover.remove();
+    };
+  }
 
   trigger.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -89,6 +152,10 @@ export function initBuddyPicker(container, {
 
     if (typeof onOpen === "function") onOpen();
     trigger.classList.add("has-open-popover");
+    if (portal) {
+      popover.classList.add("al-buddy-popover-portal");
+      document.body.appendChild(popover);
+    }
     popover.style.display = "block";
     popover.innerHTML = `
       <div class="al-buddy-pop-search-box">
@@ -182,6 +249,14 @@ export function initBuddyPicker(container, {
 
     inp?.focus();
     renderOptions("");
+    if (portal) {
+      positionPortalPopover();
+      if (!portalListenersActive) {
+        portalListenersActive = true;
+        window.addEventListener("resize", onPortalScrollOrResize);
+        window.addEventListener("scroll", onPortalScrollOrResize, true);
+      }
+    }
   });
 
   if (container._buddyDocClick) {

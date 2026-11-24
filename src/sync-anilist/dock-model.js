@@ -1,3 +1,5 @@
+import { computeBuddySyncState } from "./buddy.js";
+
 /**
  * Pure domain model deriving the minimal dock UI state from AniList & player state.
  * Keeps UI rendering (actions.js) free of business rules (SRP/KISS).
@@ -7,7 +9,8 @@ export function deriveDockState({
   activeEp = 0,
   isWatch = false,
   autoTrackState = null,
-  buddyData = null
+  buddyData = null,
+  myResume = null
 } = {}) {
   const entry = media?.mediaListEntry || null;
   const progress = entry?.progress || 0;
@@ -21,8 +24,26 @@ export function deriveDockState({
   const isAhead = Boolean(isWatchEp && (!entry || isRewatching || activeEp > progress));
 
   const isBuddyCompleted = Boolean(buddyData?.isCompleted);
-  const isBuddyAhead = Boolean(buddyData?.name && (buddyData.progress || 0) > progress);
-  const canSyncBuddy = isBuddyAhead || (isBuddyCompleted && entry?.status !== "COMPLETED");
+  const buddySync = buddyData?.name
+    ? computeBuddySyncState({
+        myProgress: progress,
+        myStatus: entry?.status || null,
+        myResume,
+        buddyProgress: buddyData?.progress || 0,
+        buddyStatus: buddyData?.status || null,
+        buddyIsCompleted: isBuddyCompleted,
+        buddyResume: buddyData?.resume || null
+      })
+    : {
+        canSync: false,
+        canSyncResume: false,
+        syncKind: "none",
+        resumeToApply: null
+      };
+
+  const canSyncBuddy = buddySync.canSync;
+  const canDecrement = Boolean(entry && progress > 0);
+  const canIncrement = Boolean(entry && (!total || progress < total));
 
   let episodeMode = "detail";
   if (isWatchEp) {
@@ -47,6 +68,11 @@ export function deriveDockState({
     isAhead,
     isBuddyCompleted,
     canSyncBuddy,
+    canSyncBuddyResume: buddySync.canSyncResume,
+    buddySyncKind: buddySync.syncKind,
+    buddyResumeToApply: buddySync.resumeToApply,
+    canDecrement,
+    canIncrement,
     episodeMode
   };
 }

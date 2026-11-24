@@ -185,3 +185,59 @@ export const Buddy = {
     }
   }
 };
+
+/**
+ * Computes pure buddy sync state for episode progress and intra-episode [resume:...] timestamps.
+ */
+export function computeBuddySyncState({
+  myProgress = 0,
+  myStatus = null,
+  myResume = null,
+  buddyProgress = 0,
+  buddyStatus = null,
+  buddyIsCompleted = false,
+  buddyResume = null
+} = {}) {
+  const isEpAhead = buddyProgress > myProgress;
+  const canSyncCompleted = Boolean((buddyIsCompleted || buddyStatus === "COMPLETED") && myStatus !== "COMPLETED");
+  const targetProgress = isEpAhead ? buddyProgress : myProgress;
+
+  const buddyResumePercent = buddyResume
+    ? (typeof buddyResume.percent === "number"
+      ? buddyResume.percent
+      : (buddyResume.duration > 0 ? Math.round((buddyResume.time / buddyResume.duration) * 100) : 0))
+    : 100;
+
+  const isValidResume = Boolean(
+    buddyResume &&
+    typeof buddyResume.time === "number" &&
+    buddyResume.time > 10 &&
+    buddyResume.ep === targetProgress + 1 &&
+    buddyResumePercent < 90
+  );
+
+  const validBuddyResume = !canSyncCompleted && isValidResume ? buddyResume : null;
+  const canSyncResume = Boolean(
+    validBuddyResume &&
+    (isEpAhead || !myResume || myResume.ep !== validBuddyResume.ep || validBuddyResume.time > (myResume.time || 0) + 10)
+  );
+
+  const canSync = Boolean(isEpAhead || canSyncCompleted || canSyncResume);
+  const syncKind = canSyncCompleted
+    ? "completed"
+    : isEpAhead
+      ? "episode"
+      : canSyncResume
+        ? "resume"
+        : "none";
+  const resumeToApply = canSyncResume ? validBuddyResume : null;
+
+  return {
+    isEpAhead,
+    canSyncCompleted,
+    canSyncResume,
+    canSync,
+    syncKind,
+    resumeToApply
+  };
+}

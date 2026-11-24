@@ -1,5 +1,10 @@
 import { Logger } from "../shared/logger.js";
-import { resolveManualSkipTarget, buildTimelineHighlightGradient } from "./skip-logic.js";
+import {
+  resolveManualSkipTarget,
+  resolveEdSkipTarget,
+  hasPostCredits,
+  buildTimelineHighlightGradient
+} from "./skip-logic.js";
 
 export function initPlayer() {
   let rawOp = null;
@@ -13,8 +18,10 @@ export function initPlayer() {
   let skipFallbackDuration = 85;
   let btn = null;
   let isBtnVisible = false;
+  let currentBtnKind = "op";
   let lastReportedDur = 0;
-  let hasAutoSkipped = false;
+  let hasAutoSkippedOp = false;
+  let hasAutoSkippedEd = false;
   let lastSkipTime = 0;
   let pendingResumeSeek = null;
   let activeResumeTarget = null;
@@ -430,7 +437,32 @@ export function initPlayer() {
     Logger.info(`⏩ ${isAuto ? "Auto-skipped" : "User skipped"} intro to ${target.toFixed(2)}s`);
     seekTo(target);
     try {
-      window.top.postMessage({ type: "AU_SKIP_EXECUTED", mode: isAuto ? "auto" : "manual", source: (rawOp || nativeOp)?.source || "aniskip", target }, "*");
+      window.top.postMessage({
+        type: "AU_SKIP_EXECUTED",
+        mode: isAuto ? "auto" : "manual",
+        kind: "op",
+        source: (rawOp || nativeOp)?.source || "aniskip",
+        target
+      }, "*");
+    } catch (_) {}
+  }
+
+  function skipEnding(isAuto = false) {
+    if (!currentEd) return;
+    const dur = getDuration();
+    const res = resolveEdSkipTarget({ edSegment: currentEd, duration: dur });
+    if (!res) return;
+    Logger.info(`⏩ ${isAuto ? "Auto-skipped" : "User skipped"} ending to ${res.target.toFixed(2)}s (postCredits: ${res.hasPostCredits})`);
+    seekTo(res.target);
+    try {
+      window.top.postMessage({
+        type: "AU_SKIP_EXECUTED",
+        mode: isAuto ? "auto" : "manual",
+        kind: "ed",
+        hasPostCredits: res.hasPostCredits,
+        source: (rawEd || nativeEd)?.source || "aniskip",
+        target: res.target
+      }, "*");
     } catch (_) {}
   }
 
@@ -446,11 +478,12 @@ export function initPlayer() {
       currentPos: pos,
       duration: dur,
       segment: currentOp,
+      edSegment: currentEd,
       fallbackDuration: skipFallbackDuration
     });
 
     if (resolution.mode === "segment") {
-      Logger.info(`⏩ User skipped intro (${resolution.source}) to ${resolution.target.toFixed(2)}s`);
+      Logger.info(`⏩ User skipped ${resolution.kind || "op"} (${resolution.source}) to ${resolution.target.toFixed(2)}s`);
     } else {
       Logger.info(`⏩ Fallback skip (+${skipFallbackDuration}s) to ${resolution.target.toFixed(2)}s`);
     }
@@ -459,6 +492,8 @@ export function initPlayer() {
       window.top.postMessage({
         type: "AU_SKIP_EXECUTED",
         mode: resolution.mode,
+        kind: resolution.kind || (resolution.mode === "segment" ? "op" : undefined),
+        hasPostCredits: resolution.hasPostCredits,
         source: resolution.source,
         fallbackDuration: skipFallbackDuration,
         target: resolution.target
@@ -484,7 +519,8 @@ export function initPlayer() {
           e.stopImmediatePropagation();
           if (evt === "click") {
             e.preventDefault();
-            skipIntro(false);
+            if (currentBtnKind === "ed") skipEnding(false);
+            else skipIntro(false);
           }
         },
         true
@@ -519,7 +555,7 @@ export function initPlayer() {
     }
 
     computeAdjustedOp();
-    if (!currentOp) {
+    if (!currentOp && !currentEd) {
       if (btn && isBtnVisible) {
         btn.style.display = "none";
         isBtnVisible = false;
@@ -528,6 +564,7 @@ export function initPlayer() {
     }
 
     const pos = getPos();
+    const dur = getDuration();
 
     // Auto-skip logic
     if (autoSkip) {
@@ -535,24 +572,54 @@ export function initPlayer() {
         btn.style.display = "none";
         isBtnVisible = false;
       }
-      if (pos >= currentOp.start && pos < currentOp.end - 1) {
-        if (!hasAutoSkipped) {
-          hasAutoSkipped = true;
-          skipIntro(true);
+      if (currentOp) {
+        if (pos >= currentOp.start && pos < currentOp.end - 1) {
+          if (!hasAutoSkippedOp) {
+            hasAutoSkippedOp = true;
+            skipIntro(true);
+            return;
+          }
+        } else if (pos < currentOp.start - 5) {
+          hasAutoSkippedOp = false;
         }
-      } else if (pos < currentOp.start - 5) {
-        hasAutoSkipped = false;
+      }
+      if (currentEd) {
+        if (pos >= currentEd.start && pos < currentEd.end - 1) {
+          if (!hasAutoSkippedEd) {
+            hasAutoSkippedEd = true;
+            skipEnding(true);
+            return;
+          }
+        } else if (pos < currentEd.start - 5) {
+          hasAutoSkippedEd = false;
+        }
       }
       return;
     }
 
-    // Manual skip button logic (restored from origin/master)
-    const showStart = Math.max(0, currentOp.start - 1.5);
-    const showEnd = Math.max(showStart, currentOp.end - 2);
+    // Manual skip button logic
+    const inOp = Boolean(
+      currentOp &&
+      pos >= Math.max(0, currentOp.start - 1.5) &&
+      pos <= Math.max(currentOp.start, currentOp.end - 2)
+    );
+    const inEd = Boolean(
+      !inOp &&
+      currentEd &&
+      pos >= Math.max(0, currentEd.start - 1.5) &&
+      pos <= Math.max(currentEd.start, currentEd.end - 2)
+    );
 
-    if (pos >= showStart && pos <= showEnd) {
+    if (inOp || inEd) {
+      ensureButton();
+      const nextKind = inEd ? "ed" : "op";
+      const nextLabel = inEd
+        ? (hasPostCredits(currentEd, dur) ? "Skip to Post-Credits (S)" : "Skip Ending (S)")
+        : "Skip Intro (S)";
+      currentBtnKind = nextKind;
+      const span = btn.querySelector("span");
+      if (span && span.textContent !== nextLabel) span.textContent = nextLabel;
       if (!isBtnVisible) {
-        ensureButton();
         btn.style.display = "inline-flex";
         isBtnVisible = true;
       }
@@ -572,7 +639,8 @@ export function initPlayer() {
       if (typeof e.data.skipFallbackDuration === "number" && e.data.skipFallbackDuration > 0) {
         skipFallbackDuration = e.data.skipFallbackDuration;
       }
-      hasAutoSkipped = false;
+      hasAutoSkippedOp = false;
+      hasAutoSkippedEd = false;
       computeAdjustedOp();
       checkTime();
     } else if (e.data?.type === "AU_TRIGGER_SKIP") {

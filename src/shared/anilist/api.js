@@ -132,7 +132,7 @@ export const AniListAPI = {
 
   getFriendMediaEntry: (userName, mediaId) =>
     AniListAPI.call(
-      `query($u:String,$m:Int){MediaList(userName:$u,mediaId:$m,type:ANIME){id status progress user{name avatar{medium}}}}`,
+      `query($u:String,$m:Int){MediaList(userName:$u,mediaId:$m,type:ANIME){id status progress notes media{episodes} user{name avatar{medium}}}}`,
       { u: String(userName), m: Number(mediaId) },
       { silent: true }
     ),

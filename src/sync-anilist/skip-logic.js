@@ -37,14 +37,45 @@ export function resolveSkipSegment({ aniskipOp = null, nativeIntro = null } = {}
 }
 
 /**
+ * Returns true if there is meaningful post-credits content after an ending segment.
+ */
+export function hasPostCredits(edSegment, duration = 0, minRemaining = 5) {
+  return Boolean(
+    isValidSegment(edSegment) &&
+      typeof duration === "number" &&
+      Number.isFinite(duration) &&
+      duration > 0 &&
+      duration - edSegment.end >= minRemaining
+  );
+}
+
+/**
+ * Resolves the target timestamp when skipping an Ending (ED) segment.
+ * Jumps to ed.end - 1 when post-credits exist, otherwise to ed.end (clamped to duration).
+ */
+export function resolveEdSkipTarget({ edSegment = null, duration = 0, minRemaining = 5 } = {}) {
+  if (!isValidSegment(edSegment)) return null;
+  const postCredits = hasPostCredits(edSegment, duration, minRemaining);
+  const target = postCredits
+    ? Math.max(0, edSegment.end - 1)
+    : (duration > 0 ? Math.min(duration, edSegment.end) : edSegment.end);
+  return {
+    target,
+    hasPostCredits: postCredits,
+    source: edSegment.source || "aniskip"
+  };
+}
+
+/**
  * Resolves the target timestamp for a manual skip action (S key).
- * Uses the active segment's end (-1s) when currentPos is inside the intro window,
+ * Uses the active OP or ED segment when currentPos is inside its window,
  * otherwise falls back to currentPos + fallbackDuration (default 85s), clamped to duration - 1.
  */
 export function resolveManualSkipTarget({
   currentPos = 0,
   duration = 0,
   segment = null,
+  edSegment = null,
   fallbackDuration = 85
 } = {}) {
   const pos = typeof currentPos === "number" && Number.isFinite(currentPos) && currentPos >= 0 ? currentPos : 0;
@@ -62,6 +93,21 @@ export function resolveManualSkipTarget({
         target: Math.max(0, segment.end - 1),
         mode: "segment",
         source: segment.source || "aniskip"
+      };
+    }
+  }
+
+  if (isValidSegment(edSegment)) {
+    const showStart = Math.max(0, edSegment.start - 1.5);
+    const showEnd = Math.max(showStart, edSegment.end - 2);
+    if (pos >= showStart && pos <= showEnd) {
+      const edRes = resolveEdSkipTarget({ edSegment, duration: dur });
+      return {
+        target: edRes.target,
+        mode: "segment",
+        kind: "ed",
+        hasPostCredits: edRes.hasPostCredits,
+        source: edRes.source
       };
     }
   }

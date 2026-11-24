@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { shouldAutoTrack, computeProgressUpdate } from "../src/sync-anilist/domain/tracking.js";
+import { shouldAutoTrack, isEpisodeFinished, computeProgressUpdate } from "../src/sync-anilist/domain/tracking.js";
 
 describe("domain/tracking shouldAutoTrack", () => {
   it("tracks next episode at >= 85% or ended, and blocks older episodes", () => {
@@ -19,6 +19,41 @@ describe("domain/tracking shouldAutoTrack", () => {
   it("auto-adds untracked anime at Ep. 1 >= 85%", () => {
     assert.equal(shouldAutoTrack({ activeEp: 1, trackedProgress: -1, status: null, percent: 85 }), true);
     assert.equal(shouldAutoTrack({ activeEp: 1, trackedProgress: -1, status: null, percent: 30 }), false);
+  });
+
+  it("marks episode finished and auto-tracks at edStart even before 85%", () => {
+    assert.equal(
+      isEpisodeFinished({ currentTime: 1195, duration: 1440, percent: 83, edStart: 1200 }),
+      false
+    );
+    assert.equal(
+      isEpisodeFinished({ currentTime: 1200, duration: 1440, percent: 83, edStart: 1200 }),
+      true
+    );
+    assert.equal(
+      shouldAutoTrack({
+        activeEp: 6,
+        trackedProgress: 5,
+        status: "CURRENT",
+        currentTime: 1200,
+        duration: 1440,
+        percent: 83,
+        edStart: 1200
+      }),
+      true
+    );
+    assert.equal(
+      shouldAutoTrack({
+        activeEp: 6,
+        trackedProgress: 5,
+        status: "CURRENT",
+        currentTime: 1200,
+        duration: 1440,
+        percent: 83,
+        edStart: null
+      }),
+      false
+    );
   });
 });
 

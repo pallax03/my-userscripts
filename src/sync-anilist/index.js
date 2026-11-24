@@ -8,13 +8,13 @@ import { cleanTitle, extractSeason } from "./providers/base.js";
 import { getProvider, getCurrentProvider } from "./providers/index.js";
 import { Settings } from "./settings.js";
 import { Resume, resolveResumeAction, isResumeEligibleEpisode } from "./resume.js";
-import { shouldAutoTrack, computeProgressUpdate } from "./domain/tracking.js";
+import { shouldAutoTrack, isEpisodeFinished, computeProgressUpdate } from "./domain/tracking.js";
 import { renderNav } from "./components/nav.js";
 import { renderActions } from "./components/actions.js";
 import { renderWatchingShelf } from "./components/watching-shelf.js";
-import { Buddy } from "./buddy.js";
+import { Buddy, computeBuddySyncState } from "./buddy.js";
 import { iconHtml, Play } from "../shared/icons.js";
-import { checkSkipIntro, initSkipIntroTop, renderAutoSkipButton } from "./components/skip-intro.js";
+import { checkSkipIntro, initSkipIntroTop, renderAutoSkipButton, getActiveSkipSegments } from "./components/skip-intro.js";
 import { initPlayer } from "./player.js";
 import { renderCrossSwitch } from "./components/cross-switch.js";
 
@@ -175,6 +175,10 @@ function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
   const settings = Settings.get();
   const percent = duration > 0 ? (currentTime / duration) * 100 : 0;
   const isEligible = isEpisodeEligibleForResume(activeEp);
+  const edStart = getActiveSkipSegments().ed?.start || null;
+  const threshold = settings.completionThreshold || 85;
+  const finished = isEpisodeFinished({ currentTime, duration, percent, isEnded, threshold, edStart });
+  const alreadyTrackedOrCancelled = cancelledEps.has(activeEp) || !isEligible;
 
   // Companion mode: yield only if video is already near target or playing deep past 20s
   if (currentTime > 5 && (!pendingResumeTarget || Math.abs(currentTime - pendingResumeTarget) <= 15 || currentTime > 20)) {
@@ -182,8 +186,8 @@ function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
     pendingResumeTarget = null;
   }
 
-  // 1. Fast local cache update (strictly ONLY for eligible episodes, never past episodes)
-  if (isEligible && currentTime > 5 && percent < 92) {
+  // 1. Fast local cache update (strictly ONLY for eligible, unfinished episodes)
+  if (!alreadyTrackedOrCancelled && !finished && currentTime > 5) {
     Resume.setLocal(currentMedia.id, {
       ep: activeEp,
       time: Math.round(currentTime),
@@ -192,26 +196,28 @@ function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
     });
   }
 
-  // 2. Refresh UI on pause & sync resume to notes (only for active Watching/Rewatching, not COMPLETED Ep. 1 local-only trial)
+  // 2. Refresh UI on pause & sync resume to notes (only for active Watching/Rewatching, unfinished)
   const entryStatus = currentMedia?.mediaListEntry?.status;
   if (isPaused) {
-    if (isEligible && entryStatus !== "COMPLETED" && settings.autoResume && currentUser?.id && currentTime > 5 && percent < 88) {
+    if (!alreadyTrackedOrCancelled && !finished && entryStatus !== "COMPLETED" && settings.autoResume && currentUser?.id && currentTime > 5) {
       syncResumeToNotes(currentMedia.id, activeEp, currentTime, duration);
     }
     App.render();
   }
 
-  // 3. Trigger: Video Completion (>= 85% or isEnded) via pure domain rule
-  const threshold = settings.completionThreshold || 85;
+  // 3. Trigger: Video Completion (ED start, >= 85%, or isEnded) via pure domain rule
   if (
     settings.autoTrack &&
     shouldAutoTrack({
       activeEp,
       trackedProgress,
       status: entryStatus,
+      currentTime,
+      duration,
       percent,
       isEnded,
       threshold,
+      edStart,
       isCancelled: cancelledEps.has(activeEp)
     })
   ) {
@@ -221,8 +227,8 @@ function handlePlaybackState({ currentTime, duration, isPaused, isEnded }) {
     return;
   }
 
-  // 4. Cloud Sync to notes (periodic while playing)
-  if (isEligible && entryStatus !== "COMPLETED" && settings.autoResume && currentUser?.id && currentTime > 15 && percent < 85) {
+  // 4. Cloud Sync to notes (periodic while playing, only if unfinished)
+  if (!alreadyTrackedOrCancelled && !finished && entryStatus !== "COMPLETED" && settings.autoResume && currentUser?.id && currentTime > 15) {
     const now = Date.now();
     const timeDiff = Math.abs(currentTime - lastSyncedResumeTime);
     if (now - lastNotesSyncTime >= 60000 && timeDiff >= 15) {
@@ -364,7 +370,17 @@ async function computeHomeSyncNotifs() {
       const myProgress = entry.progress || 0;
       const buddyProgress = buddyEntry?.progress || 0;
       const isBuddyCompleted = buddyEntry?.status === "COMPLETED" || (buddyEntry?.media?.episodes && buddyProgress >= buddyEntry.media.episodes);
-      const isAhead = buddyProgress > myProgress;
+      const buddyResume = Resume.extract(buddyEntry?.notes);
+      const myResume = Resume.extract(entry.notes) || Resume.getLocal(entry.mediaId);
+      const syncState = computeBuddySyncState({
+        myProgress,
+        myStatus: entry.status,
+        myResume,
+        buddyProgress,
+        buddyStatus: buddyEntry?.status,
+        buddyIsCompleted: !!isBuddyCompleted,
+        buddyResume
+      });
       const media = entry.media || {};
       const title = media.title?.english || media.title?.romaji || "Untitled";
 
@@ -374,9 +390,13 @@ async function computeHomeSyncNotifs() {
         avatar: Buddy.getAvatar(buddyName) || "https://anilist.co/img/icons/icon.svg",
         buddyEp: buddyProgress,
         myEp: myProgress,
-        isAhead,
+        isAhead: syncState.isEpAhead,
         isBuddyCompleted: !!isBuddyCompleted,
-        canSync: isAhead || (isBuddyCompleted && entry.status !== "COMPLETED"),
+        buddyResume,
+        resumeToApply: syncState.resumeToApply,
+        canSyncResume: syncState.canSyncResume,
+        syncKind: syncState.syncKind,
+        canSync: syncState.canSync,
         title
       });
     }
@@ -458,8 +478,12 @@ function renderHome() {
     syncNotifs: homeSyncNotifs,
     onLogin: openAuth,
     onRefresh: () => loadHomeWatching(),
-    onSyncEntry: async (mediaId, ep, isCompleted = false) => {
-      await App.setProgress(ep, mediaId, isCompleted ? "COMPLETED" : null);
+    onSyncEntry: async (mediaId, ep, isCompleted = false, buddyResume = null, syncKind = "episode") => {
+      if (syncKind === "resume" && buddyResume) {
+        await App.syncBuddyResume(mediaId, buddyResume);
+        return;
+      }
+      await App.setProgress(ep, mediaId, isCompleted ? "COMPLETED" : null, { buddyResume });
       await loadHomeWatching();
     },
     onClearResume: async (entry) => {
@@ -551,7 +575,7 @@ export const App = {
     showToast("Disconnected from AniList");
   },
 
-  async setProgress(newProgress, targetMediaId = null, overrideStatus = null) {
+  async setProgress(newProgress, targetMediaId = null, overrideStatus = null, { buddyResume = null } = {}) {
     const id = targetMediaId || currentMedia?.id;
     if (!id) return;
     const isSinglePage = !targetMediaId && currentMedia;
@@ -569,12 +593,19 @@ export const App = {
     });
     const targetStatus = params.status;
 
-    if (entry?.notes && entry.notes.includes("[resume:")) {
-      const cleared = Resume.clear(entry.notes);
-      params.notes = cleared;
-      if (entry) entry.notes = cleared;
+    if (buddyResume && typeof buddyResume.time === "number" && buddyResume.time > 10) {
+      const appliedNotes = Resume.apply(entry?.notes || "", buddyResume);
+      params.notes = appliedNotes;
+      if (entry) entry.notes = appliedNotes;
+      Resume.setLocal(id, buddyResume);
+    } else {
+      if (entry?.notes && entry.notes.includes("[resume:")) {
+        const cleared = Resume.clear(entry.notes);
+        params.notes = cleared;
+        if (entry) entry.notes = cleared;
+      }
+      Resume.clearLocal(id);
     }
-    Resume.clearLocal(id);
 
     const res = await AniListAPI.saveEntry(params);
     if (res?.SaveMediaListEntry) {
@@ -592,6 +623,33 @@ export const App = {
         App.sync();
       } else {
         await loadHomeWatching();
+      }
+    }
+  },
+
+  async syncBuddyResume(mediaId, buddyResume) {
+    if (!mediaId || !buddyResume) return;
+    const isSinglePage = currentMedia?.id === mediaId;
+    const homeEntry = homeEntries?.find((e) => e.mediaId === mediaId || e.media?.id === mediaId) || null;
+    const entry = isSinglePage ? currentMedia?.mediaListEntry : homeEntry;
+    const updatedNotes = Resume.apply(entry?.notes || "", buddyResume);
+
+    Resume.setLocal(mediaId, buddyResume);
+    const res = await AniListAPI.saveEntry({ mediaId, notes: updatedNotes });
+    if (res?.SaveMediaListEntry) {
+      if (entry) entry.notes = updatedNotes;
+      showToast(`↺ Synced resume to Ep. ${buddyResume.ep} (${Resume.formatTime(buddyResume.time)})`);
+      if (isHome()) {
+        await loadHomeWatching();
+      } else {
+        const activeEp = provider?.getActiveEpisode?.() || 0;
+        if (provider?.isWatchPage?.() && activeEp === buddyResume.ep) {
+          resumedEpKey = null;
+          pendingResumeTarget = buddyResume.time;
+          pendingResumeEp = buddyResume.ep;
+          dispatchResumeSeek();
+        }
+        await App.sync();
       }
     }
   },
@@ -634,7 +692,13 @@ export const App = {
       onConnect: openAuth,
       onAdd: () => App.setProgress(activeEp || 1),
       onResetProgress: () => App.setProgress(0),
-      onBuddySync: (ep, isCompleted) => App.setProgress(ep, null, isCompleted ? "COMPLETED" : null),
+      onBuddySync: async ({ ep, isCompleted = false, buddyResume = null, syncKind = "episode" } = {}) => {
+        if (syncKind === "resume" && buddyResume && currentMedia?.id) {
+          await App.syncBuddyResume(currentMedia.id, buddyResume);
+          return;
+        }
+        await App.setProgress(ep, null, isCompleted ? "COMPLETED" : null, { buddyResume });
+      },
       onStatusChange: async (status) => {
         const entry = currentMedia?.mediaListEntry;
         const params = { mediaId: currentMedia.id, status };
@@ -682,37 +746,17 @@ export const App = {
         cancelAutoTrack();
         App.render();
       },
-      onRewind: async (rewindTarget, currentActiveEp) => {
+      onStepProgress: async (targetEp) => {
         cancelAutoTrack();
-        if (currentActiveEp) cancelledEps.add(currentActiveEp);
-        await App.setProgress(rewindTarget);
-        const total = currentMedia?.episodes || 0;
-        const selectEp = total > 0 ? Math.min(total, rewindTarget + 1) : rewindTarget + 1;
-        if (currentMedia && provider?.resolveTargetUrl && selectEp > 0) {
-          const targetUrl = await provider.resolveTargetUrl(currentMedia, selectEp);
-          if (targetUrl && targetUrl !== window.location.pathname && targetUrl !== window.location.href) {
-            window.location.href = targetUrl;
-          }
-        }
-      },
-      onNextEp: async () => {
-        cancelAutoTrack();
-        const nextEp = (trackedProgress > 0 ? trackedProgress : activeEp) + 1;
-        await App.setProgress(nextEp);
-        const total = currentMedia?.episodes || 0;
-        const selectEp = total > 0 ? Math.min(total, nextEp + 1) : nextEp + 1;
-        if (currentMedia && provider?.resolveTargetUrl && selectEp > 0) {
-          const targetUrl = await provider.resolveTargetUrl(currentMedia, selectEp);
-          if (targetUrl && targetUrl !== window.location.pathname && targetUrl !== window.location.href) {
-            window.location.href = targetUrl;
-          }
-        }
+        if (activeEp && targetEp < activeEp) cancelledEps.add(activeEp);
+        await App.setProgress(Math.max(0, targetEp));
       }
     }, {
       isLoading: isMediaLoading,
       viewer: currentUser,
       defaultBuddy: Settings.get().defaultBuddy,
       buddyData: currentBuddyData,
+      myResume: Resume.extract(currentMedia?.mediaListEntry?.notes) || Resume.getLocal(currentMedia?.id),
       provider,
       activeEp,
       trackedProgress,
@@ -820,7 +864,8 @@ export const App = {
           avatar: Buddy.getAvatar(buddyName) || buddyEntry?.user?.avatar?.medium || "https://anilist.co/img/icons/icon.svg",
           progress: buddyEp,
           status: buddyEntry?.status,
-          isCompleted: !!isBuddyCompleted
+          isCompleted: !!isBuddyCompleted,
+          resume: Resume.extract(buddyEntry?.notes)
         };
       } else {
         currentBuddyData = null;
@@ -926,7 +971,21 @@ export const App = {
     const handlePageExit = () => {
       if (currentMedia && currentUser?.id && currentMedia.mediaListEntry?.status !== "COMPLETED") {
         const local = Resume.getLocal(currentMedia.id);
-        if (local && local.time > 15 && local.percent < 85) {
+        const edStart = getActiveSkipSegments().ed?.start || null;
+        const threshold = Settings.get().completionThreshold || 85;
+        if (
+          local &&
+          local.time > 15 &&
+          !cancelledEps.has(local.ep) &&
+          isEpisodeEligibleForResume(local.ep) &&
+          !isEpisodeFinished({
+            currentTime: local.time,
+            duration: local.duration,
+            percent: local.percent,
+            threshold,
+            edStart
+          })
+        ) {
           syncResumeToNotes(currentMedia.id, local.ep, local.time, local.duration);
         }
       }

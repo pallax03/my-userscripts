@@ -1,6 +1,6 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { Buddy } from "../src/sync-anilist/buddy.js";
+import { Buddy, computeBuddySyncState } from "../src/sync-anilist/buddy.js";
 import { Resume, resolveResumeAction } from "../src/sync-anilist/resume.js";
 
 function installMemoryLocalStorage() {
@@ -181,5 +181,64 @@ describe("resolveResumeAction", () => {
       }),
       { action: "none", reason: "no_valid_resume" }
     );
+  });
+});
+
+describe("computeBuddySyncState", () => {
+  it("detects same-episode buddy resume when ahead by > 10s", () => {
+    const res = computeBuddySyncState({
+      myProgress: 4,
+      myStatus: "CURRENT",
+      myResume: { ep: 5, time: 120, duration: 1440, percent: 8 },
+      buddyProgress: 4,
+      buddyStatus: "CURRENT",
+      buddyResume: { ep: 5, time: 450, duration: 1440, percent: 31 }
+    });
+    assert.equal(res.canSync, true);
+    assert.equal(res.syncKind, "resume");
+    assert.equal(res.canSyncResume, true);
+    assert.deepEqual(res.resumeToApply, { ep: 5, time: 450, duration: 1440, percent: 31 });
+  });
+
+  it("ignores same-episode buddy resume when within 10s or behind", () => {
+    const res = computeBuddySyncState({
+      myProgress: 4,
+      myStatus: "CURRENT",
+      myResume: { ep: 5, time: 445, duration: 1440, percent: 31 },
+      buddyProgress: 4,
+      buddyStatus: "CURRENT",
+      buddyResume: { ep: 5, time: 450, duration: 1440, percent: 31 }
+    });
+    assert.equal(res.canSync, false);
+    assert.equal(res.syncKind, "none");
+    assert.equal(res.resumeToApply, null);
+  });
+
+  it("carries buddy resume when syncing ahead on episodes", () => {
+    const res = computeBuddySyncState({
+      myProgress: 2,
+      myStatus: "CURRENT",
+      buddyProgress: 5,
+      buddyStatus: "CURRENT",
+      buddyResume: { ep: 6, time: 300, duration: 1440, percent: 21 }
+    });
+    assert.equal(res.canSync, true);
+    assert.equal(res.syncKind, "episode");
+    assert.equal(res.isEpAhead, true);
+    assert.deepEqual(res.resumeToApply, { ep: 6, time: 300, duration: 1440, percent: 21 });
+  });
+
+  it("returns completed syncKind without resume when buddy completed", () => {
+    const res = computeBuddySyncState({
+      myProgress: 10,
+      myStatus: "CURRENT",
+      buddyProgress: 12,
+      buddyStatus: "COMPLETED",
+      buddyIsCompleted: true,
+      buddyResume: { ep: 13, time: 100, duration: 1440, percent: 7 }
+    });
+    assert.equal(res.canSync, true);
+    assert.equal(res.syncKind, "completed");
+    assert.equal(res.resumeToApply, null);
   });
 });
